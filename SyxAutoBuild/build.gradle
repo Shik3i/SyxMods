@@ -1,0 +1,118 @@
+plugins {
+    id 'java'
+}
+
+group = 'com.autoplanner'
+version = '0.1.0'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_16
+    targetCompatibility = JavaVersion.VERSION_16
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 16
+}
+
+// Locate Songs of Syx JAR
+def defaultSteamPath = "C:/Program Files (x86)/Steam/steamapps/common/Songs of Syx/SongsOfSyx.jar"
+def songsJarPath = project.findProperty("songsJar") ?: defaultSteamPath
+
+if (!file(songsJarPath).exists()) {
+    logger.warn("WARNING: SongsOfSyx.jar not found at: ${songsJarPath}. Set -PsongsJar=<path> if located elsewhere.")
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compileOnly files(songsJarPath)
+    testImplementation files(songsJarPath)
+}
+
+jar {
+    archiveBaseName.set("SyxAutoPlanner")
+    archiveVersion.set("")
+    archiveClassifier.set("")
+    
+    // Include mod assets in JAR resources if needed
+    from("mod-files") {
+        include "assets/**"
+        include "_Info.txt"
+        include "_info.txt"
+    }
+}
+
+tasks.register('sanityCheck', JavaExec) {
+    dependsOn tasks.jar, tasks.testClasses
+    group = "verification"
+    description = "Executes automated physics, packing, reachability and UI sanity tests"
+    workingDir = projectDir
+    classpath = sourceSets.test.runtimeClasspath + files(songsJarPath)
+    mainClass = "com.autoplanner.SanityTest"
+}
+
+tasks.named('test') {
+    enabled = false
+}
+
+tasks.named('check') {
+    dependsOn 'sanityCheck'
+}
+
+// Task to deploy directly to the game's mod directory
+tasks.register("deployMod", Copy) {
+    dependsOn tasks.jar
+    group = "songs of syx"
+    description = "Deploys the compiled mod JAR, _Info.txt, and assets directly to %APPDATA%/songsofsyx/mods/SyxAutoPlanner/"
+
+    def appData = System.getenv("APPDATA") ?: "${System.getProperty('user.home')}/AppData/Roaming"
+    def targetModDir = file("${appData}/songsofsyx/mods/SyxAutoPlanner")
+
+    doFirst {
+        println "Deploying Syx Auto-Planner to: ${targetModDir}"
+        targetModDir.mkdirs()
+    }
+
+    // Root metadata
+    into(targetModDir)
+    from("mod-files") {
+        include "_Info.txt"
+    }
+
+    // Songs of Syx V71 version layout
+    into("V71/script") {
+        from(tasks.jar.archiveFile)
+    }
+
+    into("V71/assets") {
+        from("mod-files/assets")
+    }
+
+    // Guarantee that _Info.txt is written with exact case to both root and V71 folders
+    doLast {
+        def infoContent = file("${projectDir}/mod-files/_Info.txt").getText("UTF-8")
+
+        // Windows NTFS file system quirk:
+        // Songs of Syx Util.check() performs a case-sensitive startsWith() on directory files.
+        // To ensure NTFS stores the exact "_Info.txt" casing, delete any existing file before writing.
+        [targetModDir, file("${targetModDir}/V71")].each { dir ->
+            dir.mkdirs()
+            def oldFile = new File(dir, "_info.txt")
+            if (oldFile.exists()) {
+                oldFile.delete()
+            }
+            def targetFile = new File(dir, "_Info.txt")
+            if (targetFile.exists()) {
+                targetFile.delete()
+            }
+            targetFile.setText(infoContent, "UTF-8")
+        }
+
+        println "Deployment complete! _Info.txt verified in:"
+        println "  -> ${targetModDir}/_Info.txt"
+        println "  -> ${targetModDir}/V71/_Info.txt"
+    }
+}
