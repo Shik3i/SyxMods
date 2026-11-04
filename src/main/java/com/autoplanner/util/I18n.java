@@ -88,9 +88,9 @@ public final class I18n {
         EN_STRINGS.put("msg.clear_success", "Cleared all furniture from current room draft.");
         EN_STRINGS.put("msg.draw_room_first", "Please draw the room area on the floor first!");
 
-        EN_STRINGS.put("hud.planner", "PLANNER");
-        EN_STRINGS.put("hud.tooltip_title", "Syx Auto-Planner  [F9]");
-        EN_STRINGS.put("hud.tooltip_desc", "Click opens Auto-Planner configuration and options (Hotkeys: F9 / ESC).");
+        EN_STRINGS.put("hud.planner", "AUTO");
+        EN_STRINGS.put("hud.tooltip_title", "Auto-Planner  [F9]");
+        EN_STRINGS.put("hud.tooltip_desc", "Click opens Auto-Planner options and settings (Hotkeys: F9 / ESC).");
 
         // --- German Translations ---
         DE_STRINGS.put("mod.name", "Syx Auto-Planner");
@@ -146,9 +146,9 @@ public final class I18n {
         DE_STRINGS.put("msg.clear_success", "Alle Einrichtungsgegenstände im Raum-Entwurf entfernt.");
         DE_STRINGS.put("msg.draw_room_first", "Bitte zeichne zuerst die Raumfläche auf dem Boden!");
 
-        DE_STRINGS.put("hud.planner", "PLANNER");
-        DE_STRINGS.put("hud.tooltip_title", "Syx Auto-Planner  [F9]");
-        DE_STRINGS.put("hud.tooltip_desc", "Klick öffnet die Auto-Planner Optionen und Einstellungen (Hotkeys: F9 / ESC).");
+        DE_STRINGS.put("hud.planner", "AUTO");
+        DE_STRINGS.put("hud.tooltip_title", "Auto-Planner  [F9]");
+        DE_STRINGS.put("hud.tooltip_desc", "Klick öffnet Auto-Strut & Möbel-Optionen (Hotkeys: F9 / ESC).");
     }
 
     private I18n() {}

@@ -9,6 +9,7 @@ import com.autoplanner.solver.AutoStrutSolver;
 import com.autoplanner.ui.PlannerOverlayUI;
 import com.autoplanner.util.I18n;
 
+import init.sprite.SPRITES;
 import init.sprite.UI.UI;
 import script.SCRIPT.SCRIPT_INSTANCE;
 import settlement.main.SETT;
@@ -58,7 +59,8 @@ public final class AutoPlannerInstance implements SCRIPT_INSTANCE {
             GText t = new GText(UI.FONT().S, I18n.get("hud.planner"));
             t.lablify();
             hudButton = new GButt.ButtPanel((snake2d.util.sprite.SPRITE) t);
-            hudButton.setDim(76, 24);
+            hudButton.icon(SPRITES.icons().m.wallceiling);
+            hudButton.pad(6, 2);
             hudButton.align(DIR.C);
             hudButton.hoverTitleSet(I18n.get("hud.tooltip_title"));
             hudButton.hoverInfoSet(I18n.get("hud.tooltip_desc"));
@@ -96,7 +98,9 @@ public final class AutoPlannerInstance implements SCRIPT_INSTANCE {
         ensureHudButton();
         if (hudButton != null) {
             GuiSection section = new GuiSection();
-            section.add(hudButton);
+            section.add(UIPanelTop.sep());
+            section.addRightC(4, hudButton);
+            section.pad(2, 0);
             top.addRightRight(section);
             lastAttachedTop = top;
             attachedToTopPanel = true;
