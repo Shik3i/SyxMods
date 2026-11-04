@@ -67,7 +67,7 @@ public final class TutorialModal {
 
         int width = 840;
         int height = 580;
-        int contentW = 800;
+        int contentW = 770;
 
         GuiSection root = new GuiSection();
         GPanel panel = new GPanel(width, height);
@@ -91,7 +91,7 @@ public final class TutorialModal {
         content.addDown(0, header);
         content.addDown(6, GFrame.separator(contentW));
 
-        // 2-Column Guide Content (392px each)
+        // 2-Column Guide Content (377px each)
         int colW = (contentW - 16) / 2;
         GuiSection grid = new GuiSection();
 
@@ -151,7 +151,10 @@ public final class TutorialModal {
         content.addDown(6, btnClose);
 
         root.add(panel);
-        content.body().moveX1Y1(panel.inner().x1() + 20, panel.inner().y1() + 28);
+        // Symmetrically center content inside visible stone frame
+        int contentX = panel.body().x1() + 424 - (contentW / 2); // panel.body().x1() + 39
+        int contentY = panel.body().y1() + 24;
+        content.body().moveX1Y1(contentX, contentY);
         root.add(content);
 
         if (C.DIM() != null) {

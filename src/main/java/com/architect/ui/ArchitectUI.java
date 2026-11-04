@@ -42,6 +42,8 @@ public final class ArchitectUI {
     private static boolean isOpen = false;
     private static int activeTab = 0; // 0 = City & Economy, 1 = World & Population
     private static int selectedRaceIndex = 0;
+    private static int windowX = -1;
+    private static int windowY = -1;
 
     private ArchitectUI() {}
 
@@ -83,10 +85,9 @@ public final class ArchitectUI {
         isOpen = true;
         int screenH = (C.DIM() != null) ? C.DIM().height() : 720;
         int width = 860;
-        int height = Math.min(630, Math.max(540, screenH - 40));
-        int contentW = 820;
+        int height = Math.min(640, Math.max(530, screenH - 40));
+        int contentW = 790;
 
-        DraggableModalSection root = new DraggableModalSection();
         GPanel panel = new GPanel(width, height);
         panel.setBig();
         panel.setTitle(I18n.get("ui.title"));
@@ -105,7 +106,7 @@ public final class ArchitectUI {
         // 1. TOP BAR: Native Tabs + Language + Manual
         // =========================================================================
         GuiSection topBar = new GuiSection();
-        int tabW = (contentW - 18) / 4; // 200px each
+        int tabW = (contentW - 18) / 4; // 193px each
 
         // Tab 0: City & Economy
         GButt.ButtPanel tabCity = createBtnM(I18n.get("ui.tab.city"), tabW, 30);
@@ -179,13 +180,31 @@ public final class ArchitectUI {
             buildWorldTab(content, contentW, state, callback, closeAction);
         }
 
+        DraggableModalSection root = new DraggableModalSection(panel, content);
         root.add(panel);
-        // Position content cleanly inside big panel frame
-        content.body().moveX1Y1(panel.inner().x1() + 20, panel.inner().y1() + 28);
+        // Symmetrically center content inside visible stone frame:
+        // Visible width: panel.x1 - 8 to panel.x1 + 876 (center = panel.x1 + 434)
+        int contentX = panel.body().x1() + 434 - (contentW / 2); // panel.body().x1() + 39
+        int contentY = panel.body().y1() + 24;
+        content.body().moveX1Y1(contentX, contentY);
         root.add(content);
 
-        if (C.DIM() != null) {
-            root.body().centerIn(C.DIM());
+        int screenW = (C.DIM() != null) ? C.DIM().width() : 1280;
+        int screenHActual = (C.DIM() != null) ? C.DIM().height() : 720;
+        int maxX = Math.max(0, screenW - root.body().width());
+        int maxY = Math.max(0, screenHActual - root.body().height());
+
+        if (windowX >= 0 && windowY >= 0) {
+            int posX = CLAMP.i(windowX, 0, maxX);
+            int posY = CLAMP.i(windowY, 0, maxY);
+            root.body().moveX1(posX);
+            root.body().moveY1(posY);
+        } else {
+            if (C.DIM() != null) {
+                root.body().centerIn(C.DIM());
+            }
+            windowX = root.body().x1();
+            windowY = root.body().y1();
         }
 
         VIEW.inters().section.activate(root);
@@ -255,9 +274,9 @@ public final class ArchitectUI {
         content.addDown(4, presetRow);
         content.addDown(8, GFrame.separator(contentW));
 
-        // --- 2. Main 2-Column Grid (402px per column) ---
-        int colW = (contentW - 16) / 2; // 402px
-        int ctrlW = 180; // Control button width
+        // --- 2. Main 2-Column Grid (387px per column) ---
+        int colW = (contentW - 16) / 2; // 387px
+        int ctrlW = 170; // Control button width
         int ctrlH = 28;
 
         GuiSection gridRow = new GuiSection();
@@ -614,8 +633,8 @@ public final class ArchitectUI {
         content.addDown(8, envHeader);
         content.addDown(4, GFrame.separator(contentW));
 
-        int colW = (contentW - 16) / 2; // 402px
-        int ctrlW = 180;
+        int colW = (contentW - 16) / 2; // 387px
+        int ctrlW = 170;
         int ctrlH = 28;
 
         GuiSection envGrid = new GuiSection();
@@ -748,10 +767,10 @@ public final class ArchitectUI {
 
         GText lbl = new GText(UI.FONT().M, title);
         lbl.lablify();
-        lbl.setMaxWidth(width - control.body().width() - 16);
-        row.add(lbl, 4, (32 - lbl.height()) / 2);
+        int ctrlX = width - control.body().width() - 6;
+        lbl.setMaxWidth(ctrlX - 12);
+        row.add(lbl, 6, (32 - lbl.height()) / 2);
 
-        int ctrlX = width - control.body().width() - 4;
         row.add(control, ctrlX, (32 - control.body().height()) / 2);
         return row;
     }
@@ -760,52 +779,62 @@ public final class ArchitectUI {
      * Fully draggable modal container allowing the user to reposition dialogs freely with the mouse.
      */
     private static class DraggableModalSection extends GuiSection {
+        private final GPanel panel;
+        private final GuiSection content;
         private boolean isDragging = false;
         private int dragAnchorX = 0;
         private int dragAnchorY = 0;
 
-        public void moveDelta(int dx, int dy) {
-            if (dx == 0 && dy == 0) return;
-            body().incrX(dx).incrY(dy);
-            for (RENDEROBJ r : elements()) {
-                r.body().incrX(dx).incrY(dy);
-            }
+        public DraggableModalSection(GPanel panel, GuiSection content) {
+            this.panel = panel;
+            this.content = content;
         }
 
         @Override
         public void render(SPRITE_RENDERER r, float ds) {
-            COORDINATE m = CORE.getInput().getMouse().getCoo();
-            if (isDragging) {
-                if (m != null && MButt.LEFT.isDown()) {
-                    int targetX = CLAMP.i(m.x() - dragAnchorX, 10, C.WIDTH() - body().width() - 10);
-                    int targetY = CLAMP.i(m.y() - dragAnchorY, 10, C.HEIGHT() - body().height() - 10);
-                    int dx = targetX - body().x1();
-                    int dy = targetY - body().y1();
-                    moveDelta(dx, dy);
-                } else {
-                    isDragging = false;
-                }
-            }
+            handleDrag();
             super.render(r, ds);
         }
 
-        @Override
-        public boolean click() {
+        private void handleDrag() {
             COORDINATE m = CORE.getInput().getMouse().getCoo();
-            boolean clickedChild = super.click();
-            if (clickedChild) {
-                return true;
+            if (m == null) {
+                isDragging = false;
+                return;
             }
-            if (m != null) {
-                int headerY2 = body().y1() + 48;
-                if (m.y() >= body().y1() && m.y() <= headerY2 && m.x() >= body().x1() && m.x() <= body().x2()) {
-                    isDragging = true;
-                    dragAnchorX = m.x() - body().x1();
-                    dragAnchorY = m.y() - body().y1();
-                    return true;
+
+            if (MButt.LEFT.isDown()) {
+                if (!isDragging) {
+                    // Title bar drag region:
+                    // y: top stone border of panel down to the top of content
+                    // x: within panel bounds, avoiding the top-right close 'X' button
+                    int headerY1 = panel.body().y1() - 28;
+                    int headerY2 = content.body().y1() - 2;
+                    int closeX = panel.body().x2() - 36;
+                    if (m.y() >= headerY1 && m.y() <= headerY2 && m.x() >= panel.body().x1() - 8 && m.x() <= closeX) {
+                        isDragging = true;
+                        dragAnchorX = m.x() - body().x1();
+                        dragAnchorY = m.y() - body().y1();
+                    }
                 }
+
+                if (isDragging) {
+                    int screenW = (C.DIM() != null) ? C.DIM().width() : 1280;
+                    int screenH = (C.DIM() != null) ? C.DIM().height() : 720;
+                    int maxX = Math.max(0, screenW - body().width());
+                    int maxY = Math.max(0, screenH - body().height());
+                    int targetX = CLAMP.i(m.x() - dragAnchorX, 0, maxX);
+                    int targetY = CLAMP.i(m.y() - dragAnchorY, 0, maxY);
+                    if (targetX != body().x1() || targetY != body().y1()) {
+                        body().moveX1(targetX);
+                        body().moveY1(targetY);
+                        windowX = body().x1();
+                        windowY = body().y1();
+                    }
+                }
+            } else {
+                isDragging = false;
             }
-            return false;
         }
     }
 }
