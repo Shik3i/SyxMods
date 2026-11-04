@@ -3,7 +3,7 @@ plugins {
 }
 
 group = 'com.architect'
-version = '0.1.0'
+version = '1.0.0'
 
 java {
     sourceCompatibility = JavaVersion.VERSION_16
@@ -94,14 +94,31 @@ tasks.register("deployMod", Copy) {
         from("mod-files/assets")
     }
 
-    // Also mirror metadata in V71 folder for all launcher/loader path variations
+    // Also write explicit _Info.txt and mirror metadata in V71 folder for all launcher/loader path variations
     doLast {
         def v71Dir = file("${targetModDir}/V71")
         v71Dir.mkdirs()
+
+        def modInfoText = """NAME: "Syx Architect",
+DESC: "Creative, Schönbau & Sandbox Suite for Songs of Syx",
+VERSION: "1.0.0",
+AUTHOR: "Architect",
+GAMEVERSION: "71",
+"""
+        // Ensure exact Snake2D metadata is written to both mod root and V71
+        file("${targetModDir}/_Info.txt").write(modInfoText, "UTF-8")
+        file("${targetModDir}/_info.txt").write(modInfoText, "UTF-8")
+        file("${v71Dir}/_Info.txt").write(modInfoText, "UTF-8")
+        file("${v71Dir}/_info.txt").write(modInfoText, "UTF-8")
+
         copy {
             from("mod-files") {
-                include "_info.txt"
-                include "_Info.txt"
+                include "icon.png"
+            }
+            into(targetModDir)
+        }
+        copy {
+            from("mod-files") {
                 include "icon.png"
             }
             into(v71Dir)

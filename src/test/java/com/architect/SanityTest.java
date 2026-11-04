@@ -314,13 +314,18 @@ public class SanityTest {
         String desc = json.text("DESC", null);
         String version = json.text("VERSION", null);
         String author = json.text("AUTHOR", null);
-        String info = json.text("INFO", null);
+        String gameVersion = json.text("GAMEVERSION", null);
 
         if (name == null || name.trim().isEmpty()) throw new AssertionError("NAME is missing in _Info.txt");
         if (desc == null || desc.trim().isEmpty()) throw new AssertionError("DESC is missing in _Info.txt");
         if (version == null || version.trim().isEmpty()) throw new AssertionError("VERSION is missing in _Info.txt");
         if (author == null || author.trim().isEmpty()) throw new AssertionError("AUTHOR is missing in _Info.txt");
-        if (info == null || info.trim().isEmpty()) throw new AssertionError("INFO is missing in _Info.txt");
+        if (gameVersion == null || gameVersion.trim().isEmpty()) throw new AssertionError("GAMEVERSION is missing in _Info.txt");
+
+        assertEquals("NAME", "Syx Architect", name);
+        assertEquals("VERSION", "1.0.0", version);
+        assertEquals("AUTHOR", "Architect", author);
+        assertEquals("GAMEVERSION", "71", gameVersion);
     }
 
     private static void assertEquals(String field, Object expected, Object actual) {
