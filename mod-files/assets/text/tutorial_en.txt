@@ -3,51 +3,50 @@
 ================================================================================
 
 Welcome to Syx Architect!
-The comprehensive creative, Schönbau, and sandbox suite for Songs of Syx (v0.71+).
+Your ultimate creative, model-building, and sandbox suite for Songs of Syx (v0.71+).
 
-OPENING THE SUITE:
-- Press [F10] on your keyboard anywhere in-game.
-- Click the discreet 'Syx Architect [F10]' button in the top HUD bar.
-- Open via the debug menu [Syx Architect].
+OPENING IN GAME:
+- Press [F10] on your keyboard anytime.
+- Click the permanent 'Syx Architect [F10]' button in the top HUD bar.
+- Or use the developer menu entry [Syx Architect].
 
 CORE CAPABILITIES:
 
-1. SEMANTIC SCHÖNBAU TIERS:
-   - Construction:
-     * Free Materials (Keep Work): Oddjobbers physically pave roads and build
-       walls, but material costs are 0! Enjoy the bustling city life.
-     * Fast & Free (10x Speed): Supercharged building speed at zero cost.
-     * Instant Build: Immediately completes all planned rooms, roads, walls,
-       ceilings, and fortifications with one click.
-   - Maintenance:
-     * Janitors Work (Free Mats): Janitors roam the city repairing buildings,
-       keeping the atmosphere alive without draining resources.
-     * Zero Decay: Permanently locks building condition at 100%.
-   - Knowledge:
-     * No Forgetting (High-Watermark): Unlocked technologies are never lost!
-     * Omniscience: Grants +1,000,000 innovation points instantly.
-   - Logistics:
-     * Raw Materials: Auto-tops up essential building resources to ~80%.
-     * All Assigned Crates: Supplies all assigned warehouse crates automatically.
+1. SEMANTIC CHEAT TIERS (DECOUPLING WORK FROM COSTS):
+   - Construction Tiers:
+     * Free Materials (Keep Work): Your builders construct and pave normally,
+       preserving living city ambience, without consuming any stockpile goods.
+     * Fast & Free (10x Speed): 10x accelerated construction at zero cost.
+     * Instant Build: Instantly completes all designated rooms, roads, plazas,
+       walls, roofs, and fortifications.
+   - Building Maintenance:
+     * Janitors Work (Free Mats): Janitors roam and repair without materials.
+     * Zero Decay: Permanently freezes structural integrity at 100%.
+   - Knowledge & Research:
+     * No Forgetting (High-Watermark): Unlocked tech stays unlocked forever.
+     * Omniscience: Grants +1,000,000 innovation points immediately.
+   - Warehouse Logistics:
+     * Raw Materials Only: Keeps base construction goods filled to ~80%.
+     * All Assigned Crates: Keeps all designated crates topped up to ~80%.
 
 2. WORLD, NATURE & POPULATION MANAGER:
-   - Instant Immigrants: Spawn +10, +50, or +100 citizens of any playable species
-     directly to populate your grand districts.
-   - Cosmopolitan Wave: Spawn +25 citizens of every playable species at once!
-   - Anti-Aging: Multiplies life expectancy by 1000x to prevent deaths from old age.
-   - Clear Building Weather: Freezes bright daylight, clears storm clouds, rain,
-     and snow for crystal-clear model building and screenshot captures.
-   - 100% Soil Fertility: Maximizes soil moisture map-wide, letting you place farms
-     and lush orchards anywhere without ground restrictions.
+   - Instant Immigration: Spawn +10, +50, or +100 citizens of any selected
+     species to populate new quarters immediately.
+   - Cosmopolitan Wave: Spawn +25 citizens across all playable races at once!
+   - Anti-Aging Protection: Vastly extends longevity so no citizens die of old age.
+   - Clear Daylight & Weather: Locks peaceful daylight and dispels clouds, rain,
+     and snow - ideal for architecture and screenshots.
+   - 100% Soil Fertility: Maximizes map moisture for lush farms and orchards.
 
 3. SECURITY & PEACE:
-   - Raid Immunity: Automatically cancels barbarian raids and hostile incursions.
-   - Combat Auto-Win: Instantly shatters enemy morale for guaranteed victory.
+   - Raid Immunity: Automatically cancels hostile raids and barbarian incursions.
+   - Combat Victory: Breaks enemy morale immediately for an unconditional win.
 
 4. 1-CLICK INSTANT ACTIONS:
-   - [⚡ Instant Build Now] settlement-wide.
-   - [📦 Fill All Crates to 100%] in all warehouses.
-   - [⚔️ Win Combat Now] on all active battlefields.
+   - [[>>] Instant Build Now] for the entire settlement.
+   - [[++] Fill All Crates to 100%] across all warehouses.
+   - [[$$] +1,000,000 Denari] to replenish the royal treasury.
+   - [[XX] Win Combat Now] on all tactical combat fields.
 
-Enjoy designing your dream empire!
+Happy building and shaping your dream metropolis!
 ================================================================================

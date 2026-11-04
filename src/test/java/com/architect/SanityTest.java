@@ -156,10 +156,22 @@ public class SanityTest {
             if (enVal == null || enVal.trim().isEmpty()) {
                 throw new AssertionError("Empty translation in EN for key: " + key);
             }
+            for (char c : enVal.toCharArray()) {
+                if ((c < 32 || c > 126) && c != '\n' && c != '\t' && c != '\r') {
+                    throw new AssertionError("Non-ASCII character '" + c + "' (code " + (int)c + ") in EN key: " + key);
+                }
+            }
+
             String deVal = deProps.getProperty(key);
             if (deVal == null || deVal.trim().isEmpty()) {
                 throw new AssertionError("Missing translation in DE for key: " + key);
             }
+            for (char c : deVal.toCharArray()) {
+                if ((c < 32 || c > 126) && c != '\n' && c != '\t' && c != '\r') {
+                    throw new AssertionError("Non-ASCII character '" + c + "' (code " + (int)c + ") in DE key: " + key);
+                }
+            }
+
             if (!javaEn.containsKey(key)) {
                 throw new AssertionError("Key missing in I18n.java (EN): " + key);
             }

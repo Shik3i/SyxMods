@@ -9,6 +9,7 @@ import com.architect.util.I18n;
 
 import init.constant.C;
 import init.sprite.UI.UI;
+import snake2d.util.datatypes.DIR;
 import snake2d.util.gui.GuiSection;
 import snake2d.util.misc.ACTION;
 import util.gui.misc.GButt;
@@ -18,7 +19,7 @@ import view.main.VIEW;
 
 /**
  * In-game bilingual tutorial and feature guide modal.
- * Can load tutorial texts directly from packaged JAR ClassLoader resources.
+ * Clean, ASCII-safe formatting with strict boundary clamping.
  */
 public final class TutorialModal {
 
@@ -46,7 +47,7 @@ public final class TutorialModal {
                         StringBuilder sb = new StringBuilder();
                         String line;
                         while ((line = r.readLine()) != null) {
-                            sb.append(line).append("\n");
+                            sb.append(I18n.sanitizeAscii(line)).append("\n");
                         }
                         return sb.toString();
                     }
@@ -58,10 +59,15 @@ public final class TutorialModal {
     }
 
     public static void open() {
-        int width = 640;
-        int height = 540;
+        if (VIEW.inters() == null || VIEW.inters().section == null) {
+            return;
+        }
 
-        GuiSection section = new GuiSection();
+        int width = 680;
+        int height = 560;
+        int contentW = width - 40;
+
+        GuiSection root = new GuiSection();
         GPanel panel = new GPanel(width, height);
         panel.setTitle(I18n.get("btn.tutorial"));
 
@@ -76,11 +82,14 @@ public final class TutorialModal {
         panel.setCloseAction(closeAction);
 
         GuiSection content = new GuiSection();
-        content.pad(15);
 
         // Header
         GText title = new GText(UI.FONT().H1, I18n.get("ui.title"));
         content.addDown(0, title);
+
+        GText sub = new GText(UI.FONT().M, "Creative, Schoenbau & Sandbox Suite");
+        sub.lablify();
+        content.addDown(4, sub);
 
         // Body items
         String[] keys = new String[]{
@@ -96,29 +105,30 @@ public final class TutorialModal {
         };
 
         for (String key : keys) {
-            GText head = new GText(UI.FONT().M, "• " + I18n.get(key));
+            GText head = new GText(UI.FONT().M, "* " + I18n.get(key));
             head.lablify();
-            content.addDown(10, head);
+            content.addDown(6, head);
 
             GText desc = new GText(UI.FONT().S, "  " + I18n.get(key + ".desc"));
-            content.addDown(3, desc);
+            desc.setMaxWidth(contentW - 20);
+            content.addDown(2, desc);
         }
 
-        // Close button
-        GButt.ButtPanel closeBtn = new GButt.ButtPanel(I18n.get("btn.close"));
-        closeBtn.clickActionSet(closeAction);
-        content.addDown(16, closeBtn);
+        // Close button at bottom
+        GButt.ButtPanel btnClose = new GButt.ButtPanel(I18n.get("btn.close"));
+        btnClose.setDim(contentW, 30);
+        btnClose.align(DIR.C);
+        btnClose.clickActionSet(closeAction);
+        content.addDown(12, btnClose);
 
-        section.add(panel);
-        section.add(content);
+        root.add(panel);
+        content.body().moveX1Y1(panel.inner().x1() + 16, panel.inner().y1() + 8);
+        root.add(content);
 
-        // Center on screen
         if (C.DIM() != null) {
-            section.body().centerIn(C.DIM());
+            root.body().centerIn(C.DIM());
         }
 
-        if (VIEW.inters() != null && VIEW.inters().section != null) {
-            VIEW.inters().section.activate(section);
-        }
+        VIEW.inters().section.activate(root);
     }
 }

@@ -23,17 +23,19 @@ import snake2d.util.datatypes.COORDINATE;
 import snake2d.util.datatypes.Rec;
 import snake2d.util.file.FileGetter;
 import snake2d.util.file.FilePutter;
+import util.gui.misc.GButt;
 import view.keyboard.KEYS;
 import view.main.VIEW;
 
 /**
  * Runtime execution instance of Syx Architect during active gameplay.
- * STRICT ZERO-ALLOCATION GUARANTEE: update(double ds) and render(Renderer r, float ds)
- * allocate zero heap objects.
+ * STRICT ZERO-ALLOCATION GUARANTEE in update and render loops.
+ * Features a permanent, fully-interactive top HUD button and non-intrusive start banner.
  */
 public final class ArchitectInstance implements SCRIPT_INSTANCE {
 
     private static final String HUD_LABEL = "Syx Architect [F10]";
+    private static final String BANNER_TEXT = "Syx Architect active  |  Press [F10] or Click Top Button";
 
     private final ArchitectState state = new ArchitectState();
 
@@ -44,11 +46,16 @@ public final class ArchitectInstance implements SCRIPT_INSTANCE {
     private final SecurityModule securityModule = new SecurityModule();
     private final WorldModule worldModule = new WorldModule();
 
-    // Zero-allocation input state
+    // Zero-allocation input state tracking
     private boolean wasF10Down = false;
+    private boolean wasLeftMouseDown = false;
 
-    // HUD button area (top-right screen position, 140x24 pixels)
+    // HUD button area (top-right screen position, right next to speed controls)
     private final Rec hudBounds = new Rec();
+    private final Rec bannerBounds = new Rec();
+
+    // Subtle welcome banner timer (in seconds) - fades away cleanly without popping up modals
+    private double bannerTimer = 5.0;
 
     // Reusable UI callback to prevent lambda allocation on each open
     private final ArchitectUI.UICallback uiCallback = new ArchitectUI.UICallback() {
@@ -107,14 +114,24 @@ public final class ArchitectInstance implements SCRIPT_INSTANCE {
      */
     @Override
     public void update(double ds) {
-        // 1. Direct F10 Hotkey polling (always active, no debug mode required!)
+        // 1. Direct F10 Hotkey polling (always active)
         boolean f10 = CORE.getInput().getKeyboard().isPressed(KEYCODES.KEY_F10);
         if (f10 && !wasF10Down) {
             toggleUI();
         }
         wasF10Down = f10;
 
-        // 2. Subsystem simulation updates
+        // 2. Direct mouse click polling for HUD button (catches clicks even if interrupters consume callback)
+        boolean isLeftDown = MButt.LEFT.isDown();
+        if (isLeftDown && !wasLeftMouseDown) {
+            COORDINATE mouseCoo = CORE.getInput().getMouse().getCoo();
+            if (mouseCoo != null && hudBounds.holdsPoint(mouseCoo)) {
+                toggleUI();
+            }
+        }
+        wasLeftMouseDown = isLeftDown;
+
+        // 3. Subsystem simulation updates
         boostModule.update(ds, state);
         logisticsModule.update(ds, state);
         constructionModule.update(ds, state);
@@ -153,22 +170,51 @@ public final class ArchitectInstance implements SCRIPT_INSTANCE {
     public void load(FileGetter file) throws IOException {
         state.load(file);
         notifyStateChanged();
+        // Reset subtle banner timer upon loading game
+        bannerTimer = 5.0;
     }
 
     @Override
     public void render(Renderer r, float ds) {
-        // Render discreet HUD shortcut button in top bar (Zero allocation)
-        if (C.DIM() != null) {
-            int hudX = Math.max(0, C.DIM().width() - 150);
-            int hudY = 4;
-            int hudW = 140;
-            int hudH = 24;
-            hudBounds.set(hudX, hudX + hudW, hudY, hudY + hudH);
+        if (C.DIM() == null) return;
 
-            COLOR.BLACK.render(r, hudBounds, 0);
-            COLOR.WHITE20.renderFrame(r, hudBounds, 1, 0);
+        // --- 1. Render permanent, native-styled HUD Button in Top Bar ---
+        int hudW = 160;
+        int hudH = 26;
+        int hudX = Math.max(10, C.DIM().width() - 380);
+        int hudY = 4;
+        hudBounds.set(hudX, hudX + hudW, hudY, hudY + hudH);
+
+        COORDINATE mouseCoo = CORE.getInput().getMouse().getCoo();
+        boolean isHover = mouseCoo != null && hudBounds.holdsPoint(mouseCoo);
+        boolean isPressed = isHover && MButt.LEFT.isDown();
+        boolean isOpen = ArchitectUI.isOpen();
+
+        // Native button styling matching Songs of Syx UI panels
+        GButt.ButtPanel.renderBG(r, isHover, isPressed, isOpen, hudBounds);
+        GButt.ButtPanel.renderFrame(r, isHover, isPressed, isOpen, hudBounds);
+
+        if (UI.FONT() != null && UI.FONT().S != null) {
+            int textW = UI.FONT().S.width(HUD_LABEL);
+            int textX = hudBounds.x1() + (hudBounds.width() - textW) / 2;
+            int textY = hudBounds.y1() + (hudBounds.height() - UI.FONT().S.height()) / 2;
+            UI.FONT().S.render(r, HUD_LABEL, textX, textY);
+        }
+
+        // --- 2. Render discrete welcome banner on game load (Non-intrusive, fades after 5s) ---
+        if (bannerTimer > 0) {
+            bannerTimer -= ds;
+            int bannerW = 420;
+            int bannerH = 28;
+            int bannerX = (C.DIM().width() - bannerW) / 2;
+            int bannerY = 42;
+            bannerBounds.set(bannerX, bannerX + bannerW, bannerY, bannerY + bannerH);
+
+            COLOR.BLACK.render(r, bannerBounds, 0);
+            COLOR.WHITE35.renderFrame(r, bannerBounds, 1, 0);
             if (UI.FONT() != null && UI.FONT().S != null) {
-                UI.FONT().S.render(r, HUD_LABEL, hudX + 8, hudY + 5);
+                int tw = UI.FONT().S.width(BANNER_TEXT);
+                UI.FONT().S.render(r, BANNER_TEXT, bannerX + (bannerW - tw) / 2, bannerY + 6);
             }
         }
     }
@@ -176,10 +222,6 @@ public final class ArchitectInstance implements SCRIPT_INSTANCE {
     @Override
     public void mouseClick(MButt button) {
         if (button == MButt.LEFT) {
-            // Guard: Ignore HUD clicks if any modal interrupter is active
-            if (VIEW.inters() != null && VIEW.inters().section != null && VIEW.inters().section.isActivated()) {
-                return;
-            }
             COORDINATE mouseCoo = CORE.getInput().getMouse().getCoo();
             if (mouseCoo != null && hudBounds.holdsPoint(mouseCoo)) {
                 toggleUI();

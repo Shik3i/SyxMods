@@ -11,6 +11,7 @@ import init.constant.C;
 import init.race.RACES;
 import init.race.Race;
 import init.sprite.UI.UI;
+import snake2d.util.datatypes.DIR;
 import snake2d.util.gui.GuiSection;
 import snake2d.util.misc.ACTION;
 import snake2d.util.sets.LIST;
@@ -21,11 +22,8 @@ import view.main.VIEW;
 
 /**
  * Main GUI control center for Syx Architect.
- * Provides live controls for sandbox modules, semantic Schönbau presets, 1-click actions,
- * treasury control, world & population management, and seamless in-game bilingual localization.
- *
- * LAYOUT:
- * Clamped and budgeted for 100% visibility on all resolutions from 720p to 4K.
+ * Elegant, strictly-structured 2-column grid layout with fixed button widths,
+ * zero text clipping, zero emoji/encoding errors, and complete memory-safe lifecycle management.
  */
 public final class ArchitectUI {
 
@@ -51,11 +49,9 @@ public final class ArchitectUI {
     }
 
     public static void close() {
-        if (isOpen) {
-            isOpen = false;
-            if (VIEW.inters() != null && VIEW.inters().section != null) {
-                VIEW.inters().section.close();
-            }
+        isOpen = false;
+        if (VIEW.inters() != null && VIEW.inters().section != null) {
+            VIEW.inters().section.close();
         }
     }
 
@@ -68,10 +64,15 @@ public final class ArchitectUI {
     }
 
     public static void open(ArchitectState state, UICallback callback) {
+        if (VIEW.inters() == null || VIEW.inters().section == null) {
+            return;
+        }
+
         isOpen = true;
         int screenH = (C.DIM() != null) ? C.DIM().height() : 720;
-        int width = 640;
-        int height = Math.min(680, Math.max(500, screenH - 25));
+        int width = 720;
+        int height = Math.min(680, Math.max(520, screenH - 40));
+        int contentW = width - 40;
 
         GuiSection root = new GuiSection();
         GPanel panel = new GPanel(width, height);
@@ -80,22 +81,20 @@ public final class ArchitectUI {
         ACTION closeAction = new ACTION() {
             @Override
             public void exe() {
-                isOpen = false;
-                if (VIEW.inters() != null && VIEW.inters().section != null) {
-                    VIEW.inters().section.close();
-                }
+                close();
             }
         };
         panel.setCloseAction(closeAction);
 
         GuiSection content = new GuiSection();
-        content.pad(10);
 
         // --- Top Bar: Tab Switcher + Language Toggle + Tutorial [?] ---
         GuiSection topBar = new GuiSection();
 
         // Tab 0: City & Economy
-        GButt.ButtPanel tabCity = new GButt.ButtPanel((activeTab == 0 ? "▶ " : "") + I18n.get("ui.tab.city"));
+        GButt.ButtPanel tabCity = new GButt.ButtPanel((activeTab == 0 ? ">> " : "") + I18n.get("ui.tab.city"));
+        tabCity.setDim(180, 28);
+        tabCity.align(DIR.C);
         tabCity.clickActionSet(new ACTION() {
             @Override
             public void exe() {
@@ -106,7 +105,9 @@ public final class ArchitectUI {
         topBar.add(tabCity);
 
         // Tab 1: World & Population
-        GButt.ButtPanel tabWorld = new GButt.ButtPanel((activeTab == 1 ? "▶ " : "") + I18n.get("ui.tab.world"));
+        GButt.ButtPanel tabWorld = new GButt.ButtPanel((activeTab == 1 ? ">> " : "") + I18n.get("ui.tab.world"));
+        tabWorld.setDim(180, 28);
+        tabWorld.align(DIR.C);
         tabWorld.clickActionSet(new ACTION() {
             @Override
             public void exe() {
@@ -117,7 +118,9 @@ public final class ArchitectUI {
         topBar.addRight(8, tabWorld);
 
         // Language toggle [EN] or [DE]
-        GButt.ButtPanel btnLang = new GButt.ButtPanel("[" + I18n.getLanguage().code.toUpperCase() + "]");
+        GButt.ButtPanel btnLang = new GButt.ButtPanel("[" + I18n.getLanguage().code.toUpperCase() + "] " + I18n.get("btn.language"));
+        btnLang.setDim(160, 28);
+        btnLang.align(DIR.C);
         btnLang.clickActionSet(new ACTION() {
             @Override
             public void exe() {
@@ -127,10 +130,12 @@ public final class ArchitectUI {
                 open(state, callback);
             }
         });
-        topBar.addRight(110, btnLang);
+        topBar.addRight(12, btnLang);
 
-        // Tutorial modal [?]
-        GButt.ButtPanel btnTut = new GButt.ButtPanel("[?]");
+        // Tutorial modal [? Guide]
+        GButt.ButtPanel btnTut = new GButt.ButtPanel("[? Guide]");
+        btnTut.setDim(100, 28);
+        btnTut.align(DIR.C);
         btnTut.clickActionSet(new ACTION() {
             @Override
             public void exe() {
@@ -142,33 +147,36 @@ public final class ArchitectUI {
         content.addDown(0, topBar);
 
         if (activeTab == 0) {
-            buildCityTab(content, state, callback, closeAction);
+            buildCityTab(content, contentW, state, callback, closeAction);
         } else {
-            buildWorldTab(content, state, callback, closeAction);
+            buildWorldTab(content, contentW, state, callback, closeAction);
         }
 
         root.add(panel);
+        // Position content cleanly inside the inner boundary of the GPanel
+        content.body().moveX1Y1(panel.inner().x1() + 16, panel.inner().y1() + 8);
         root.add(content);
 
         if (C.DIM() != null) {
             root.body().centerIn(C.DIM());
         }
 
-        if (VIEW.inters() != null && VIEW.inters().section != null) {
-            VIEW.inters().section.activate(root);
-        }
+        VIEW.inters().section.activate(root);
     }
 
-    private static void buildCityTab(GuiSection content, ArchitectState state, UICallback callback, ACTION closeAction) {
-        // --- 1. Quick Presets Section ---
+    private static void buildCityTab(GuiSection content, int contentW, ArchitectState state, UICallback callback, ACTION closeAction) {
+        // --- 1. Quick Presets Section (3 Columns) ---
         GText presetTitle = new GText(UI.FONT().M, I18n.get("ui.presets"));
         presetTitle.lablify();
-        content.addDown(8, presetTitle);
+        content.addDown(10, presetTitle);
 
         GuiSection presetRow = new GuiSection();
+        int btnW3 = (contentW - 16) / 3;
 
         // Preset 1: God Mode
-        GButt.ButtPanel btnGod = new GButt.ButtPanel("🌟 " + I18n.get("preset.god"));
+        GButt.ButtPanel btnGod = new GButt.ButtPanel("[*] " + I18n.get("preset.god"));
+        btnGod.setDim(btnW3, 30);
+        btnGod.align(DIR.C);
         btnGod.clickActionSet(new ACTION() {
             @Override
             public void exe() {
@@ -187,7 +195,9 @@ public final class ArchitectUI {
         presetRow.add(btnGod);
 
         // Preset 2: Living City
-        GButt.ButtPanel btnLiving = new GButt.ButtPanel("🏗️ " + I18n.get("preset.living"));
+        GButt.ButtPanel btnLiving = new GButt.ButtPanel("[+] " + I18n.get("preset.living"));
+        btnLiving.setDim(btnW3, 30);
+        btnLiving.align(DIR.C);
         btnLiving.clickActionSet(new ACTION() {
             @Override
             public void exe() {
@@ -203,10 +213,12 @@ public final class ArchitectUI {
                 open(state, callback);
             }
         });
-        presetRow.addDown(4, btnLiving);
+        presetRow.addRight(8, btnLiving);
 
         // Preset 3: Vanilla Reset
-        GButt.ButtPanel btnReset = new GButt.ButtPanel("🔄 " + I18n.get("preset.vanilla"));
+        GButt.ButtPanel btnReset = new GButt.ButtPanel("[R] " + I18n.get("preset.vanilla"));
+        btnReset.setDim(btnW3, 30);
+        btnReset.align(DIR.C);
         btnReset.clickActionSet(new ACTION() {
             @Override
             public void exe() {
@@ -215,14 +227,27 @@ public final class ArchitectUI {
                 open(state, callback);
             }
         });
-        presetRow.addDown(4, btnReset);
+        presetRow.addRight(8, btnReset);
 
         content.addDown(4, presetRow);
 
-        // --- 2. Semantic Modules & Cheat Toggles ---
-        // Construction Tier (covers rooms, roads, walls, roofs, fortifications)
+        // --- 2. Semantic Modules & Cheat Toggles (Clean 2-Column Grid) ---
+        int btnW2 = (contentW - 12) / 2;
+
+        GuiSection gridRow = new GuiSection();
+
+        // Left Column: Construction, Maintenance, Knowledge, Spoilage
+        GuiSection leftCol = new GuiSection();
+
+        GText lblLeft = new GText(UI.FONT().M, "--- " + I18n.get("ui.tab.construction") + " & " + I18n.get("ui.tab.boosts") + " ---");
+        lblLeft.lablify();
+        leftCol.addDown(0, lblLeft);
+
+        // Construction Tier Button
         String constrLabel = I18n.get("cheat.construction") + ": " + state.constructionTier.getLabel();
         GButt.ButtPanel btnConstr = new GButt.ButtPanel(constrLabel);
+        btnConstr.setDim(btnW2, 30);
+        btnConstr.align(DIR.W);
         btnConstr.clickActionSet(new ACTION() {
             @Override
             public void exe() {
@@ -231,11 +256,13 @@ public final class ArchitectUI {
                 open(state, callback);
             }
         });
-        content.addDown(6, btnConstr);
+        leftCol.addDown(4, btnConstr);
 
-        // Maintenance Tier
+        // Maintenance Tier Button
         String maintLabel = I18n.get("cheat.maintenance") + ": " + state.maintenanceTier.getLabel();
         GButt.ButtPanel btnMaint = new GButt.ButtPanel(maintLabel);
+        btnMaint.setDim(btnW2, 30);
+        btnMaint.align(DIR.W);
         btnMaint.clickActionSet(new ACTION() {
             @Override
             public void exe() {
@@ -244,11 +271,13 @@ public final class ArchitectUI {
                 open(state, callback);
             }
         });
-        content.addDown(4, btnMaint);
+        leftCol.addDown(4, btnMaint);
 
-        // Knowledge Tier
+        // Knowledge Tier Button
         String knowLabel = I18n.get("cheat.knowledge") + ": " + state.knowledgeTier.getLabel();
         GButt.ButtPanel btnKnow = new GButt.ButtPanel(knowLabel);
+        btnKnow.setDim(btnW2, 30);
+        btnKnow.align(DIR.W);
         btnKnow.clickActionSet(new ACTION() {
             @Override
             public void exe() {
@@ -257,50 +286,13 @@ public final class ArchitectUI {
                 open(state, callback);
             }
         });
-        content.addDown(4, btnKnow);
+        leftCol.addDown(4, btnKnow);
 
-        // Logistics Tier
-        String logLabel = I18n.get("cheat.logistics") + ": " + state.logisticsTier.getLabel();
-        GButt.ButtPanel btnLog = new GButt.ButtPanel(logLabel);
-        btnLog.clickActionSet(new ACTION() {
-            @Override
-            public void exe() {
-                state.logisticsTier = state.logisticsTier.next();
-                callback.onStateUpdated();
-                open(state, callback);
-            }
-        });
-        content.addDown(4, btnLog);
-
-        // Treasury / Infinite Denari Toggle
-        String denariLabel = I18n.get("cheat.infinite_denari") + ": " + (state.infiniteDenari ? I18n.get("status.active") : I18n.get("status.inactive"));
-        GButt.ButtPanel btnDenari = new GButt.ButtPanel(denariLabel);
-        btnDenari.clickActionSet(new ACTION() {
-            @Override
-            public void exe() {
-                state.infiniteDenari = !state.infiniteDenari;
-                callback.onStateUpdated();
-                open(state, callback);
-            }
-        });
-        content.addDown(4, btnDenari);
-
-        // Loyalty & Happiness Toggle
-        String loyaltyLabel = I18n.get("cheat.loyalty") + ": " + (state.loyaltyBoost ? I18n.get("status.active") : I18n.get("status.inactive"));
-        GButt.ButtPanel btnLoyalty = new GButt.ButtPanel(loyaltyLabel);
-        btnLoyalty.clickActionSet(new ACTION() {
-            @Override
-            public void exe() {
-                state.loyaltyBoost = !state.loyaltyBoost;
-                callback.onStateUpdated();
-                open(state, callback);
-            }
-        });
-        content.addDown(4, btnLoyalty);
-
-        // Spoilage Toggle
+        // Spoilage Toggle Button
         String spoilLabel = I18n.get("cheat.spoilage") + ": " + (state.spoilageDisabled ? I18n.get("status.active") : I18n.get("status.inactive"));
         GButt.ButtPanel btnSpoil = new GButt.ButtPanel(spoilLabel);
+        btnSpoil.setDim(btnW2, 30);
+        btnSpoil.align(DIR.W);
         btnSpoil.clickActionSet(new ACTION() {
             @Override
             public void exe() {
@@ -309,11 +301,67 @@ public final class ArchitectUI {
                 open(state, callback);
             }
         });
-        content.addDown(4, btnSpoil);
+        leftCol.addDown(4, btnSpoil);
 
-        // Raid Immunity Toggle
+        gridRow.add(leftCol);
+
+        // Right Column: Logistics, Treasury, Loyalty, Raid Immunity
+        GuiSection rightCol = new GuiSection();
+
+        GText lblRight = new GText(UI.FONT().M, "--- " + I18n.get("ui.tab.logistics") + " & " + I18n.get("ui.tab.security") + " ---");
+        lblRight.lablify();
+        rightCol.addDown(0, lblRight);
+
+        // Logistics Tier Button
+        String logLabel = I18n.get("cheat.logistics") + ": " + state.logisticsTier.getLabel();
+        GButt.ButtPanel btnLog = new GButt.ButtPanel(logLabel);
+        btnLog.setDim(btnW2, 30);
+        btnLog.align(DIR.W);
+        btnLog.clickActionSet(new ACTION() {
+            @Override
+            public void exe() {
+                state.logisticsTier = state.logisticsTier.next();
+                callback.onStateUpdated();
+                open(state, callback);
+            }
+        });
+        rightCol.addDown(4, btnLog);
+
+        // Treasury / Infinite Denari Button
+        String denariLabel = I18n.get("cheat.infinite_denari") + ": " + (state.infiniteDenari ? I18n.get("status.active") : I18n.get("status.inactive"));
+        GButt.ButtPanel btnDenari = new GButt.ButtPanel(denariLabel);
+        btnDenari.setDim(btnW2, 30);
+        btnDenari.align(DIR.W);
+        btnDenari.clickActionSet(new ACTION() {
+            @Override
+            public void exe() {
+                state.infiniteDenari = !state.infiniteDenari;
+                callback.onStateUpdated();
+                open(state, callback);
+            }
+        });
+        rightCol.addDown(4, btnDenari);
+
+        // Loyalty & Happiness Button
+        String loyaltyLabel = I18n.get("cheat.loyalty") + ": " + (state.loyaltyBoost ? I18n.get("status.active") : I18n.get("status.inactive"));
+        GButt.ButtPanel btnLoyalty = new GButt.ButtPanel(loyaltyLabel);
+        btnLoyalty.setDim(btnW2, 30);
+        btnLoyalty.align(DIR.W);
+        btnLoyalty.clickActionSet(new ACTION() {
+            @Override
+            public void exe() {
+                state.loyaltyBoost = !state.loyaltyBoost;
+                callback.onStateUpdated();
+                open(state, callback);
+            }
+        });
+        rightCol.addDown(4, btnLoyalty);
+
+        // Raid Immunity Button
         String raidLabel = I18n.get("cheat.raid_protection") + ": " + (state.raidImmunity ? I18n.get("status.active") : I18n.get("status.inactive"));
         GButt.ButtPanel btnRaid = new GButt.ButtPanel(raidLabel);
+        btnRaid.setDim(btnW2, 30);
+        btnRaid.align(DIR.W);
         btnRaid.clickActionSet(new ACTION() {
             @Override
             public void exe() {
@@ -322,13 +370,23 @@ public final class ArchitectUI {
                 open(state, callback);
             }
         });
-        content.addDown(4, btnRaid);
+        rightCol.addDown(4, btnRaid);
 
-        // --- 3. Instant Action Buttons ---
+        gridRow.addRight(12, rightCol);
+        content.addDown(10, gridRow);
+
+        // --- 3. Instant 1-Click Action Buttons (4 Columns) ---
+        GText lblActions = new GText(UI.FONT().M, "--- Instant 1-Click Actions ---");
+        lblActions.lablify();
+        content.addDown(10, lblActions);
+
         GuiSection actionSection = new GuiSection();
+        int btnW4 = (contentW - 18) / 4;
 
-        // 1-Click Instant Build All (Rooms, roads, walls)
+        // 1-Click Instant Build
         GButt.ButtPanel btnInstantBuild = new GButt.ButtPanel(I18n.get("btn.instant_build_now"));
+        btnInstantBuild.setDim(btnW4, 30);
+        btnInstantBuild.align(DIR.C);
         btnInstantBuild.clickActionSet(new ACTION() {
             @Override
             public void exe() {
@@ -339,6 +397,8 @@ public final class ArchitectUI {
 
         // 1-Click Fill All Crates to 100%
         GButt.ButtPanel btnFillCrates = new GButt.ButtPanel(I18n.get("btn.fill_crates_100"));
+        btnFillCrates.setDim(btnW4, 30);
+        btnFillCrates.align(DIR.C);
         btnFillCrates.clickActionSet(new ACTION() {
             @Override
             public void exe() {
@@ -349,6 +409,8 @@ public final class ArchitectUI {
 
         // 1-Click Add 1,000,000 Denari
         GButt.ButtPanel btnAddDenari = new GButt.ButtPanel(I18n.get("btn.add_denari_1m"));
+        btnAddDenari.setDim(btnW4, 30);
+        btnAddDenari.align(DIR.C);
         btnAddDenari.clickActionSet(new ACTION() {
             @Override
             public void exe() {
@@ -357,29 +419,33 @@ public final class ArchitectUI {
         });
         actionSection.addRight(6, btnAddDenari);
 
-        content.addDown(6, actionSection);
-
-        // 1-Click Combat Auto-Win Button
+        // 1-Click Combat Auto-Win
         GButt.ButtPanel btnWinCombat = new GButt.ButtPanel(I18n.get("btn.win_combat_now"));
+        btnWinCombat.setDim(btnW4, 30);
+        btnWinCombat.align(DIR.C);
         btnWinCombat.clickActionSet(new ACTION() {
             @Override
             public void exe() {
                 callback.onWinCombatRequested();
             }
         });
-        content.addDown(4, btnWinCombat);
+        actionSection.addRight(6, btnWinCombat);
 
-        // Footer: Close Button
+        content.addDown(4, actionSection);
+
+        // --- 4. Footer: Close Button ---
         GButt.ButtPanel btnClose = new GButt.ButtPanel(I18n.get("btn.close"));
+        btnClose.setDim(contentW, 30);
+        btnClose.align(DIR.C);
         btnClose.clickActionSet(closeAction);
-        content.addDown(6, btnClose);
+        content.addDown(10, btnClose);
     }
 
-    private static void buildWorldTab(GuiSection content, ArchitectState state, UICallback callback, ACTION closeAction) {
+    private static void buildWorldTab(GuiSection content, int contentW, ArchitectState state, UICallback callback, ACTION closeAction) {
         // --- 1. Population Manager Section ---
-        GText popTitle = new GText(UI.FONT().M, I18n.get("world.population.title"));
+        GText popTitle = new GText(UI.FONT().M, "--- " + I18n.get("world.population.title") + " ---");
         popTitle.lablify();
-        content.addDown(8, popTitle);
+        content.addDown(10, popTitle);
 
         LIST<Race> races = null;
         try {
@@ -394,68 +460,108 @@ public final class ArchitectUI {
             final Race currentRace = races.get(selectedRaceIndex);
             final LIST<Race> finalRaces = races;
 
-            CharSequence raceName = currentRace.info != null ? currentRace.info.name : currentRace.key;
+            String raceName = currentRace.info != null ? currentRace.info.name.toString() : currentRace.key;
+            raceName = I18n.sanitizeAscii(raceName);
 
             GuiSection raceRow = new GuiSection();
 
-            GButt.ButtPanel btnSelectRace = new GButt.ButtPanel(I18n.get("world.population.species") + " [ " + raceName + " ]");
-            btnSelectRace.clickActionSet(new ACTION() {
+            GButt.ButtPanel btnPrev = new GButt.ButtPanel("<<");
+            btnPrev.setDim(44, 28);
+            btnPrev.align(DIR.C);
+            btnPrev.clickActionSet(new ACTION() {
+                @Override
+                public void exe() {
+                    selectedRaceIndex = (selectedRaceIndex - 1 + finalRaces.size()) % finalRaces.size();
+                    open(state, callback);
+                }
+            });
+            raceRow.add(btnPrev);
+
+            GButt.ButtPanel lblRace = new GButt.ButtPanel(I18n.get("world.population.species") + " " + raceName);
+            lblRace.setDim(contentW - 96, 28);
+            lblRace.align(DIR.C);
+            raceRow.addRight(4, lblRace);
+
+            GButt.ButtPanel btnNext = new GButt.ButtPanel(">>");
+            btnNext.setDim(44, 28);
+            btnNext.align(DIR.C);
+            btnNext.clickActionSet(new ACTION() {
                 @Override
                 public void exe() {
                     selectedRaceIndex = (selectedRaceIndex + 1) % finalRaces.size();
                     open(state, callback);
                 }
             });
-            raceRow.add(btnSelectRace);
+            raceRow.addRight(4, btnNext);
 
-            GButt.ButtPanel btnSpawn10 = new GButt.ButtPanel(I18n.get("world.btn.spawn10"));
-            btnSpawn10.clickActionSet(new ACTION() {
+            content.addDown(4, raceRow);
+
+            // Spawn Buttons in a single clean row
+            GuiSection spawnRow = new GuiSection();
+            int btnW4 = (contentW - 18) / 4;
+
+            GButt.ButtPanel btn10 = new GButt.ButtPanel(I18n.get("world.btn.spawn10"));
+            btn10.setDim(btnW4, 30);
+            btn10.align(DIR.C);
+            btn10.clickActionSet(new ACTION() {
                 @Override
                 public void exe() {
                     callback.onSpawnImmigrantsRequested(currentRace, 10);
                 }
             });
-            raceRow.addRight(6, btnSpawn10);
+            spawnRow.add(btn10);
 
-            GButt.ButtPanel btnSpawn50 = new GButt.ButtPanel(I18n.get("world.btn.spawn50"));
-            btnSpawn50.clickActionSet(new ACTION() {
+            GButt.ButtPanel btn50 = new GButt.ButtPanel(I18n.get("world.btn.spawn50"));
+            btn50.setDim(btnW4, 30);
+            btn50.align(DIR.C);
+            btn50.clickActionSet(new ACTION() {
                 @Override
                 public void exe() {
                     callback.onSpawnImmigrantsRequested(currentRace, 50);
                 }
             });
-            raceRow.addRight(6, btnSpawn50);
+            spawnRow.addRight(6, btn50);
 
-            GButt.ButtPanel btnSpawn100 = new GButt.ButtPanel(I18n.get("world.btn.spawn100"));
-            btnSpawn100.clickActionSet(new ACTION() {
+            GButt.ButtPanel btn100 = new GButt.ButtPanel(I18n.get("world.btn.spawn100"));
+            btn100.setDim(btnW4, 30);
+            btn100.align(DIR.C);
+            btn100.clickActionSet(new ACTION() {
                 @Override
                 public void exe() {
                     callback.onSpawnImmigrantsRequested(currentRace, 100);
                 }
             });
-            raceRow.addRight(6, btnSpawn100);
+            spawnRow.addRight(6, btn100);
 
-            content.addDown(6, raceRow);
-
-            // Button: Cosmopolitan Wave (spawns 25 citizens of EVERY playable race)
-            GButt.ButtPanel btnSpawnAll = new GButt.ButtPanel(I18n.get("world.btn.spawn_all_25"));
-            btnSpawnAll.clickActionSet(new ACTION() {
+            GButt.ButtPanel btnAll25 = new GButt.ButtPanel(I18n.get("world.btn.spawn_all_25"));
+            btnAll25.setDim(btnW4, 30);
+            btnAll25.align(DIR.C);
+            btnAll25.clickActionSet(new ACTION() {
                 @Override
                 public void exe() {
                     callback.onSpawnAllPlayableRequested(25);
                 }
             });
-            content.addDown(4, btnSpawnAll);
+            spawnRow.addRight(6, btnAll25);
+
+            content.addDown(4, spawnRow);
         }
 
-        // --- 2. Environment & Longevity Toggles ---
-        GText envTitle = new GText(UI.FONT().M, I18n.get("world.env.title"));
+        // --- 2. Atmosphere, Longevity & Soil Environment ---
+        GText envTitle = new GText(UI.FONT().M, "--- " + I18n.get("world.env.title") + " ---");
         envTitle.lablify();
-        content.addDown(10, envTitle);
+        content.addDown(12, envTitle);
 
-        // Anti-Aging Toggle
+        int btnW2 = (contentW - 12) / 2;
+        GuiSection envGrid = new GuiSection();
+
+        // Left: Aging & Weather
+        GuiSection envLeft = new GuiSection();
+
         String agingLabel = I18n.get("world.toggle.aging") + ": " + (state.disableAging ? I18n.get("status.active") : I18n.get("status.inactive"));
         GButt.ButtPanel btnAging = new GButt.ButtPanel(agingLabel);
+        btnAging.setDim(btnW2, 30);
+        btnAging.align(DIR.W);
         btnAging.clickActionSet(new ACTION() {
             @Override
             public void exe() {
@@ -464,11 +570,12 @@ public final class ArchitectUI {
                 open(state, callback);
             }
         });
-        content.addDown(6, btnAging);
+        envLeft.addDown(0, btnAging);
 
-        // Nice Weather & Daylight Toggle
         String weatherLabel = I18n.get("world.toggle.weather") + ": " + (state.freezeNiceWeather ? I18n.get("status.active") : I18n.get("status.inactive"));
         GButt.ButtPanel btnWeather = new GButt.ButtPanel(weatherLabel);
+        btnWeather.setDim(btnW2, 30);
+        btnWeather.align(DIR.W);
         btnWeather.clickActionSet(new ACTION() {
             @Override
             public void exe() {
@@ -477,12 +584,18 @@ public final class ArchitectUI {
                 open(state, callback);
             }
         });
-        content.addDown(4, btnWeather);
+        envLeft.addDown(4, btnWeather);
 
-        // Max Soil Moisture & Fertility Toggle
-        String ferLabel = I18n.get("world.toggle.fertility") + ": " + (state.maxFertility ? I18n.get("status.active") : I18n.get("status.inactive"));
-        GButt.ButtPanel btnFer = new GButt.ButtPanel(ferLabel);
-        btnFer.clickActionSet(new ACTION() {
+        envGrid.add(envLeft);
+
+        // Right: Soil Fertility
+        GuiSection envRight = new GuiSection();
+
+        String fertilityLabel = I18n.get("world.toggle.fertility") + ": " + (state.maxFertility ? I18n.get("status.active") : I18n.get("status.inactive"));
+        GButt.ButtPanel btnFertility = new GButt.ButtPanel(fertilityLabel);
+        btnFertility.setDim(btnW2, 30);
+        btnFertility.align(DIR.W);
+        btnFertility.clickActionSet(new ACTION() {
             @Override
             public void exe() {
                 state.maxFertility = !state.maxFertility;
@@ -490,21 +603,27 @@ public final class ArchitectUI {
                 open(state, callback);
             }
         });
-        content.addDown(4, btnFer);
+        envRight.addDown(0, btnFertility);
 
-        // 1-Click Soil Moisture Immediate Action
-        GButt.ButtPanel btnFerNow = new GButt.ButtPanel(I18n.get("world.btn.fertility_now"));
-        btnFerNow.clickActionSet(new ACTION() {
+        GButt.ButtPanel btnFertilityNow = new GButt.ButtPanel(I18n.get("world.btn.fertility_now"));
+        btnFertilityNow.setDim(btnW2, 30);
+        btnFertilityNow.align(DIR.W);
+        btnFertilityNow.clickActionSet(new ACTION() {
             @Override
             public void exe() {
                 callback.onMaxFertilityRequested();
             }
         });
-        content.addDown(6, btnFerNow);
+        envRight.addDown(4, btnFertilityNow);
 
-        // Footer: Close Button
+        envGrid.addRight(12, envRight);
+        content.addDown(4, envGrid);
+
+        // --- 3. Footer: Close Button ---
         GButt.ButtPanel btnClose = new GButt.ButtPanel(I18n.get("btn.close"));
+        btnClose.setDim(contentW, 30);
+        btnClose.align(DIR.C);
         btnClose.clickActionSet(closeAction);
-        content.addDown(8, btnClose);
+        content.addDown(12, btnClose);
     }
 }
