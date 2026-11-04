@@ -7,9 +7,11 @@ import com.architect.modules.BoostModule;
 import com.architect.modules.ConstructionModule;
 import com.architect.modules.LogisticsModule;
 import com.architect.modules.SecurityModule;
+import com.architect.modules.WorldModule;
 import com.architect.ui.ArchitectUI;
 
 import init.constant.C;
+import init.race.Race;
 import init.sprite.UI.UI;
 import script.SCRIPT.SCRIPT_INSTANCE;
 import snake2d.CORE;
@@ -22,6 +24,7 @@ import snake2d.util.datatypes.Rec;
 import snake2d.util.file.FileGetter;
 import snake2d.util.file.FilePutter;
 import view.keyboard.KEYS;
+import view.main.VIEW;
 
 /**
  * Runtime execution instance of Syx Architect during active gameplay.
@@ -36,6 +39,7 @@ public final class ArchitectInstance implements SCRIPT_INSTANCE {
     private final LogisticsModule logisticsModule = new LogisticsModule();
     private final ConstructionModule constructionModule = new ConstructionModule();
     private final SecurityModule securityModule = new SecurityModule();
+    private final WorldModule worldModule = new WorldModule();
 
     // Zero-allocation input state
     private boolean wasF10Down = false;
@@ -64,6 +68,21 @@ public final class ArchitectInstance implements SCRIPT_INSTANCE {
         public void onWinCombatRequested() {
             securityModule.instantWinCombat();
         }
+
+        @Override
+        public void onSpawnImmigrantsRequested(Race race, int count) {
+            worldModule.spawnImmigrants(race, count);
+        }
+
+        @Override
+        public void onSpawnAllPlayableRequested(int countPerRace) {
+            worldModule.spawnAllPlayable(countPerRace);
+        }
+
+        @Override
+        public void onMaxFertilityRequested() {
+            worldModule.maximizeSoilMoisture();
+        }
     };
 
     public ArchitectInstance() {
@@ -71,6 +90,7 @@ public final class ArchitectInstance implements SCRIPT_INSTANCE {
         logisticsModule.init();
         constructionModule.init();
         securityModule.init();
+        worldModule.init();
     }
 
     /**
@@ -91,6 +111,7 @@ public final class ArchitectInstance implements SCRIPT_INSTANCE {
         logisticsModule.update(ds, state);
         constructionModule.update(ds, state);
         securityModule.update(ds, state);
+        worldModule.update(ds, state);
     }
 
     /**
@@ -101,6 +122,7 @@ public final class ArchitectInstance implements SCRIPT_INSTANCE {
         logisticsModule.onStateChanged(state);
         constructionModule.onStateChanged(state);
         securityModule.onStateChanged(state);
+        worldModule.onStateChanged(state);
     }
 
     /**
@@ -129,7 +151,7 @@ public final class ArchitectInstance implements SCRIPT_INSTANCE {
     public void render(Renderer r, float ds) {
         // Render discreet HUD shortcut button in top bar (Zero allocation)
         if (C.DIM() != null) {
-            int hudX = C.DIM().width() - 150;
+            int hudX = Math.max(0, C.DIM().width() - 150);
             int hudY = 4;
             int hudW = 140;
             int hudH = 24;
@@ -146,6 +168,10 @@ public final class ArchitectInstance implements SCRIPT_INSTANCE {
     @Override
     public void mouseClick(MButt button) {
         if (button == MButt.LEFT) {
+            // Guard: Ignore HUD clicks if a modal interrupter is active
+            if (VIEW.inters() != null && VIEW.inters().section != null && VIEW.inters().section.isActivated()) {
+                return;
+            }
             COORDINATE mouseCoo = CORE.getInput().getMouse().getCoo();
             if (mouseCoo != null && hudBounds.holdsPoint(mouseCoo)) {
                 toggleUI();

@@ -8,9 +8,12 @@ import com.architect.config.CheatTiers.MaintenanceTier;
 import com.architect.util.I18n;
 
 import init.constant.C;
+import init.race.RACES;
+import init.race.Race;
 import init.sprite.UI.UI;
 import snake2d.util.gui.GuiSection;
 import snake2d.util.misc.ACTION;
+import snake2d.util.sets.LIST;
 import util.gui.misc.GButt;
 import util.gui.misc.GText;
 import util.gui.panel.GPanel;
@@ -19,11 +22,13 @@ import view.main.VIEW;
 /**
  * Main GUI control center for Syx Architect.
  * Provides live controls for sandbox modules, semantic Schönbau presets, 1-click actions,
- * and seamless in-game bilingual localization.
+ * world & population management, and seamless in-game bilingual localization.
  */
 public final class ArchitectUI {
 
     private static boolean isOpen = false;
+    private static int activeTab = 0; // 0 = City & Economy, 1 = World & Population
+    private static int selectedRaceIndex = 0;
 
     private ArchitectUI() {}
 
@@ -32,6 +37,9 @@ public final class ArchitectUI {
         void onInstantBuildRequested();
         void onFillCratesRequested();
         void onWinCombatRequested();
+        void onSpawnImmigrantsRequested(Race race, int count);
+        void onSpawnAllPlayableRequested(int countPerRace);
+        void onMaxFertilityRequested();
     }
 
     public static boolean isOpen() {
@@ -41,7 +49,9 @@ public final class ArchitectUI {
     public static void close() {
         if (isOpen) {
             isOpen = false;
-            VIEW.inters().section.close();
+            if (VIEW.inters() != null && VIEW.inters().section != null) {
+                VIEW.inters().section.close();
+            }
         }
     }
 
@@ -55,8 +65,8 @@ public final class ArchitectUI {
 
     public static void open(ArchitectState state, UICallback callback) {
         isOpen = true;
-        int width = 620;
-        int height = 660;
+        int width = 640;
+        int height = 690;
 
         GuiSection root = new GuiSection();
         GPanel panel = new GPanel(width, height);
@@ -66,7 +76,9 @@ public final class ArchitectUI {
             @Override
             public void exe() {
                 isOpen = false;
-                VIEW.inters().section.close();
+                if (VIEW.inters() != null && VIEW.inters().section != null) {
+                    VIEW.inters().section.close();
+                }
             }
         };
         panel.setCloseAction(closeAction);
@@ -74,11 +86,32 @@ public final class ArchitectUI {
         GuiSection content = new GuiSection();
         content.pad(14);
 
-        // Top Header Line: Subtitle + Language Toggle [DE | EN] + [?] Tutorial Button
-        GuiSection topHeader = new GuiSection();
-        GText sub = new GText(UI.FONT().S, I18n.get("mod.desc"));
-        topHeader.add(sub, 0, 4);
+        // --- Top Bar: Tab Switcher + Language Toggle + Tutorial [?] ---
+        GuiSection topBar = new GuiSection();
 
+        // Tab 0: City & Economy
+        GButt.ButtPanel tabCity = new GButt.ButtPanel((activeTab == 0 ? "▶ " : "") + I18n.get("ui.tab.city"));
+        tabCity.clickActionSet(new ACTION() {
+            @Override
+            public void exe() {
+                activeTab = 0;
+                open(state, callback);
+            }
+        });
+        topBar.add(tabCity);
+
+        // Tab 1: World & Population
+        GButt.ButtPanel tabWorld = new GButt.ButtPanel((activeTab == 1 ? "▶ " : "") + I18n.get("ui.tab.world"));
+        tabWorld.clickActionSet(new ACTION() {
+            @Override
+            public void exe() {
+                activeTab = 1;
+                open(state, callback);
+            }
+        });
+        topBar.addRight(8, tabWorld);
+
+        // Language toggle
         GButt.ButtPanel btnLang = new GButt.ButtPanel("[" + I18n.getLanguage().code.toUpperCase() + "]");
         btnLang.clickActionSet(new ACTION() {
             @Override
@@ -89,8 +122,9 @@ public final class ArchitectUI {
                 open(state, callback);
             }
         });
-        topHeader.addRight(160, btnLang);
+        topBar.addRight(120, btnLang);
 
+        // Tutorial modal [?]
         GButt.ButtPanel btnTut = new GButt.ButtPanel("[?]");
         btnTut.clickActionSet(new ACTION() {
             @Override
@@ -98,10 +132,29 @@ public final class ArchitectUI {
                 TutorialModal.open();
             }
         });
-        topHeader.addRight(8, btnTut);
+        topBar.addRight(8, btnTut);
 
-        content.addDown(0, topHeader);
+        content.addDown(0, topBar);
 
+        if (activeTab == 0) {
+            buildCityTab(content, state, callback, closeAction);
+        } else {
+            buildWorldTab(content, state, callback, closeAction);
+        }
+
+        root.add(panel);
+        root.add(content);
+
+        if (C.DIM() != null) {
+            root.body().centerIn(C.DIM());
+        }
+
+        if (VIEW.inters() != null && VIEW.inters().section != null) {
+            VIEW.inters().section.activate(root);
+        }
+    }
+
+    private static void buildCityTab(GuiSection content, ArchitectState state, UICallback callback, ACTION closeAction) {
         // --- 1. Quick Presets Section ---
         GText presetTitle = new GText(UI.FONT().M, I18n.get("ui.presets"));
         presetTitle.lablify();
@@ -160,7 +213,7 @@ public final class ArchitectUI {
         content.addDown(6, presetRow);
 
         // --- 2. Semantic Modules & Cheat Toggles ---
-        // Construction Tier
+        // Construction Tier (covers rooms, roads, walls, roofs, fortifications)
         String constrLabel = I18n.get("cheat.construction") + ": " + state.constructionTier.getLabel();
         GButt.ButtPanel btnConstr = new GButt.ButtPanel(constrLabel);
         btnConstr.clickActionSet(new ACTION() {
@@ -254,7 +307,7 @@ public final class ArchitectUI {
         // --- 3. Instant Action Buttons ---
         GuiSection actionSection = new GuiSection();
 
-        // 1-Click Instant Build All
+        // 1-Click Instant Build All (Rooms, roads, walls)
         GButt.ButtPanel btnInstantBuild = new GButt.ButtPanel(I18n.get("btn.instant_build_now"));
         btnInstantBuild.clickActionSet(new ACTION() {
             @Override
@@ -289,15 +342,139 @@ public final class ArchitectUI {
         // Footer: Close Button
         GButt.ButtPanel btnClose = new GButt.ButtPanel(I18n.get("btn.close"));
         btnClose.clickActionSet(closeAction);
-        content.addDown(12, btnClose);
+        content.addDown(10, btnClose);
+    }
 
-        root.add(panel);
-        root.add(content);
+    private static void buildWorldTab(GuiSection content, ArchitectState state, UICallback callback, ACTION closeAction) {
+        // --- 1. Population Manager Section ---
+        GText popTitle = new GText(UI.FONT().M, I18n.get("world.population.title"));
+        popTitle.lablify();
+        content.addDown(12, popTitle);
 
-        if (C.DIM() != null) {
-            root.body().centerIn(C.DIM());
+        LIST<Race> races = null;
+        try {
+            races = (RACES.playable() != null && RACES.playable().size() > 0) ? RACES.playable() : RACES.all();
+        } catch (Exception ignored) {
         }
 
-        VIEW.inters().section.activate(root);
+        if (races != null && races.size() > 0) {
+            if (selectedRaceIndex >= races.size() || selectedRaceIndex < 0) {
+                selectedRaceIndex = 0;
+            }
+            final Race currentRace = races.get(selectedRaceIndex);
+            final LIST<Race> finalRaces = races;
+
+            CharSequence raceName = currentRace.info != null ? currentRace.info.name : currentRace.key;
+
+            GuiSection raceRow = new GuiSection();
+
+            GButt.ButtPanel btnSelectRace = new GButt.ButtPanel(I18n.get("world.population.species") + " [ " + raceName + " ]");
+            btnSelectRace.clickActionSet(new ACTION() {
+                @Override
+                public void exe() {
+                    selectedRaceIndex = (selectedRaceIndex + 1) % finalRaces.size();
+                    open(state, callback);
+                }
+            });
+            raceRow.add(btnSelectRace);
+
+            GButt.ButtPanel btnSpawn10 = new GButt.ButtPanel(I18n.get("world.btn.spawn10"));
+            btnSpawn10.clickActionSet(new ACTION() {
+                @Override
+                public void exe() {
+                    callback.onSpawnImmigrantsRequested(currentRace, 10);
+                }
+            });
+            raceRow.addRight(6, btnSpawn10);
+
+            GButt.ButtPanel btnSpawn50 = new GButt.ButtPanel(I18n.get("world.btn.spawn50"));
+            btnSpawn50.clickActionSet(new ACTION() {
+                @Override
+                public void exe() {
+                    callback.onSpawnImmigrantsRequested(currentRace, 50);
+                }
+            });
+            raceRow.addRight(6, btnSpawn50);
+
+            GButt.ButtPanel btnSpawn100 = new GButt.ButtPanel(I18n.get("world.btn.spawn100"));
+            btnSpawn100.clickActionSet(new ACTION() {
+                @Override
+                public void exe() {
+                    callback.onSpawnImmigrantsRequested(currentRace, 100);
+                }
+            });
+            raceRow.addRight(6, btnSpawn100);
+
+            content.addDown(8, raceRow);
+
+            // Button: Cosmopolitan Wave (spawns 25 citizens of EVERY playable race)
+            GButt.ButtPanel btnSpawnAll = new GButt.ButtPanel(I18n.get("world.btn.spawn_all_25"));
+            btnSpawnAll.clickActionSet(new ACTION() {
+                @Override
+                public void exe() {
+                    callback.onSpawnAllPlayableRequested(25);
+                }
+            });
+            content.addDown(6, btnSpawnAll);
+        }
+
+        // --- 2. Environment & Longevity Toggles ---
+        GText envTitle = new GText(UI.FONT().M, I18n.get("world.env.title"));
+        envTitle.lablify();
+        content.addDown(16, envTitle);
+
+        // Anti-Aging Toggle
+        String agingLabel = I18n.get("world.toggle.aging") + ": " + (state.disableAging ? I18n.get("status.active") : I18n.get("status.inactive"));
+        GButt.ButtPanel btnAging = new GButt.ButtPanel(agingLabel);
+        btnAging.clickActionSet(new ACTION() {
+            @Override
+            public void exe() {
+                state.disableAging = !state.disableAging;
+                callback.onStateUpdated();
+                open(state, callback);
+            }
+        });
+        content.addDown(8, btnAging);
+
+        // Nice Weather & Daylight Toggle
+        String weatherLabel = I18n.get("world.toggle.weather") + ": " + (state.freezeNiceWeather ? I18n.get("status.active") : I18n.get("status.inactive"));
+        GButt.ButtPanel btnWeather = new GButt.ButtPanel(weatherLabel);
+        btnWeather.clickActionSet(new ACTION() {
+            @Override
+            public void exe() {
+                state.freezeNiceWeather = !state.freezeNiceWeather;
+                callback.onStateUpdated();
+                open(state, callback);
+            }
+        });
+        content.addDown(6, btnWeather);
+
+        // Max Soil Moisture & Fertility Toggle
+        String ferLabel = I18n.get("world.toggle.fertility") + ": " + (state.maxFertility ? I18n.get("status.active") : I18n.get("status.inactive"));
+        GButt.ButtPanel btnFer = new GButt.ButtPanel(ferLabel);
+        btnFer.clickActionSet(new ACTION() {
+            @Override
+            public void exe() {
+                state.maxFertility = !state.maxFertility;
+                callback.onStateUpdated();
+                open(state, callback);
+            }
+        });
+        content.addDown(6, btnFer);
+
+        // 1-Click Soil Moisture Immediate Action
+        GButt.ButtPanel btnFerNow = new GButt.ButtPanel(I18n.get("world.btn.fertility_now"));
+        btnFerNow.clickActionSet(new ACTION() {
+            @Override
+            public void exe() {
+                callback.onMaxFertilityRequested();
+            }
+        });
+        content.addDown(10, btnFerNow);
+
+        // Footer: Close Button
+        GButt.ButtPanel btnClose = new GButt.ButtPanel(I18n.get("btn.close"));
+        btnClose.clickActionSet(closeAction);
+        content.addDown(14, btnClose);
     }
 }

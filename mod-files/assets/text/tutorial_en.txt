@@ -3,31 +3,51 @@
 ================================================================================
 
 Welcome to Syx Architect!
-This suite gives you full creative and sandbox control over your Songs of Syx city.
+The comprehensive creative, Schönbau, and sandbox suite for Songs of Syx (v0.71+).
 
-KEY FEATURES:
-1. Boosts & Innovation:
-   Instantly boost technology progression, research speed, and city innovation
-   points with customizable multiplier tiers (2x, 5x, 10x, 100x).
+OPENING THE SUITE:
+- Press [F10] on your keyboard anywhere in-game.
+- Click the discreet 'Syx Architect [F10]' button in the top HUD bar.
+- Open via the debug menu [Syx Architect].
 
-2. Zero Degradation & Spoilage:
-   Keep every structure in pristine condition forever without maintenance costs.
-   Food, rations, and perishable resources will never spoil in your granaries.
+CORE CAPABILITIES:
 
-3. Instant Build & Creative Schönbau:
-   Layout ambitious monuments, intricate road networks, and palatial districts
-   without waiting for haulers, brickmakers, or scaffolding builders.
+1. SEMANTIC SCHÖNBAU TIERS:
+   - Construction:
+     * Free Materials (Keep Work): Oddjobbers physically pave roads and build
+       walls, but material costs are 0! Enjoy the bustling city life.
+     * Fast & Free (10x Speed): Supercharged building speed at zero cost.
+     * Instant Build: Immediately completes all planned rooms, roads, walls,
+       ceilings, and fortifications with one click.
+   - Maintenance:
+     * Janitors Work (Free Mats): Janitors roam the city repairing buildings,
+       keeping the atmosphere alive without draining resources.
+     * Zero Decay: Permanently locks building condition at 100%.
+   - Knowledge:
+     * No Forgetting (High-Watermark): Unlocked technologies are never lost!
+     * Omniscience: Grants +1,000,000 innovation points instantly.
+   - Logistics:
+     * Raw Materials: Auto-tops up essential building resources to ~80%.
+     * All Assigned Crates: Supplies all assigned warehouse crates automatically.
 
-4. Logistics & Warehousing:
-   Multiply crate storage sizes to eliminate micro-management bottlenecks.
+2. WORLD, NATURE & POPULATION MANAGER:
+   - Instant Immigrants: Spawn +10, +50, or +100 citizens of any playable species
+     directly to populate your grand districts.
+   - Cosmopolitan Wave: Spawn +25 citizens of every playable species at once!
+   - Anti-Aging: Multiplies life expectancy by 1000x to prevent deaths from old age.
+   - Clear Building Weather: Freezes bright daylight, clears storm clouds, rain,
+     and snow for crystal-clear model building and screenshot captures.
+   - 100% Soil Fertility: Maximizes soil moisture map-wide, letting you place farms
+     and lush orchards anywhere without ground restrictions.
 
-5. Sandbox Peace & Raid Immunity:
-   Focus entirely on architecture and city aesthetics without worrying about
-   unexpected devastation from barbarian raids.
+3. SECURITY & PEACE:
+   - Raid Immunity: Automatically cancels barbarian raids and hostile incursions.
+   - Combat Auto-Win: Instantly shatters enemy morale for guaranteed victory.
 
-HOW TO OPEN IN-GAME:
-- Press the configured hotkey or open the debug panel in the top-right menu.
-- Select 'Syx Architect' to toggle this control panel at any time.
+4. 1-CLICK INSTANT ACTIONS:
+   - [⚡ Instant Build Now] settlement-wide.
+   - [📦 Fill All Crates to 100%] in all warehouses.
+   - [⚔️ Win Combat Now] on all active battlefields.
 
-Enjoy building your dream metropolis!
+Enjoy designing your dream empire!
 ================================================================================

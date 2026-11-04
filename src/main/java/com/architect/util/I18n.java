@@ -44,6 +44,8 @@ public final class I18n {
         EN_STRINGS.put("preset.living", "Living City (Free Mats + Work)");
         EN_STRINGS.put("preset.vanilla", "Reset All to Vanilla");
 
+        EN_STRINGS.put("ui.tab.city", "🏗️ City & Economy");
+        EN_STRINGS.put("ui.tab.world", "🌍 World & Population");
         EN_STRINGS.put("ui.tab.boosts", "Boosts & Science");
         EN_STRINGS.put("ui.tab.logistics", "Logistics & Storage");
         EN_STRINGS.put("ui.tab.construction", "Construction & Decor");
@@ -97,6 +99,19 @@ public final class I18n {
         EN_STRINGS.put("status.crates_filled", "All warehouse crates topped up to 100%!");
         EN_STRINGS.put("status.combat_won", "Victory achieved on all active combat fronts!");
 
+        // World & Population Strings
+        EN_STRINGS.put("world.population.title", "Population Manager (Instant Living City)");
+        EN_STRINGS.put("world.population.species", "Species:");
+        EN_STRINGS.put("world.btn.spawn10", "+10 Citizens");
+        EN_STRINGS.put("world.btn.spawn50", "+50 Citizens");
+        EN_STRINGS.put("world.btn.spawn100", "+100 Citizens");
+        EN_STRINGS.put("world.btn.spawn_all_25", "✨ +25 Citizens (All Playable Races)");
+        EN_STRINGS.put("world.env.title", "Atmosphere, Longevity & Environment");
+        EN_STRINGS.put("world.toggle.aging", "⏳ Disable Aging & Old Age Death");
+        EN_STRINGS.put("world.toggle.weather", "☀️ Freeze Clear Daylight & Weather");
+        EN_STRINGS.put("world.toggle.fertility", "🌱 Maximum Soil Moisture & Fertility (100%)");
+        EN_STRINGS.put("world.btn.fertility_now", "🌱 Set Map Soil Moisture to 100% Now");
+
         // Built-in German dictionary
         DE_STRINGS.put("mod.name", "Syx Architect");
         DE_STRINGS.put("mod.desc", "Creative-, Schönbau- & Sandbox-Suite für Songs of Syx.");
@@ -106,6 +121,8 @@ public final class I18n {
         DE_STRINGS.put("preset.living", "Lebendiges Gewusel (Gratis Material + Bau)");
         DE_STRINGS.put("preset.vanilla", "Alles auf Vanilla zurücksetzen");
 
+        DE_STRINGS.put("ui.tab.city", "🏗️ Stadt & Wirtschaft");
+        DE_STRINGS.put("ui.tab.world", "🌍 Welt & Bevölkerung");
         DE_STRINGS.put("ui.tab.boosts", "Boosts & Forschung");
         DE_STRINGS.put("ui.tab.logistics", "Logistik & Lager");
         DE_STRINGS.put("ui.tab.construction", "Bau & Schönbau");
@@ -158,6 +175,19 @@ public final class I18n {
         DE_STRINGS.put("status.instant_triggered", "Sofortbau ausgeführt!");
         DE_STRINGS.put("status.crates_filled", "Alle Lagerkisten auf 100% aufgefüllt!");
         DE_STRINGS.put("status.combat_won", "Sieg auf allen aktiven Schlachtfeldern errungen!");
+
+        // World & Population Strings
+        DE_STRINGS.put("world.population.title", "Bevölkerungs-Manager (Sofort-Gewusel)");
+        DE_STRINGS.put("world.population.species", "Spezies:");
+        DE_STRINGS.put("world.btn.spawn10", "+10 Bürger");
+        DE_STRINGS.put("world.btn.spawn50", "+50 Bürger");
+        DE_STRINGS.put("world.btn.spawn100", "+100 Bürger");
+        DE_STRINGS.put("world.btn.spawn_all_25", "✨ +25 Bürger (Alle spielbaren Rassen)");
+        DE_STRINGS.put("world.env.title", "Atmosphäre, Langlebigkeit & Umwelt");
+        DE_STRINGS.put("world.toggle.aging", "⏳ Alterung & Alterstod deaktivieren");
+        DE_STRINGS.put("world.toggle.weather", "☀️ Schönes Bauwetter & Tageslicht fixieren");
+        DE_STRINGS.put("world.toggle.fertility", "🌱 Maximale Bodenfeuchte & Fruchtbarkeit (100%)");
+        DE_STRINGS.put("world.btn.fertility_now", "🌱 Bodenfeuchte sofort auf 100% setzen");
     }
 
     private I18n() {}

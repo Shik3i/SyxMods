@@ -18,7 +18,7 @@ import snake2d.util.file.FilePutter;
 public final class ArchitectState {
 
     public static final int MAGIC_HEADER = 0x59584152; // 'SXAR'
-    public static final int CURRENT_VERSION = 2;
+    public static final int CURRENT_VERSION = 3;
 
     // Semantic Schönbau and sandbox settings
     public MaintenanceTier maintenanceTier = MaintenanceTier.VANILLA;
@@ -34,6 +34,11 @@ public final class ArchitectState {
     public boolean loyaltyBoost = false;
     public boolean raidImmunity = false;
     public boolean battleAutoWin = false;
+
+    // World & Population toggles (Sprint 3)
+    public boolean freezeNiceWeather = false;
+    public boolean disableAging = false;
+    public boolean maxFertility = false;
 
     // Preferences
     public String language = "en";
@@ -53,6 +58,9 @@ public final class ArchitectState {
         loyaltyBoost = false;
         raidImmunity = false;
         battleAutoWin = false;
+        freezeNiceWeather = false;
+        disableAging = false;
+        maxFertility = false;
         language = "en";
         I18n.setLanguage(I18n.Language.EN);
     }
@@ -75,6 +83,11 @@ public final class ArchitectState {
         file.bool(loyaltyBoost);
         file.bool(raidImmunity);
         file.bool(battleAutoWin);
+
+        // Version 3 fields
+        file.bool(freezeNiceWeather);
+        file.bool(disableAging);
+        file.bool(maxFertility);
 
         file.chars(language != null ? language : "en");
     }
@@ -103,6 +116,16 @@ public final class ArchitectState {
             raidImmunity = file.bool();
             battleAutoWin = file.bool();
 
+            if (version >= 3) {
+                freezeNiceWeather = file.bool();
+                disableAging = file.bool();
+                maxFertility = file.bool();
+            } else {
+                freezeNiceWeather = false;
+                disableAging = false;
+                maxFertility = false;
+            }
+
             language = file.chars();
             I18n.setLanguage(I18n.Language.fromCode(language));
         } else if (version == 1) {
@@ -118,6 +141,9 @@ public final class ArchitectState {
             file.i(); // storage tier
             file.bool();
             file.bool();
+            freezeNiceWeather = false;
+            disableAging = false;
+            maxFertility = false;
             language = file.chars();
             I18n.setLanguage(I18n.Language.fromCode(language));
         }

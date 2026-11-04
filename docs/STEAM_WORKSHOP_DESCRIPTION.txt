@@ -1,0 +1,71 @@
+[h1]Syx Architect - Creative, Schönbau & Sandbox Suite[/h1]
+
+[b]Syx Architect[/b] transforms [i]Songs of Syx[/i] into the ultimate model-building sandbox! Whether you want to construct colossal Roman-style metropolises, design sprawling paved road systems, enjoy the charming atmosphere of bustling workers without tedious resource grinding, or customize weather and population on the fly, Syx Architect puts complete control at your fingertips.
+
+[h2]⚡ Highlights & Features[/h2]
+
+[b]1. Semantic Schönbau Tiers (Decoupling Work from Material Costs):[/b]
+[list]
+[*] [b]Baustellen-Modus (Construction):[/b]
+  - [i]Free Materials (Keep Work):[/i] Your oddjobbers physically pave roads, build walls, and erect grand halls—the bustling street life remains 100% active, but no materials are drained from your stockpiles!
+  - [i]Fast & Free (10x Speed):[/i] Supercharged building pace at zero resource cost.
+  - [i]Instant Build:[/i] Completes all pending rooms, roads, walls, and fortifications across the entire map immediately.
+[*] [b]Gebäude-Wartung (Maintenance):[/b]
+  - [i]Janitors Work (Free Mats):[/i] Janitors roam the city repairing buildings, keeping the bustling atmosphere alive with zero repair resource consumption.
+  - [i]Zero Decay:[/i] Permanently locks all building condition at 100%.
+[*] [b]Wissen & Forschung (Knowledge):[/b]
+  - [i]No Forgetting (High-Watermark):[/i] Unlocked technologies are never forgotten, even during lab worker shortages.
+  - [i]Omniscience:[/i] Grants +1,000,000 innovation points instantly.
+[*] [b]Lagerhaus-Logistik (Logistics):[/b]
+  - Automatically maintains building materials or all assigned warehouse crates at ~80% capacity.
+[/list]
+
+[b]2. World, Nature & Population Manager:[/b]
+[list]
+[*] [b]Instant Immigrant Spawning:[/b] One-click buttons to spawn +10, +50, or +100 citizens of any playable species directly to populate your new districts.
+[*] [b]Cosmopolitan Wave:[/b] Instantly spawns +25 citizens of EVERY playable race at once!
+[*] [b]Anti-Aging & Longevity:[/b] Eliminates deaths by old age, keeping your master artisans alive indefinitely.
+[*] [b]Clear Building Weather & Daylight:[/b] Freezes crystal-clear daylight, clearing storm clouds, rain, and snow for perfect architectural visibility and screenshot beauty.
+[*] [b]100% Soil Moisture & Fertility:[/b] Maximizes ground moisture map-wide, letting you place farms and orchards anywhere without soil quality restrictions.
+[/list]
+
+[b]3. Security, Peace & 1-Click Instant Actions:[/b]
+[list]
+[*] [b]Raid Immunity:[/b] Automatically cancels barbarian raids and hostile incursions before they strike.
+[*] [b]Combat Auto-Win:[/b] Immediately shatters enemy army morale for guaranteed tactical victory.
+[*] [b][⚡ Instant Build Now][/b] settlement-wide.
+[*] [b][📦 Fill All Crates to 100%][/b] in all warehouses.
+[*] [b][⚔️ Click Here to Win Combat][/b] on active battlefields.
+[/list]
+
+[h2]🎮 In-Game Controls & Hotkey[/h2]
+[list]
+[*] Press [b][F10][/b] anywhere in-game to toggle the interface.
+[*] Click the discreet [b]'Syx Architect [F10]'[/b] HUD button in the top bar.
+[*] Switch seamlessly between [b]English[/b] and [b]Deutsch[/b] with one click.
+[*] Safe savegame integration: save and load anytime without corrupting vanilla saves.
+[/list]
+
+---
+
+[h1]🇩🇪 Deutsche Beschreibung[/h1]
+
+[b]Syx Architect[/b] verwandelt [i]Songs of Syx[/i] in den perfekten Modellbaukasten! Ob monumentale Paläste, kilometerweite Pflasterstraßen, lebendiges Gewusel ohne Ressourcen-Grind oder direkte Kontrolle über Wetter, Bodenfruchtbarkeit und Bevölkerung – Syx Architect gibt dir alle Freiheiten.
+
+[h2]⚡ Kernfunktionen[/h2]
+
+[list]
+[*] [b]Baustellen-Modus:[/b] Gratis-Material mit echten Bauarbeitern (Gewusel bleibt erhalten!) oder augenblicklicher Sofortbau.
+[*] [b]Gebäude-Wartung:[/b] Hausmeister reparieren kostenfrei oder dauerhaft 100% Gebäudezustand.
+[*] [b]Forschung:[/b] Nie wieder Technologien vergessen oder sofortige Allwissenheit (+1 Mio. Punkte).
+[*] [b]Bevölkerungs-Manager:[/b] Spawne per Klick Bürger jeder Spezies (+10, +50, +100) oder eine kosmopolitische Welle aller spielbaren Rassen.
+[*] [b]Alterungsschutz:[/b] Verhindert das Sterben von Bürgern an Altersschwäche.
+[*] [b]Schönes Bauwetter & Tageslicht:[/b] Helles Tageslicht dauerhaft fixieren, keine störenden Wolken oder Dunkelheit beim Bauen.
+[*] [b]100% Bodenfruchtbarkeit:[/b] Maximale Bodenfeuchte kartenweit für grenzenlose Freiheit bei Feldern und Obstgärten.
+[*] [b]Raid-Schutz & Sofortsieg:[/b] Schutz vor Überfällen und 1-Klick-Sieg auf dem Schlachtfeld.
+[*] [b]Bilinguales UI & F10 Hotkey:[/b] Öffne das Menü jederzeit mit F10 oder über die HUD-Leiste; Sprache jederzeit zwischen Deutsch und Englisch umschaltbar.
+[/list]
+
+[h2]Compatibility[/h2]
+[b]Songs of Syx Version:[/b] v0.71.44+ (V71)
+[b]Performance:[/b] 100% Zero-Allocation im 60 Hz Update-Loop. Garantiert keine Ruckler oder GC-Pausen.

@@ -3,33 +3,54 @@
 ================================================================================
 
 Willkommen bei Syx Architect!
-Diese Suite verleiht dir vollständige kreative Kontrolle und Sandbox-Freiheit
-über deine Siedlung in Songs of Syx.
-
-KERNFUNKTIONEN:
-1. Forschung & Innovation:
-   Beschleunige Forschung, Innovationspunkte und Tech-Fortschritt mit flexiblen
-   Multiplikator-Stufen (2x, 5x, 10x, 100x).
-
-2. Verschleißfrei & Haltbar:
-   Halte alle Gebäude dauerhaft in perfektem Zustand, ganz ohne Wartungsaufwand
-   oder Hausmeister. Nahrung und Waren verderben in Lagern niemals.
-
-3. Instant Build & Schönbau:
-   Entwerfe monumentale Paläste, kunstvolle Straßennetze und gigantische
-   Distrikte ohne Wartezeit auf Transporte oder Materialbeschaffung.
-
-4. Logistik & Lagerkapazität:
-   Vervielfache die Kapazität von Lagerkisten und Halden, um Engpässe sofort
-   zu beseitigen.
-
-5. Sandbox-Frieden & Raid-Schutz:
-   Konzentriere dich ungestört auf Stadtplanung und Ästhetik – feindliche
-   Überfälle und Raids können automatisch neutralisiert werden.
+Deine ultimative Creative-, Schönbau- und Sandbox-Suite für Songs of Syx (v0.71+).
 
 ÖFFNEN IM SPIEL:
-- Über das Debug-Menü oben rechts oder die konfigurierte Tastenkombination.
-- Wähle 'Syx Architect' aus, um das Kontrollfenster jederzeit aufzurufen.
+- Drücke [F10] jederzeit auf deiner Tastatur.
+- Klicke auf den 'Syx Architect [F10]'-Button in der oberen HUD-Leiste.
+- Alternativ über das Debug-Menü [Syx Architect].
 
-Viel Freude beim Erschaffen deiner Traumstadt!
+KERNFUNKTIONEN:
+
+1. SEMANTISCHE SCHÖNBAU-STUFEN (ARBEIT & WAREN ENTKOPPELT):
+   - Baustellen-Modus:
+     * Gratis Material (Arbeit bleibt!): Deine Bauarbeiter pflastern Straßen
+       und errichten Mauern ganz normal (Gewusel bleibt erhalten!), aber ohne
+       Ressourcenkosten aus dem Lager.
+     * Schnell & Gratis (10x Tempo): Rasanter Baufortschritt zum Nulltarif.
+     * Sofortbau (Instant Build): Stellt alle geplanten Räume, Straßen,
+       Plätze, Mauern, Decken und Festungen sofort fertig.
+   - Gebäude-Wartung:
+     * Hausmeister reparieren (Gratis Material): Hausmeister laufen durch die
+       Stadt und halten alles in Schuss, ohne Verschleißmaterial zu verbrauchen.
+     * Kein Verschleiß: Friert den Zustand aller Gebäude dauerhaft auf 100% ein.
+   - Wissen & Forschung:
+     * Nie wieder vergessen (High-Watermark): Einmal erforschte Technologien
+       bleiben für immer erhalten – kein Rückschritt bei Laborschwankungen!
+     * Allwissenheit: Gewährt sofort +1.000.000 Innovationspunkte.
+   - Lagerhaus-Logistik:
+     * Basis-Rohstoffe: Hält Bau- und Primärgüter auf ~80% Füllstand.
+     * Alle zugewiesenen Kisten: Hält jede zugewiesene Lagerkiste versorgt.
+
+2. WELT, NATUR & BEVÖLKERUNGS-MANAGER:
+   - Sofort-Einwanderung: Spawne per Klick +10, +50 oder +100 Bürger jeder
+     Spezies, um neue Stadtviertel sofort mit Leben zu füllen.
+   - Kosmopolitische Welle: Spawne +25 Bürger aller spielbaren Völker zugleich!
+   - Alterungsschutz: Multipliziert die Lebenserwartung drastisch, sodass keine
+     Bürger an Altersschwäche sterben.
+   - Schönes Bauwetter & Tageslicht: Friert angenehmes Tageslicht ein und vertreibt
+     Wolken, Regen und Schnee – ideal für Modellbau und Screenshots.
+   - 100% Bodenfruchtbarkeit: Maximiert die Bodenfeuchte kartenweit, damit Farmen
+     und Obstgärten überall ästhetisch und ertragreich angelegt werden können.
+
+3. SICHERHEIT & KAMPF:
+   - Raid-Immunität: Bricht feindliche Invasionen und Raids automatisch ab.
+   - Sofort-Sieg im Kampf: Zerschlägt die Moral gegnerischer Armeen augenblicklich.
+
+4. 1-KLICK SOFORTAKTIONEN:
+   - [⚡ Sofortbau jetzt ausführen] für die gesamte Karte.
+   - [📦 Alle Lagerkisten auf 100% füllen] in sämtlichen Lagern.
+   - [⚔️ Sofort-Sieg im Kampf] auf allen aktiven Schlachtfeldern.
+
+Viel Freude beim Erschaffen deiner Traummetropole!
 ================================================================================
