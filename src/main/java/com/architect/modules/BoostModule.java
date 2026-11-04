@@ -8,6 +8,9 @@ import com.architect.config.CheatTiers.MaintenanceTier;
 import game.GAME;
 import game.boosting.BOOSTABLES;
 import game.boosting.BSourceInfo;
+import game.boosting.BoostSpec;
+import game.boosting.Boostable;
+import game.boosting.Booster;
 import game.boosting.BoosterImp;
 import game.faction.player.PTech;
 import game.faction.player.Player;
@@ -31,14 +34,23 @@ public final class BoostModule implements ArchitectModule {
     private static final double TECH_CHECK_INTERVAL = 1.0;
 
     public static class DynamicBooster extends BoosterImp {
-        private double activeValue = 1.0;
+        private double activeValue;
 
         public DynamicBooster(BSourceInfo info, boolean isMul) {
-            super(info, 1.0, isMul);
+            this(info, isMul ? 1.0 : 0.0, isMul);
+        }
+
+        public DynamicBooster(BSourceInfo info, double initialValue, boolean isMul) {
+            super(info, initialValue, isMul);
+            this.activeValue = initialValue;
         }
 
         public void setValue(double val) {
             this.activeValue = val;
+        }
+
+        public double getValue() {
+            return activeValue;
         }
 
         @Override
@@ -50,49 +62,109 @@ public final class BoostModule implements ArchitectModule {
         public double vGet(Player player) {
             return activeValue;
         }
+
+        @Override
+        public double vGet(init.type.HCLASS_RACE hclass) {
+            return activeValue;
+        }
+
+        @Override
+        public double vGet(world.map.regions.Region region) {
+            return activeValue;
+        }
+
+        @Override
+        public double vGet(settlement.stats.Induvidual ind) {
+            return activeValue;
+        }
+
+        @Override
+        public double vGet(game.battle.div.Div div) {
+            return activeValue;
+        }
+
+        @Override
+        public double vGet(game.faction.npc.FactionNPC npc) {
+            return activeValue;
+        }
     }
+
+    private static void registerBooster(Boostable boostable, Booster booster) {
+        if (boostable != null && booster != null && !boostable.contains(booster)) {
+            boostable.addFactor(new BoostSpec(booster, boostable, null));
+        }
+    }
+
+    private void ensureBoostersRegistered() {
+        if (innovationBooster == null) {
+            init();
+        }
+
+        try {
+            if (BOOSTABLES.CIVICS() != null) {
+                registerBooster(BOOSTABLES.CIVICS().INNOVATION, innovationBooster);
+                registerBooster(BOOSTABLES.CIVICS().MAINTENANCE, maintenanceBooster);
+                registerBooster(BOOSTABLES.CIVICS().SPOILAGE, spoilageBooster);
+            }
+        } catch (Throwable ignored) {
+        }
+
+        try {
+            if (BOOSTABLES.BEHAVIOUR() != null) {
+                registerBooster(BOOSTABLES.BEHAVIOUR().LOYALTY, loyaltyBooster);
+                registerBooster(BOOSTABLES.BEHAVIOUR().HAPPI, happinessBooster);
+            }
+        } catch (Throwable ignored) {
+        }
+
+        try {
+            if (GAME.player() != null && GAME.player().tech != null && GAME.player().tech.currs() != null) {
+                for (int i = 0; i < GAME.player().tech.currs().size(); i++) {
+                    PTech.TechCurr tc = GAME.player().tech.currs().get(i);
+                    if (tc != null && tc.cu != null && tc.cu.bo != null) {
+                        registerBooster(tc.cu.bo, innovationBooster);
+                    }
+                }
+            }
+        } catch (Throwable ignored) {
+        }
+    }
+
+    private static final snake2d.util.sprite.SPRITE DUMMY_SPRITE = new snake2d.util.sprite.SPRITE() {
+        @Override
+        public void render(snake2d.SPRITE_RENDERER r, int x1, int x2, int y1, int y2) {}
+        @Override
+        public void renderTextured(snake2d.util.sprite.TextureCoords t, int x1, int x2, int y1, int y2) {}
+        @Override
+        public int width() { return 16; }
+        @Override
+        public int height() { return 16; }
+    };
 
     @Override
     public void init() {
         if (innovationBooster == null) {
-            BSourceInfo source = new BSourceInfo("Syx Architect", UI.icons().s.cog);
-            innovationBooster = new DynamicBooster(source, true);
-            maintenanceBooster = new DynamicBooster(source, true);
-            spoilageBooster = new DynamicBooster(source, true);
-            loyaltyBooster = new DynamicBooster(source, true);
-            happinessBooster = new DynamicBooster(source, true);
+            snake2d.util.sprite.SPRITE icon = (UI.icons() != null && UI.icons().s != null) ? UI.icons().s.cog : DUMMY_SPRITE;
+            BSourceInfo source = new BSourceInfo("Syx Architect", icon);
+            // Innovation is ADDITIVE (isMul = false) so it adds research points directly even with 0 labs!
+            innovationBooster = new DynamicBooster(source, 0.0, false);
+            maintenanceBooster = new DynamicBooster(source, 1.0, true);
+            spoilageBooster = new DynamicBooster(source, 1.0, true);
+            // Loyalty is ADDITIVE (isMul = false) because base value is 0.0 (+1.0 = +100%)
+            loyaltyBooster = new DynamicBooster(source, 0.0, false);
+            happinessBooster = new DynamicBooster(source, 1.0, true);
         }
 
-        // Attach to core game boostables if not already present
-        if (BOOSTABLES.CIVICS() != null) {
-            if (BOOSTABLES.CIVICS().INNOVATION != null && !BOOSTABLES.CIVICS().INNOVATION.fGlobal.contains(innovationBooster)) {
-                BOOSTABLES.CIVICS().INNOVATION.fGlobal.add(innovationBooster);
-            }
-            if (BOOSTABLES.CIVICS().MAINTENANCE != null && !BOOSTABLES.CIVICS().MAINTENANCE.fGlobal.contains(maintenanceBooster)) {
-                BOOSTABLES.CIVICS().MAINTENANCE.fGlobal.add(maintenanceBooster);
-            }
-            if (BOOSTABLES.CIVICS().SPOILAGE != null && !BOOSTABLES.CIVICS().SPOILAGE.fGlobal.contains(spoilageBooster)) {
-                BOOSTABLES.CIVICS().SPOILAGE.fGlobal.add(spoilageBooster);
-            }
-        }
-
-        if (BOOSTABLES.BEHAVIOUR() != null) {
-            if (BOOSTABLES.BEHAVIOUR().LOYALTY != null && !BOOSTABLES.BEHAVIOUR().LOYALTY.fGlobal.contains(loyaltyBooster)) {
-                BOOSTABLES.BEHAVIOUR().LOYALTY.fGlobal.add(loyaltyBooster);
-            }
-            if (BOOSTABLES.BEHAVIOUR().HAPPI != null && !BOOSTABLES.BEHAVIOUR().HAPPI.fGlobal.contains(happinessBooster)) {
-                BOOSTABLES.BEHAVIOUR().HAPPI.fGlobal.add(happinessBooster);
-            }
-        }
+        ensureBoostersRegistered();
     }
 
     @Override
     public void update(double ds, ArchitectState state) {
-        // High-watermark check for NO_FORGETTING (every 1s)
-        if (state.knowledgeTier == KnowledgeTier.NO_FORGETTING) {
-            techCheckTimer += ds;
-            if (techCheckTimer >= TECH_CHECK_INTERVAL) {
-                techCheckTimer = 0.0;
+        techCheckTimer += ds;
+        if (techCheckTimer >= TECH_CHECK_INTERVAL) {
+            techCheckTimer = 0.0;
+            ensureBoostersRegistered();
+            if (state.knowledgeTier == KnowledgeTier.NO_FORGETTING) {
                 checkHighWatermark(state);
             }
         }
@@ -110,32 +182,31 @@ public final class BoostModule implements ArchitectModule {
                 if (tech.currs() != null && tech.currs().size() > 0) {
                     PTech.TechCurr innovationCurr = tech.currs().get(0);
                     int allocatedPoints = innovationCurr.allocated();
-                    
+
                     // Track only legitimate allocated tech costs
                     if (allocatedPoints > state.highWatermarkInnovation) {
                         state.highWatermarkInnovation = allocatedPoints;
                     }
 
                     int currentTotal = innovationCurr.total();
-                    if (state.highWatermarkInnovation > 0 && currentTotal < state.highWatermarkInnovation) {
+                    int baseTotal = (int) Math.max(0, currentTotal - innovationBooster.getValue());
+                    if (state.highWatermarkInnovation > 0 && baseTotal < state.highWatermarkInnovation) {
                         // Compensate so unlocked technologies are never forgotten due to laboratory worker shifts
-                        double ratio = (double) state.highWatermarkInnovation / Math.max(1.0, (double) currentTotal);
-                        innovationBooster.setValue(ratio);
+                        double needed = (double) (state.highWatermarkInnovation - baseTotal);
+                        innovationBooster.setValue(needed);
                     } else if (state.knowledgeTier != KnowledgeTier.OMNISCIENCE) {
-                        innovationBooster.setValue(1.0);
+                        innovationBooster.setValue(0.0);
                     }
                 }
             }
-        } catch (Exception ignored) {
+        } catch (Throwable ignored) {
             // Protected against uninitialized game states
         }
     }
 
     @Override
     public void onStateChanged(ArchitectState state) {
-        if (innovationBooster == null) {
-            init();
-        }
+        ensureBoostersRegistered();
 
         // 1. Knowledge Tier
         if (state.knowledgeTier == KnowledgeTier.OMNISCIENCE) {
@@ -143,7 +214,7 @@ public final class BoostModule implements ArchitectModule {
         } else if (state.knowledgeTier == KnowledgeTier.NO_FORGETTING) {
             checkHighWatermark(state);
         } else {
-            innovationBooster.setValue(1.0);
+            innovationBooster.setValue(0.0);
         }
 
         // 2. Maintenance Tier
@@ -159,8 +230,7 @@ public final class BoostModule implements ArchitectModule {
         spoilageBooster.setValue(noSpoil ? 0.0 : 1.0);
 
         // 4. Loyalty & Happiness
-        double loyaltyVal = state.loyaltyBoost ? 10.0 : 1.0;
-        loyaltyBooster.setValue(loyaltyVal);
-        happinessBooster.setValue(loyaltyVal);
+        loyaltyBooster.setValue(state.loyaltyBoost ? 10.0 : 0.0);
+        happinessBooster.setValue(state.loyaltyBoost ? 10.0 : 1.0);
     }
 }

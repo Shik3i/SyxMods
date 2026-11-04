@@ -121,6 +121,17 @@ public class SanityTest {
             failed++;
         }
 
+        // Check 8: Omniscience & Booster Mechanics Verification
+        try {
+            testOmniscienceBoosterMechanics();
+            System.out.println("[PASS] Check 8: Omniscience additive boost & HCLASS_RACE dispatch verified (+1M points).");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] Check 8: Omniscience booster error: " + t.getMessage());
+            t.printStackTrace();
+            failed++;
+        }
+
         System.out.println("================================================================================");
         System.out.println("INTEGRATION TEST RESULTS: " + passed + " passed, " + failed + " failed.");
         System.out.println("================================================================================");
@@ -372,6 +383,34 @@ public class SanityTest {
         } catch (init.paths.ModInfo.ModInfoException e) {
             throw new AssertionError("Launcher ModInfo constructor rejected SyxArchitect: " + e.getMessage(), e);
         }
+    }
+
+    private static void testOmniscienceBoosterMechanics() throws Exception {
+        com.architect.modules.BoostModule boostModule = new com.architect.modules.BoostModule();
+        boostModule.init();
+
+        ArchitectState state = new ArchitectState();
+        state.knowledgeTier = KnowledgeTier.OMNISCIENCE;
+        boostModule.onStateChanged(state);
+
+        java.lang.reflect.Field f = com.architect.modules.BoostModule.class.getDeclaredField("innovationBooster");
+        f.setAccessible(true);
+        com.architect.modules.BoostModule.DynamicBooster booster = (com.architect.modules.BoostModule.DynamicBooster) f.get(null);
+
+        if (booster == null) {
+            throw new AssertionError("innovationBooster was not initialized!");
+        }
+
+        if (booster.isMul) {
+            throw new AssertionError("innovationBooster must have isMul = false (additive), but isMul was true!");
+        }
+
+        assertEquals("Omniscience active value", 1_000_000.0, booster.getValue(), 0.001);
+        assertEquals("HCLASS_RACE vGet value", 1_000_000.0, booster.vGet((init.type.HCLASS_RACE) null), 0.001);
+
+        state.knowledgeTier = KnowledgeTier.VANILLA;
+        boostModule.onStateChanged(state);
+        assertEquals("Vanilla active value", 0.0, booster.getValue(), 0.001);
     }
 
     private static void assertEquals(String field, Object expected, Object actual) {

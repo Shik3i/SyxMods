@@ -35,17 +35,32 @@ public final class WorldModule implements ArchitectModule {
     private int moistureRowCursor = 0;
     private static final int MOISTURE_ROWS_PER_TICK = 48;
 
+    private static final snake2d.util.sprite.SPRITE DUMMY_SPRITE = new snake2d.util.sprite.SPRITE() {
+        @Override
+        public void render(snake2d.SPRITE_RENDERER r, int x1, int x2, int y1, int y2) {}
+        @Override
+        public void renderTextured(snake2d.util.sprite.TextureCoords t, int x1, int x2, int y1, int y2) {}
+        @Override
+        public int width() { return 16; }
+        @Override
+        public int height() { return 16; }
+    };
+
     @Override
     public void init() {
         if (deathAgeBooster == null) {
-            BSourceInfo source = new BSourceInfo("Syx Architect", UI.icons().s.death);
+            snake2d.util.sprite.SPRITE icon = (UI.icons() != null && UI.icons().s != null) ? UI.icons().s.death : DUMMY_SPRITE;
+            BSourceInfo source = new BSourceInfo("Syx Architect", icon);
             deathAgeBooster = new BoostModule.DynamicBooster(source, true);
         }
 
-        if (BOOSTABLES.PHYSICS() != null && BOOSTABLES.PHYSICS().DEATH_AGE != null) {
-            if (!BOOSTABLES.PHYSICS().DEATH_AGE.fGlobal.contains(deathAgeBooster)) {
-                BOOSTABLES.PHYSICS().DEATH_AGE.fGlobal.add(deathAgeBooster);
+        try {
+            if (BOOSTABLES.PHYSICS() != null && BOOSTABLES.PHYSICS().DEATH_AGE != null) {
+                if (!BOOSTABLES.PHYSICS().DEATH_AGE.contains(deathAgeBooster)) {
+                    BOOSTABLES.PHYSICS().DEATH_AGE.addFactor(new game.boosting.BoostSpec(deathAgeBooster, BOOSTABLES.PHYSICS().DEATH_AGE, null));
+                }
             }
+        } catch (Throwable ignored) {
         }
     }
 
