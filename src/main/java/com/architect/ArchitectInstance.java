@@ -9,8 +9,16 @@ import com.architect.modules.LogisticsModule;
 import com.architect.modules.SecurityModule;
 import com.architect.ui.ArchitectUI;
 
+import init.constant.C;
+import init.sprite.UI.UI;
 import script.SCRIPT.SCRIPT_INSTANCE;
+import snake2d.CORE;
+import snake2d.KEYCODES;
+import snake2d.MButt;
 import snake2d.Renderer;
+import snake2d.util.color.COLOR;
+import snake2d.util.datatypes.COORDINATE;
+import snake2d.util.datatypes.Rec;
 import snake2d.util.file.FileGetter;
 import snake2d.util.file.FilePutter;
 import view.keyboard.KEYS;
@@ -29,6 +37,12 @@ public final class ArchitectInstance implements SCRIPT_INSTANCE {
     private final ConstructionModule constructionModule = new ConstructionModule();
     private final SecurityModule securityModule = new SecurityModule();
 
+    // Zero-allocation input state
+    private boolean wasF10Down = false;
+
+    // HUD button area (top-right screen position, 140x26 pixels)
+    private final Rec hudBounds = new Rec();
+
     // Reusable UI callback to prevent lambda allocation on each open
     private final ArchitectUI.UICallback uiCallback = new ArchitectUI.UICallback() {
         @Override
@@ -39,6 +53,16 @@ public final class ArchitectInstance implements SCRIPT_INSTANCE {
         @Override
         public void onInstantBuildRequested() {
             constructionModule.triggerInstantBuildAll();
+        }
+
+        @Override
+        public void onFillCratesRequested() {
+            logisticsModule.fillAllCratesToMax();
+        }
+
+        @Override
+        public void onWinCombatRequested() {
+            securityModule.instantWinCombat();
         }
     };
 
@@ -55,6 +79,14 @@ public final class ArchitectInstance implements SCRIPT_INSTANCE {
      */
     @Override
     public void update(double ds) {
+        // 1. Direct F10 Hotkey polling (always active, no debug mode required!)
+        boolean f10 = CORE.getInput().getKeyboard().isPressed(KEYCODES.KEY_F10);
+        if (f10 && !wasF10Down) {
+            toggleUI();
+        }
+        wasF10Down = f10;
+
+        // 2. Subsystem simulation updates
         boostModule.update(ds, state);
         logisticsModule.update(ds, state);
         constructionModule.update(ds, state);
@@ -72,8 +104,12 @@ public final class ArchitectInstance implements SCRIPT_INSTANCE {
     }
 
     /**
-     * Opens the in-game control interface.
+     * Opens or closes the in-game control interface.
      */
+    public void toggleUI() {
+        ArchitectUI.toggle(state, uiCallback);
+    }
+
     public void openUI() {
         ArchitectUI.open(state, uiCallback);
     }
@@ -91,12 +127,35 @@ public final class ArchitectInstance implements SCRIPT_INSTANCE {
 
     @Override
     public void render(Renderer r, float ds) {
-        // Zero-allocation rendering hook
+        // Render discreet HUD shortcut button in top bar (Zero allocation)
+        if (C.DIM() != null) {
+            int hudX = C.DIM().width() - 150;
+            int hudY = 4;
+            int hudW = 140;
+            int hudH = 24;
+            hudBounds.set(hudX, hudX + hudW, hudY, hudY + hudH);
+
+            COLOR.BLACK.render(r, hudBounds, 0);
+            COLOR.WHITE20.renderFrame(r, hudBounds, 1, 0);
+            if (UI.FONT() != null && UI.FONT().S != null) {
+                UI.FONT().S.render(r, "Syx Architect [F10]", hudX + 8, hudY + 5);
+            }
+        }
+    }
+
+    @Override
+    public void mouseClick(MButt button) {
+        if (button == MButt.LEFT) {
+            COORDINATE mouseCoo = CORE.getInput().getMouse().getCoo();
+            if (mouseCoo != null && hudBounds.holdsPoint(mouseCoo)) {
+                toggleUI();
+            }
+        }
     }
 
     @Override
     public void keyPush(KEYS key) {
-        // Keyboard listening hook
+        // Auxiliary key handler
     }
 
     @Override

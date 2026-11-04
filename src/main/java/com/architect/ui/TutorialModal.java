@@ -45,11 +45,12 @@ public final class TutorialModal {
         String[] keys = new String[]{
             "cheat.knowledge",
             "cheat.maintenance",
+            "cheat.construction",
+            "cheat.logistics",
             "cheat.spoilage",
             "cheat.loyalty",
-            "cheat.instant_build",
-            "cheat.infinite_crates",
-            "cheat.raid_protection"
+            "cheat.raid_protection",
+            "cheat.battle_autowin"
         };
 
         for (String key : keys) {

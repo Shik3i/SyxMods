@@ -1,8 +1,10 @@
 package com.architect.ui;
 
 import com.architect.config.ArchitectState;
+import com.architect.config.CheatTiers.ConstructionTier;
+import com.architect.config.CheatTiers.KnowledgeTier;
+import com.architect.config.CheatTiers.LogisticsTier;
 import com.architect.config.CheatTiers.MaintenanceTier;
-import com.architect.config.CheatTiers.MultiplierTier;
 import com.architect.util.I18n;
 
 import init.constant.C;
@@ -16,55 +18,163 @@ import view.main.VIEW;
 
 /**
  * Main GUI control center for Syx Architect.
- * Provides live controls for sandbox modules, cheats, and language toggles.
+ * Provides live controls for sandbox modules, semantic Schönbau presets, 1-click actions,
+ * and seamless in-game bilingual localization.
  */
 public final class ArchitectUI {
+
+    private static boolean isOpen = false;
 
     private ArchitectUI() {}
 
     public interface UICallback {
         void onStateUpdated();
         void onInstantBuildRequested();
+        void onFillCratesRequested();
+        void onWinCombatRequested();
+    }
+
+    public static boolean isOpen() {
+        return isOpen;
+    }
+
+    public static void close() {
+        if (isOpen) {
+            isOpen = false;
+            VIEW.inters().section.close();
+        }
+    }
+
+    public static void toggle(ArchitectState state, UICallback callback) {
+        if (isOpen) {
+            close();
+        } else {
+            open(state, callback);
+        }
     }
 
     public static void open(ArchitectState state, UICallback callback) {
-        int width = 560;
-        int height = 580;
+        isOpen = true;
+        int width = 620;
+        int height = 660;
 
-        GuiSection section = new GuiSection();
+        GuiSection root = new GuiSection();
         GPanel panel = new GPanel(width, height);
         panel.setTitle(I18n.get("ui.title"));
 
         ACTION closeAction = new ACTION() {
             @Override
             public void exe() {
+                isOpen = false;
                 VIEW.inters().section.close();
             }
         };
         panel.setCloseAction(closeAction);
 
         GuiSection content = new GuiSection();
-        content.pad(15);
+        content.pad(14);
 
-        // Subtitle
+        // Top Header Line: Subtitle + Language Toggle [DE | EN] + [?] Tutorial Button
+        GuiSection topHeader = new GuiSection();
         GText sub = new GText(UI.FONT().S, I18n.get("mod.desc"));
-        content.addDown(0, sub);
+        topHeader.add(sub, 0, 4);
 
-        // 1. Knowledge Tier
-        String knowledgeLabel = I18n.get("cheat.knowledge") + ": " + state.knowledgeTier.getLabel();
-        GButt.ButtPanel btnKnowledge = new GButt.ButtPanel(knowledgeLabel);
-        btnKnowledge.clickActionSet(new ACTION() {
+        GButt.ButtPanel btnLang = new GButt.ButtPanel("[" + I18n.getLanguage().code.toUpperCase() + "]");
+        btnLang.clickActionSet(new ACTION() {
             @Override
             public void exe() {
-                state.knowledgeTier = state.knowledgeTier.next();
+                I18n.toggleLanguage();
+                state.language = I18n.getLanguage().code;
                 callback.onStateUpdated();
-                open(state, callback); // Re-render updated labels
+                open(state, callback);
             }
         });
-        content.addDown(12, btnKnowledge);
+        topHeader.addRight(160, btnLang);
 
-        // 2. Building Wear (Maintenance)
-        String maintLabel = I18n.get("cheat.maintenance") + ": " + (state.maintenanceTier == MaintenanceTier.ZERO_DEGRADATION ? I18n.get("status.active") : state.maintenanceTier.getLabel());
+        GButt.ButtPanel btnTut = new GButt.ButtPanel("[?]");
+        btnTut.clickActionSet(new ACTION() {
+            @Override
+            public void exe() {
+                TutorialModal.open();
+            }
+        });
+        topHeader.addRight(8, btnTut);
+
+        content.addDown(0, topHeader);
+
+        // --- 1. Quick Presets Section ---
+        GText presetTitle = new GText(UI.FONT().M, I18n.get("ui.presets"));
+        presetTitle.lablify();
+        content.addDown(12, presetTitle);
+
+        GuiSection presetRow = new GuiSection();
+
+        // Preset 1: God Mode
+        GButt.ButtPanel btnGod = new GButt.ButtPanel("🌟 " + I18n.get("preset.god"));
+        btnGod.clickActionSet(new ACTION() {
+            @Override
+            public void exe() {
+                state.constructionTier = ConstructionTier.INSTANT_BUILD;
+                state.maintenanceTier = MaintenanceTier.NO_DECAY;
+                state.knowledgeTier = KnowledgeTier.OMNISCIENCE;
+                state.logisticsTier = LogisticsTier.ALL_ASSIGNED_CRATES;
+                state.spoilageDisabled = true;
+                state.loyaltyBoost = true;
+                state.raidImmunity = true;
+                callback.onStateUpdated();
+                open(state, callback);
+            }
+        });
+        presetRow.add(btnGod);
+
+        // Preset 2: Living City
+        GButt.ButtPanel btnLiving = new GButt.ButtPanel("🏗️ " + I18n.get("preset.living"));
+        btnLiving.clickActionSet(new ACTION() {
+            @Override
+            public void exe() {
+                state.constructionTier = ConstructionTier.FREE_MATERIALS_KEEP_WORK;
+                state.maintenanceTier = MaintenanceTier.JANITOR_WORK_FREE_MATS;
+                state.knowledgeTier = KnowledgeTier.NO_FORGETTING;
+                state.logisticsTier = LogisticsTier.RAW_MATERIALS_ONLY;
+                state.spoilageDisabled = false;
+                state.loyaltyBoost = true;
+                state.raidImmunity = true;
+                callback.onStateUpdated();
+                open(state, callback);
+            }
+        });
+        presetRow.addDown(6, btnLiving);
+
+        // Preset 3: Vanilla Reset
+        GButt.ButtPanel btnReset = new GButt.ButtPanel("🔄 " + I18n.get("preset.vanilla"));
+        btnReset.clickActionSet(new ACTION() {
+            @Override
+            public void exe() {
+                state.resetToDefaults();
+                callback.onStateUpdated();
+                open(state, callback);
+            }
+        });
+        presetRow.addDown(6, btnReset);
+
+        content.addDown(6, presetRow);
+
+        // --- 2. Semantic Modules & Cheat Toggles ---
+        // Construction Tier
+        String constrLabel = I18n.get("cheat.construction") + ": " + state.constructionTier.getLabel();
+        GButt.ButtPanel btnConstr = new GButt.ButtPanel(constrLabel);
+        btnConstr.clickActionSet(new ACTION() {
+            @Override
+            public void exe() {
+                state.constructionTier = state.constructionTier.next();
+                callback.onStateUpdated();
+                open(state, callback);
+            }
+        });
+        content.addDown(12, btnConstr);
+
+        // Maintenance Tier
+        String maintLabel = I18n.get("cheat.maintenance") + ": " + state.maintenanceTier.getLabel();
         GButt.ButtPanel btnMaint = new GButt.ButtPanel(maintLabel);
         btnMaint.clickActionSet(new ACTION() {
             @Override
@@ -74,22 +184,35 @@ public final class ArchitectUI {
                 open(state, callback);
             }
         });
-        content.addDown(8, btnMaint);
+        content.addDown(6, btnMaint);
 
-        // 3. Spoilage Toggle
-        String spoilLabel = I18n.get("cheat.spoilage") + ": " + (state.spoilageDisabled ? I18n.get("status.active") : I18n.get("status.inactive"));
-        GButt.ButtPanel btnSpoil = new GButt.ButtPanel(spoilLabel);
-        btnSpoil.clickActionSet(new ACTION() {
+        // Knowledge Tier
+        String knowLabel = I18n.get("cheat.knowledge") + ": " + state.knowledgeTier.getLabel();
+        GButt.ButtPanel btnKnow = new GButt.ButtPanel(knowLabel);
+        btnKnow.clickActionSet(new ACTION() {
             @Override
             public void exe() {
-                state.spoilageDisabled = !state.spoilageDisabled;
+                state.knowledgeTier = state.knowledgeTier.next();
                 callback.onStateUpdated();
                 open(state, callback);
             }
         });
-        content.addDown(8, btnSpoil);
+        content.addDown(6, btnKnow);
 
-        // 4. Loyalty & Peace Toggle
+        // Logistics Tier
+        String logLabel = I18n.get("cheat.logistics") + ": " + state.logisticsTier.getLabel();
+        GButt.ButtPanel btnLog = new GButt.ButtPanel(logLabel);
+        btnLog.clickActionSet(new ACTION() {
+            @Override
+            public void exe() {
+                state.logisticsTier = state.logisticsTier.next();
+                callback.onStateUpdated();
+                open(state, callback);
+            }
+        });
+        content.addDown(6, btnLog);
+
+        // Loyalty & Happiness Toggle
         String loyaltyLabel = I18n.get("cheat.loyalty") + ": " + (state.loyaltyBoost ? I18n.get("status.active") : I18n.get("status.inactive"));
         GButt.ButtPanel btnLoyalty = new GButt.ButtPanel(loyaltyLabel);
         btnLoyalty.clickActionSet(new ACTION() {
@@ -100,32 +223,22 @@ public final class ArchitectUI {
                 open(state, callback);
             }
         });
-        content.addDown(8, btnLoyalty);
+        content.addDown(6, btnLoyalty);
 
-        // 5. Instant Construction Toggle
-        String buildToggleLabel = I18n.get("cheat.instant_build") + " (Auto): " + (state.instantBuildActive ? I18n.get("status.active") : I18n.get("status.inactive"));
-        GButt.ButtPanel btnBuildToggle = new GButt.ButtPanel(buildToggleLabel);
-        btnBuildToggle.clickActionSet(new ACTION() {
+        // Spoilage Toggle
+        String spoilLabel = I18n.get("cheat.spoilage") + ": " + (state.spoilageDisabled ? I18n.get("status.active") : I18n.get("status.inactive"));
+        GButt.ButtPanel btnSpoil = new GButt.ButtPanel(spoilLabel);
+        btnSpoil.clickActionSet(new ACTION() {
             @Override
             public void exe() {
-                state.instantBuildActive = !state.instantBuildActive;
+                state.spoilageDisabled = !state.spoilageDisabled;
                 callback.onStateUpdated();
                 open(state, callback);
             }
         });
-        content.addDown(8, btnBuildToggle);
+        content.addDown(6, btnSpoil);
 
-        // 6. One-shot Instant Build Trigger
-        GButt.ButtPanel btnBuildNow = new GButt.ButtPanel("⚡ " + I18n.get("cheat.instant_build") + " (One-Shot)");
-        btnBuildNow.clickActionSet(new ACTION() {
-            @Override
-            public void exe() {
-                callback.onInstantBuildRequested();
-            }
-        });
-        content.addDown(8, btnBuildNow);
-
-        // 7. Raid Immunity Toggle
+        // Raid Immunity Toggle
         String raidLabel = I18n.get("cheat.raid_protection") + ": " + (state.raidImmunity ? I18n.get("status.active") : I18n.get("status.inactive"));
         GButt.ButtPanel btnRaid = new GButt.ButtPanel(raidLabel);
         btnRaid.clickActionSet(new ACTION() {
@@ -136,49 +249,55 @@ public final class ArchitectUI {
                 open(state, callback);
             }
         });
-        content.addDown(8, btnRaid);
+        content.addDown(6, btnRaid);
 
-        // Separator / Footer Controls
-        GuiSection footer = new GuiSection();
+        // --- 3. Instant Action Buttons ---
+        GuiSection actionSection = new GuiSection();
 
-        // Language toggle
-        GButt.ButtPanel btnLang = new GButt.ButtPanel(I18n.get("btn.language"));
-        btnLang.clickActionSet(new ACTION() {
+        // 1-Click Instant Build All
+        GButt.ButtPanel btnInstantBuild = new GButt.ButtPanel(I18n.get("btn.instant_build_now"));
+        btnInstantBuild.clickActionSet(new ACTION() {
             @Override
             public void exe() {
-                I18n.toggleLanguage();
-                state.language = I18n.getLanguage().code;
-                callback.onStateUpdated();
-                open(state, callback);
+                callback.onInstantBuildRequested();
             }
         });
-        footer.add(btnLang);
+        actionSection.add(btnInstantBuild);
 
-        // Tutorial button
-        GButt.ButtPanel btnTutorial = new GButt.ButtPanel(I18n.get("btn.tutorial"));
-        btnTutorial.clickActionSet(new ACTION() {
+        // 1-Click Fill All Crates to 100%
+        GButt.ButtPanel btnFillCrates = new GButt.ButtPanel(I18n.get("btn.fill_crates_100"));
+        btnFillCrates.clickActionSet(new ACTION() {
             @Override
             public void exe() {
-                TutorialModal.open();
+                callback.onFillCratesRequested();
             }
         });
-        footer.addRight(10, btnTutorial);
+        actionSection.addRight(8, btnFillCrates);
 
-        // Close button
+        content.addDown(10, actionSection);
+
+        // 1-Click Combat Auto-Win Button
+        GButt.ButtPanel btnWinCombat = new GButt.ButtPanel(I18n.get("btn.win_combat_now"));
+        btnWinCombat.clickActionSet(new ACTION() {
+            @Override
+            public void exe() {
+                callback.onWinCombatRequested();
+            }
+        });
+        content.addDown(6, btnWinCombat);
+
+        // Footer: Close Button
         GButt.ButtPanel btnClose = new GButt.ButtPanel(I18n.get("btn.close"));
         btnClose.clickActionSet(closeAction);
-        footer.addRight(10, btnClose);
+        content.addDown(12, btnClose);
 
-        content.addDown(18, footer);
+        root.add(panel);
+        root.add(content);
 
-        section.add(panel);
-        section.add(content);
-
-        // Center on screen
         if (C.DIM() != null) {
-            section.body().centerIn(C.DIM());
+            root.body().centerIn(C.DIM());
         }
 
-        VIEW.inters().section.activate(section);
+        VIEW.inters().section.activate(root);
     }
 }

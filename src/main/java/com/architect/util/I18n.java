@@ -39,6 +39,11 @@ public final class I18n {
         EN_STRINGS.put("mod.name", "Syx Architect");
         EN_STRINGS.put("mod.desc", "Creative, Schönbau & Sandbox Suite for Songs of Syx.");
         EN_STRINGS.put("ui.title", "Syx Architect - Creative Suite");
+        EN_STRINGS.put("ui.presets", "Quick Presets:");
+        EN_STRINGS.put("preset.god", "God Mode (Model Building)");
+        EN_STRINGS.put("preset.living", "Living City (Free Mats + Work)");
+        EN_STRINGS.put("preset.vanilla", "Reset All to Vanilla");
+
         EN_STRINGS.put("ui.tab.boosts", "Boosts & Science");
         EN_STRINGS.put("ui.tab.logistics", "Logistics & Storage");
         EN_STRINGS.put("ui.tab.construction", "Construction & Decor");
@@ -46,28 +51,42 @@ public final class I18n {
         EN_STRINGS.put("ui.tab.settings", "Settings");
 
         EN_STRINGS.put("cheat.knowledge", "Knowledge & Innovation");
-        EN_STRINGS.put("cheat.knowledge.desc", "Massively accelerates technology and innovation generation.");
-        EN_STRINGS.put("cheat.maintenance", "No Building Wear");
-        EN_STRINGS.put("cheat.maintenance.desc", "Prevents building degradation and eliminates maintenance needs.");
+        EN_STRINGS.put("cheat.knowledge.desc", "Locks research against forgetting or grants instant omniscience.");
+        EN_STRINGS.put("cheat.maintenance", "Building Maintenance");
+        EN_STRINGS.put("cheat.maintenance.desc", "Decouples janitor repair work from material costs.");
         EN_STRINGS.put("cheat.spoilage", "Infinite Shelf Life");
         EN_STRINGS.put("cheat.spoilage.desc", "Stored goods, food, and rations will never spoil.");
         EN_STRINGS.put("cheat.loyalty", "Absolute Loyalty & Peace");
         EN_STRINGS.put("cheat.loyalty.desc", "Maximizes citizen happiness and eliminates rebellion risks.");
-        EN_STRINGS.put("cheat.instant_build", "Instant Construction");
-        EN_STRINGS.put("cheat.instant_build.desc", "Instantly completes planned rooms, walls, and structures without resources.");
-        EN_STRINGS.put("cheat.infinite_crates", "Infinite Storage Crates");
-        EN_STRINGS.put("cheat.infinite_crates.desc", "Multiplies crate and stockpile capacities across the settlement.");
+        EN_STRINGS.put("cheat.construction", "Construction Mode");
+        EN_STRINGS.put("cheat.construction.desc", "Free building materials with active workers or instant build.");
+        EN_STRINGS.put("cheat.logistics", "Warehouse Auto-Refill");
+        EN_STRINGS.put("cheat.logistics.desc", "Keeps stockpiles and raw materials supplied automatically.");
         EN_STRINGS.put("cheat.raid_protection", "Raid Immunity");
         EN_STRINGS.put("cheat.raid_protection.desc", "Automatically cancels hostile raids and barbarian invasions.");
-        EN_STRINGS.put("cheat.battle_autowin", "Battle Auto-Win");
-        EN_STRINGS.put("cheat.battle_autowin.desc", "Ensures absolute morale victory in all tactical battles.");
+        EN_STRINGS.put("cheat.battle_autowin", "Combat Victory");
+        EN_STRINGS.put("cheat.battle_autowin.desc", "Ensures absolute victory in all tactical battles and sieges.");
 
-        EN_STRINGS.put("tier.off", "OFF");
-        EN_STRINGS.put("tier.normal", "2x");
-        EN_STRINGS.put("tier.high", "5x");
-        EN_STRINGS.put("tier.extreme", "10x");
-        EN_STRINGS.put("tier.god", "100x");
+        EN_STRINGS.put("tier.maintenance.vanilla", "Vanilla");
+        EN_STRINGS.put("tier.maintenance.janitors_free", "Janitors Work (Free Mats)");
+        EN_STRINGS.put("tier.maintenance.no_decay", "Zero Decay (No Wear)");
 
+        EN_STRINGS.put("tier.construction.vanilla", "Vanilla");
+        EN_STRINGS.put("tier.construction.free_work", "Free Materials (Keep Work)");
+        EN_STRINGS.put("tier.construction.fast_free", "Fast & Free (10x Speed)");
+        EN_STRINGS.put("tier.construction.instant", "Instant Build");
+
+        EN_STRINGS.put("tier.knowledge.vanilla", "Vanilla");
+        EN_STRINGS.put("tier.knowledge.no_forgetting", "No Forgetting (High-Watermark)");
+        EN_STRINGS.put("tier.knowledge.omniscience", "Omniscience (+1M Tech)");
+
+        EN_STRINGS.put("tier.logistics.vanilla", "Vanilla (Off)");
+        EN_STRINGS.put("tier.logistics.raw_only", "Raw Materials (~80%)");
+        EN_STRINGS.put("tier.logistics.all_crates", "All Assigned Crates (~80%)");
+
+        EN_STRINGS.put("btn.instant_build_now", "⚡ Instant Build Now");
+        EN_STRINGS.put("btn.fill_crates_100", "📦 Fill All Crates to 100%");
+        EN_STRINGS.put("btn.win_combat_now", "⚔️ Click Here to Win Combat");
         EN_STRINGS.put("btn.apply", "Apply");
         EN_STRINGS.put("btn.close", "Close");
         EN_STRINGS.put("btn.tutorial", "Tutorial & Guide");
@@ -75,11 +94,18 @@ public final class I18n {
         EN_STRINGS.put("status.active", "ACTIVE");
         EN_STRINGS.put("status.inactive", "INACTIVE");
         EN_STRINGS.put("status.instant_triggered", "Instant construction executed!");
+        EN_STRINGS.put("status.crates_filled", "All warehouse crates topped up to 100%!");
+        EN_STRINGS.put("status.combat_won", "Victory achieved on all active combat fronts!");
 
         // Built-in German dictionary
         DE_STRINGS.put("mod.name", "Syx Architect");
         DE_STRINGS.put("mod.desc", "Creative-, Schönbau- & Sandbox-Suite für Songs of Syx.");
         DE_STRINGS.put("ui.title", "Syx Architect - Creative Suite");
+        DE_STRINGS.put("ui.presets", "Schnellstart-Presets:");
+        DE_STRINGS.put("preset.god", "Modellbau / God Mode");
+        DE_STRINGS.put("preset.living", "Lebendiges Gewusel (Gratis Material + Bau)");
+        DE_STRINGS.put("preset.vanilla", "Alles auf Vanilla zurücksetzen");
+
         DE_STRINGS.put("ui.tab.boosts", "Boosts & Forschung");
         DE_STRINGS.put("ui.tab.logistics", "Logistik & Lager");
         DE_STRINGS.put("ui.tab.construction", "Bau & Schönbau");
@@ -87,28 +113,42 @@ public final class I18n {
         DE_STRINGS.put("ui.tab.settings", "Einstellungen");
 
         DE_STRINGS.put("cheat.knowledge", "Wissen & Innovation");
-        DE_STRINGS.put("cheat.knowledge.desc", "Beschleunigt Technologie- und Innovationspunkte massiv.");
-        DE_STRINGS.put("cheat.maintenance", "Kein Gebäude-Verschleiß");
-        DE_STRINGS.put("cheat.maintenance.desc", "Verhindert Gebäude-Degradation und macht Hausmeister überflüssig.");
+        DE_STRINGS.put("cheat.knowledge.desc", "Sichert erforschte Technologien und beschleunigt Innovation.");
+        DE_STRINGS.put("cheat.maintenance", "Gebäude-Wartung");
+        DE_STRINGS.put("cheat.maintenance.desc", "Entkoppelt Hausmeister-Arbeit von Reparatur-Materialkosten.");
         DE_STRINGS.put("cheat.spoilage", "Kein Verderb (Unendliche Haltbarkeit)");
         DE_STRINGS.put("cheat.spoilage.desc", "Gelagerte Nahrung und Güter verderben niemals.");
         DE_STRINGS.put("cheat.loyalty", "Absolute Loyalität & Zufriedenheit");
         DE_STRINGS.put("cheat.loyalty.desc", "Maximiert Zufriedenheit und verhindert Aufstände vollständig.");
-        DE_STRINGS.put("cheat.instant_build", "Sofortiges Bauen (Instant Build)");
-        DE_STRINGS.put("cheat.instant_build.desc", "Stellt geplante Räume, Wände und Gebäude sofort ohne Materialaufwand fertig.");
-        DE_STRINGS.put("cheat.infinite_crates", "Unendliche Lagerkisten");
-        DE_STRINGS.put("cheat.infinite_crates.desc", "Vervielfacht die Kapazität aller Kisten und Halden.");
+        DE_STRINGS.put("cheat.construction", "Baustellen-Modus");
+        DE_STRINGS.put("cheat.construction.desc", "Gratis-Baumaterialien mit echten Bauarbeitern oder Sofortbau.");
+        DE_STRINGS.put("cheat.logistics", "Lagerhaus Auto-Befüllung");
+        DE_STRINGS.put("cheat.logistics.desc", "Hält Lagerkisten und Rohstoffe automatisch versorgt.");
         DE_STRINGS.put("cheat.raid_protection", "Raid-Immunität");
         DE_STRINGS.put("cheat.raid_protection.desc", "Bricht feindliche Raids und Barbaren-Invasionen automatisch ab.");
-        DE_STRINGS.put("cheat.battle_autowin", "Taktischer Auto-Win");
-        DE_STRINGS.put("cheat.battle_autowin.desc", "Sichert bedingungslosen Moralsieg in allen Feldschlachten.");
+        DE_STRINGS.put("cheat.battle_autowin", "Schlachten-Sieg");
+        DE_STRINGS.put("cheat.battle_autowin.desc", "Sichert bedingungslosen Moralsieg in allen Feldschlachten und Belagerungen.");
 
-        DE_STRINGS.put("tier.off", "AUS");
-        DE_STRINGS.put("tier.normal", "2x");
-        DE_STRINGS.put("tier.high", "5x");
-        DE_STRINGS.put("tier.extreme", "10x");
-        DE_STRINGS.put("tier.god", "100x");
+        DE_STRINGS.put("tier.maintenance.vanilla", "Vanilla");
+        DE_STRINGS.put("tier.maintenance.janitors_free", "Hausmeister reparieren (Gratis Material)");
+        DE_STRINGS.put("tier.maintenance.no_decay", "Kein Verschleiß (Dauerhaft 100%)");
 
+        DE_STRINGS.put("tier.construction.vanilla", "Vanilla");
+        DE_STRINGS.put("tier.construction.free_work", "Gratis Material (Arbeit bleibt!)");
+        DE_STRINGS.put("tier.construction.fast_free", "Schnell & Gratis (10x Tempo)");
+        DE_STRINGS.put("tier.construction.instant", "Sofortbau (Instant Build)");
+
+        DE_STRINGS.put("tier.knowledge.vanilla", "Vanilla");
+        DE_STRINGS.put("tier.knowledge.no_forgetting", "Nie wieder vergessen (High-Watermark)");
+        DE_STRINGS.put("tier.knowledge.omniscience", "Allwissenheit (+1 Mio. Punkte)");
+
+        DE_STRINGS.put("tier.logistics.vanilla", "Vanilla (Aus)");
+        DE_STRINGS.put("tier.logistics.raw_only", "Nur Basis-Rohstoffe (~80%)");
+        DE_STRINGS.put("tier.logistics.all_crates", "Alle zugewiesenen Kisten (~80%)");
+
+        DE_STRINGS.put("btn.instant_build_now", "⚡ Sofortbau jetzt ausführen");
+        DE_STRINGS.put("btn.fill_crates_100", "📦 Alle Lagerkisten auf 100% füllen");
+        DE_STRINGS.put("btn.win_combat_now", "⚔️ Sofort-Sieg im Kampf (Win Combat)");
         DE_STRINGS.put("btn.apply", "Anwenden");
         DE_STRINGS.put("btn.close", "Schließen");
         DE_STRINGS.put("btn.tutorial", "Tutorial & Handbuch");
@@ -116,6 +156,8 @@ public final class I18n {
         DE_STRINGS.put("status.active", "AKTIV");
         DE_STRINGS.put("status.inactive", "INAKTIV");
         DE_STRINGS.put("status.instant_triggered", "Sofortbau ausgeführt!");
+        DE_STRINGS.put("status.crates_filled", "Alle Lagerkisten auf 100% aufgefüllt!");
+        DE_STRINGS.put("status.combat_won", "Sieg auf allen aktiven Schlachtfeldern errungen!");
     }
 
     private I18n() {}
