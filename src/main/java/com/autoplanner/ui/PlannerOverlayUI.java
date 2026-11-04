@@ -502,13 +502,15 @@ public final class PlannerOverlayUI {
         return SETT.ROOMS().placement.placer;
     }
 
+    private static int configModalX = -1;
+    private static int configModalY = -1;
+
     /**
      * Opens or refreshes the ornate Songs of Syx Configuration Center modal dialog.
      */
     public void openConfigModal() {
-        DraggableModalSection root = new DraggableModalSection();
         GuiSection content = new GuiSection();
-        int contentWidth = 660;
+        int contentWidth = 720;
 
         // Header Subtitle
         GText subTitle = new GText(UI.FONT().S, I18n.get("ui.panel.subtitle")).normalify();
@@ -528,8 +530,8 @@ public final class PlannerOverlayUI {
                 openConfigModal();
             }
         };
-        btnStyle.body().setWidth(200);
-        btnStyle.body().setHeight(30);
+        btnStyle.body().setWidth(240);
+        btnStyle.body().setHeight(32);
         content.addDown(8, createOptionRow(SPRITES.icons().m.place_fill, 
                 I18n.get("ui.panel.style"), 
                 I18n.get("ui.panel.style.desc"), 
@@ -548,8 +550,8 @@ public final class PlannerOverlayUI {
                 openConfigModal();
             }
         };
-        btnEff.body().setWidth(200);
-        btnEff.body().setHeight(30);
+        btnEff.body().setWidth(240);
+        btnEff.body().setHeight(32);
         content.addDown(8, createOptionRow(SPRITES.icons().m.ok, 
                 I18n.get("ui.panel.target_eff"), 
                 I18n.get("ui.panel.target_eff.desc"), 
@@ -569,8 +571,8 @@ public final class PlannerOverlayUI {
                 openConfigModal();
             }
         };
-        btnStorage.body().setWidth(200);
-        btnStorage.body().setHeight(30);
+        btnStorage.body().setWidth(240);
+        btnStorage.body().setHeight(32);
         content.addDown(8, createOptionRow(SPRITES.icons().m.storage_push, 
                 I18n.get("ui.panel.storage"), 
                 I18n.get("ui.panel.storage.desc"), 
@@ -589,8 +591,8 @@ public final class PlannerOverlayUI {
                 openConfigModal();
             }
         };
-        btnLang.body().setWidth(200);
-        btnLang.body().setHeight(30);
+        btnLang.body().setWidth(240);
+        btnLang.body().setHeight(32);
         content.addDown(8, createOptionRow(SPRITES.icons().m.openscroll, 
                 I18n.get("ui.panel.language"), 
                 I18n.get("ui.panel.language.desc"), 
@@ -638,13 +640,29 @@ public final class PlannerOverlayUI {
         };
         panel.setCloseAction(closeAction);
 
-        root.add(panel);
-        content.body().centerIn(panel.inner());
-        root.add(content);
+        int totalW = panel.body().width();
+        int totalH = panel.body().height();
 
-        if (C.DIM() != null) {
-            root.body().centerIn(C.DIM());
+        if (configModalX < 0 || configModalY < 0) {
+            configModalX = C.DIM() != null ? (C.WIDTH() - totalW) / 2 : 100;
+            configModalY = C.DIM() != null ? (C.HEIGHT() - totalH) / 2 : 100;
         }
+
+        // Clamp to screen
+        if (C.DIM() != null) {
+            configModalX = CLAMP.i(configModalX, 10, Math.max(10, C.WIDTH() - totalW - 10));
+            configModalY = CLAMP.i(configModalY, 10, Math.max(10, C.HEIGHT() - totalH - 10));
+        }
+
+        int dx = configModalX - panel.body().x1();
+        int dy = configModalY - panel.body().y1();
+        panel.inner().incrX(dx).incrY(dy);
+        content.body().centerIn(panel.inner());
+        moveRecursive(content, dx, dy);
+
+        DraggableModalSection root = new DraggableModalSection(panel, content);
+        root.add(panel);
+        root.add(content);
 
         VIEW.inters().section.activate(root);
     }
@@ -656,16 +674,17 @@ public final class PlannerOverlayUI {
         // Left Information Block (Icon + Title + Description)
         GuiSection leftBlock = new GuiSection();
         RENDEROBJ.Sprite iconObj = new RENDEROBJ.Sprite(icon);
-        leftBlock.add(iconObj, 0, 0);
+        leftBlock.add(iconObj, 0, 4);
 
         GuiSection textBlock = new GuiSection();
         GHeader header = new GHeader(title, UI.FONT().H2);
         textBlock.add(header, 0, 0);
 
         GText descText = new GText(UI.FONT().S, desc).normalify();
+        descText.setMaxWidth(width - 250 - 40);
         textBlock.addDown(2, descText);
 
-        leftBlock.addRightC(10, textBlock);
+        leftBlock.addRightC(12, textBlock);
         row.add(leftBlock, 0, 0);
 
         // Right Control Button
@@ -682,52 +701,62 @@ public final class PlannerOverlayUI {
      * Fully draggable modal container allowing the user to reposition dialogs freely with the mouse.
      */
     private static class DraggableModalSection extends GuiSection {
+        private final GPanel panel;
+        private final GuiSection content;
         private boolean isDragging = false;
         private int dragAnchorX = 0;
         private int dragAnchorY = 0;
 
-        public void moveDelta(int dx, int dy) {
-            if (dx == 0 && dy == 0) return;
-            body().incrX(dx).incrY(dy);
-            for (RENDEROBJ r : elements()) {
-                r.body().incrX(dx).incrY(dy);
-            }
+        public DraggableModalSection(GPanel panel, GuiSection content) {
+            this.panel = panel;
+            this.content = content;
         }
 
         @Override
         public void render(SPRITE_RENDERER r, float ds) {
             COORDINATE m = CORE.getInput().getMouse().getCoo();
-            if (isDragging) {
-                if (m != null && MButt.LEFT.isDown()) {
-                    int targetX = CLAMP.i(m.x() - dragAnchorX, 10, C.WIDTH() - body().width() - 10);
-                    int targetY = CLAMP.i(m.y() - dragAnchorY, 10, C.HEIGHT() - body().height() - 10);
-                    int dx = targetX - body().x1();
-                    int dy = targetY - body().y1();
-                    moveDelta(dx, dy);
+            if (m != null) {
+                if (MButt.LEFT.isDown()) {
+                    if (!isDragging) {
+                        // Title bar drag hitbox: panel top down to panel.inner().y1() + 6
+                        // Avoiding the close button [X] at the top right
+                        int titleY1 = panel.body().y1();
+                        int titleY2 = panel.inner().y1() + 6;
+                        int closeBtnX = panel.body().x2() - 36;
+                        if (m.y() >= titleY1 && m.y() <= titleY2 && m.x() >= panel.body().x1() && m.x() <= closeBtnX) {
+                            isDragging = true;
+                            dragAnchorX = m.x() - configModalX;
+                            dragAnchorY = m.y() - configModalY;
+                        }
+                    } else {
+                        int targetX = CLAMP.i(m.x() - dragAnchorX, 10, Math.max(10, C.WIDTH() - panel.body().width() - 10));
+                        int targetY = CLAMP.i(m.y() - dragAnchorY, 10, Math.max(10, C.HEIGHT() - panel.body().height() - 10));
+                        int dx = targetX - configModalX;
+                        int dy = targetY - configModalY;
+                        if (dx != 0 || dy != 0) {
+                            configModalX = targetX;
+                            configModalY = targetY;
+                            body().incrX(dx).incrY(dy);
+                            panel.inner().incrX(dx).incrY(dy);
+                            moveRecursive(content, dx, dy);
+                        }
+                    }
                 } else {
                     isDragging = false;
                 }
             }
             super.render(r, ds);
         }
+    }
 
-        @Override
-        public boolean click() {
-            COORDINATE m = CORE.getInput().getMouse().getCoo();
-            boolean clickedChild = super.click();
-            if (clickedChild) {
-                return true;
+    private static void moveRecursive(RENDEROBJ obj, int dx, int dy) {
+        if (dx == 0 && dy == 0) return;
+        obj.body().incrX(dx).incrY(dy);
+        if (obj instanceof GuiSection) {
+            GuiSection sec = (GuiSection) obj;
+            for (RENDEROBJ child : sec.elements()) {
+                moveRecursive(child, dx, dy);
             }
-            if (m != null) {
-                int headerY2 = body().y1() + 48;
-                if (m.y() >= body().y1() && m.y() <= headerY2 && m.x() >= body().x1() && m.x() <= body().x2()) {
-                    isDragging = true;
-                    dragAnchorX = m.x() - body().x1();
-                    dragAnchorY = m.y() - body().y1();
-                    return true;
-                }
-            }
-            return false;
         }
     }
 
