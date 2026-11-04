@@ -1,0 +1,11 @@
+"workshopitem"
+{
+    "appid"               "1162750"
+    "publishedfileid"     "##PUBLISHED_FILE_ID##"
+    "contentfolder"       "##CONTENT_FOLDER##"
+    "previewfile"         "##PREVIEW_FILE##"
+    "visibility"          "##VISIBILITY##"
+    "title"               "Syx Architect"
+    "description"         "Creative, Schönbau & Sandbox Suite for Songs of Syx. Full documentation in docs/STEAM_WORKSHOP_ARCHITECT.txt."
+    "changenote"          "##CHANGENOTE##"
+}

@@ -19,3 +19,32 @@
 Thumbs.db
 *.tmp
 *.log
+
+# Secrets, Environment & Credentials (NEVER commit to git)
+*.key
+*.secret
+*.token
+*.pem
+*.p12
+*.credentials
+.env
+.env.*
+*.env
+
+# Local developer configuration
+local.properties
+
+# Steam Workshop Local & Generated Configs
+steam/local.properties
+steam/workshop.properties
+steam/generated/
+steam/build/
+steam/*.vdf
+!steam/templates/*.template.vdf
+
+# SteamCMD Runtime, Dumps & Authentication Tokens
+steamcmd/
+steamapps/
+dumps/
+*.crash
+ssfn*

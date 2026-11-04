@@ -17,7 +17,7 @@
   - Bundled JRE: `jre\bin\java.exe` (OpenJDK 21.0.11 Temurin)
   - Source Bundle: `info\SongsOfSyx-sources.jar`
   - Modding Guide: `info\MAKE_A_MOD.txt`
-- **User Mod Directory (AppData):** `C:\Users\s3ish\AppData\Roaming\songsofsyx\mods\`
+- **User Mod Directory (AppData):** `%APPDATA%\songsofsyx\mods\`
   - Mod Anchor: `%APPDATA%\songsofsyx\mods\<ModName>\`
   - Active Version Structure: `<ModName>\V71\script\<ModJar>.jar`
 
