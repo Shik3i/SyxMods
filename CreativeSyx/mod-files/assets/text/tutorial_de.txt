@@ -1,0 +1,56 @@
+================================================================================
+                           SYX ARCHITECT - CREATIVE SUITE
+================================================================================
+
+Willkommen bei Syx Architect!
+Deine ultimative Creative-, Schoenbau- und Sandbox-Suite fuer Songs of Syx (v0.71+).
+
+OEFFNEN IM SPIEL:
+- Druecke jederzeit [F10] auf deiner Tastatur.
+- Klicke auf den dauerhaften 'Syx Architect [F10]'-Button oben rechts im HUD.
+- Alternativ verfuegbar ueber das Entwickler-Menue [Syx Architect].
+
+KERNFUNKTIONEN:
+
+1. SEMANTISCHE SCHOENBAU-STUFEN (ARBEIT & WAREN ENTKOPPELT):
+   - Baustellen-Modus:
+     * Gratis Material (Arbeit bleibt!): Deine Bauarbeiter pflastern Strassen
+       und errichten Mauern ganz normal (Gewusel bleibt erhalten!), aber ohne
+       Ressourcenkosten aus dem Lager.
+     * Schnell & Gratis (10x Tempo): Rasanter Baufortschritt zum Nulltarif.
+     * Sofortbau (Instant Build): Stellt alle geplanten Raeume, Strassen,
+       Plaetze, Mauern, Decken und Festungen sofort fertig.
+   - Gebaeude-Wartung:
+     * Hausmeister reparieren (Gratis Material): Hausmeister laufen durch die
+       Stadt und halten alles in Schuss, ohne Verschleissmaterial zu verbrauchen.
+     * Kein Verschleiss: Friert den Zustand aller Gebaeude dauerhaft auf 100% ein.
+   - Wissen & Forschung:
+     * Nie wieder vergessen (High-Watermark): Einmal erforschte Technologien
+       bleiben fuer immer erhalten - kein Rueckschritt bei Laborschwankungen!
+     * Allwissenheit: Gewaehrt sofort +1.000.000 Innovationspunkte.
+   - Lagerhaus-Logistik:
+     * Basis-Rohstoffe: Haelt Bau- und Primaergueter auf ~80% Fuellstand.
+     * Alle zugewiesenen Kisten: Haelt jede zugewiesene Lagerkiste versorgt.
+
+2. WELT, NATUR & BEVOELKERUNGS-MANAGER:
+   - Sofort-Einwanderung: Spawne per Klick +10, +50 oder +100 Buerger jeder
+     Spezies, um neue Stadtviertel sofort mit Leben zu fuellen.
+   - Kosmopolitische Welle: Spawne +25 Buerger aller spielbaren Voelker zugleich!
+   - Alterungsschutz: Multipliziert die Lebenserwartung drastisch, sodass keine
+     Buerger an Altersschwaeche sterben.
+   - Schoenes Bauwetter & Tageslicht: Friert angenehmes Tageslicht ein und vertreibt
+     Wolken, Regen und Schnee - ideal fuer Modellbau und Screenshots.
+   - 100% Bodenfruchtbarkeit: Maximiert die Bodenfeuchte kartenweit, damit Farmen
+     und Obstgaerten ueberall aesthetisch und ertragreich angelegt werden koennen.
+
+3. SICHERHEIT & KAMPF:
+   - Raid-Immunitaet: Bricht feindliche Invasionen und Raids automatisch ab.
+   - Sofort-Sieg im Kampf: Zerschlaegt die Moral gegnerischer Armeen augenblicklich.
+
+4. 1-KLICK SOFORTAKTIONEN:
+   - [[>>] Sofortbau jetzt ausfuehren] fuer die gesamte Karte.
+   - [[++] Alle Lagerkisten auf 100% fuellen] in saemtlichen Lagern.
+   - [[XX] Sofort-Sieg im Kampf] auf allen aktiven Schlachtfeldern.
+
+Viel Freude beim Erschaffen deiner Traummetropole!
+================================================================================

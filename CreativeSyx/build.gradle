@@ -1,0 +1,144 @@
+plugins {
+    id 'java'
+}
+
+group = 'com.architect'
+version = '1.0.0'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_16
+    targetCompatibility = JavaVersion.VERSION_16
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 16
+}
+
+// Locate Songs of Syx JAR
+def defaultSteamPath = "C:/Program Files (x86)/Steam/steamapps/common/Songs of Syx/SongsOfSyx.jar"
+def songsJarPath = project.findProperty("songsJar") ?: defaultSteamPath
+
+if (!file(songsJarPath).exists()) {
+    logger.warn("WARNING: SongsOfSyx.jar not found at: ${songsJarPath}. Set -PsongsJar=<path> if located elsewhere.")
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compileOnly files(songsJarPath)
+    testImplementation files(songsJarPath)
+}
+
+jar {
+    archiveBaseName.set("SyxArchitect")
+    archiveVersion.set("")
+    archiveClassifier.set("")
+    
+    // 1. Include text assets directly at JAR root for zero-path ClassLoader access
+    from("mod-files/assets/text") {
+        include "*.properties"
+        include "*.txt"
+    }
+
+    // 2. Include full assets path matching mod structure
+    from("mod-files") {
+        include "assets/**"
+        include "_info.txt"
+        include "_Info.txt"
+        include "icon.png"
+    }
+}
+
+tasks.register('sanityCheck', JavaExec) {
+    dependsOn tasks.jar, tasks.testClasses
+    group = "verification"
+    description = "Executes automated localization completeness and state serialization sanity tests"
+    workingDir = projectDir
+    classpath = sourceSets.test.runtimeClasspath + files(songsJarPath)
+    mainClass = "com.architect.SanityTest"
+}
+
+tasks.named('test') {
+    enabled = false
+}
+
+tasks.named('check') {
+    dependsOn 'sanityCheck'
+}
+
+// Task to deploy directly to the game's mod directory
+tasks.register("deployMod", Copy) {
+    dependsOn tasks.jar
+    group = "songs of syx"
+    description = "Deploys the compiled mod JAR, _info.txt, and assets directly to %APPDATA%/songsofsyx/mods/SyxArchitect/"
+
+    def appData = System.getenv("APPDATA") ?: "${System.getProperty('user.home')}/AppData/Roaming"
+    def targetModDir = file("${appData}/songsofsyx/mods/SyxArchitect")
+
+    doFirst {
+        println "Deploying Syx Architect to: ${targetModDir}"
+        targetModDir.mkdirs()
+    }
+
+    // Root metadata in mod root
+    into(targetModDir)
+    from("mod-files") {
+        include "_info.txt"
+        include "_Info.txt"
+        include "icon.png"
+    }
+
+    // Songs of Syx V71 version layout
+    into("V71/script") {
+        from(tasks.jar.archiveFile)
+    }
+
+    into("V71/assets") {
+        from("mod-files/assets")
+    }
+
+    // Also write explicit _Info.txt and mirror metadata in V71 folder for all launcher/loader path variations
+    doLast {
+        def v71Dir = file("${targetModDir}/V71")
+        v71Dir.mkdirs()
+
+        def modInfoText = file("${projectDir}/mod-files/_Info.txt").getText("UTF-8")
+        // Ensure NTFS does not preserve lowercase casing: delete old files first, then write exact _Info.txt
+        def rootInfo = file("${targetModDir}/_Info.txt")
+        if (rootInfo.exists()) {
+            java.nio.file.Files.delete(rootInfo.toPath())
+        }
+        def rootInfoLower = file("${targetModDir}/_info.txt")
+        if (rootInfoLower.exists()) {
+            java.nio.file.Files.delete(rootInfoLower.toPath())
+        }
+        rootInfo.write(modInfoText, "UTF-8")
+
+        def v71Info = file("${v71Dir}/_Info.txt")
+        if (v71Info.exists()) {
+            java.nio.file.Files.delete(v71Info.toPath())
+        }
+        def v71InfoLower = file("${v71Dir}/_info.txt")
+        if (v71InfoLower.exists()) {
+            java.nio.file.Files.delete(v71InfoLower.toPath())
+        }
+        v71Info.write(modInfoText, "UTF-8")
+
+        copy {
+            from("mod-files") {
+                include "icon.png"
+            }
+            into(targetModDir)
+        }
+        copy {
+            from("mod-files") {
+                include "icon.png"
+            }
+            into(v71Dir)
+        }
+        println "Deployment complete! Mod ready in: ${targetModDir} and ${v71Dir}"
+    }
+}
