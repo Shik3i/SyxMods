@@ -1,0 +1,84 @@
+plugins {
+    id 'java'
+}
+
+group = 'com.autoplanner'
+version = '0.1.0'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_16
+    targetCompatibility = JavaVersion.VERSION_16
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 16
+}
+
+// Locate Songs of Syx JAR
+def defaultSteamPath = "C:/Program Files (x86)/Steam/steamapps/common/Songs of Syx/SongsOfSyx.jar"
+def songsJarPath = project.findProperty("songsJar") ?: defaultSteamPath
+
+if (!file(songsJarPath).exists()) {
+    logger.warn("WARNING: SongsOfSyx.jar not found at: ${songsJarPath}. Set -PsongsJar=<path> if located elsewhere.")
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compileOnly files(songsJarPath)
+}
+
+jar {
+    archiveBaseName.set("SyxAutoPlanner")
+    archiveVersion.set("")
+    archiveClassifier.set("")
+    
+    // Include mod assets in JAR resources if needed
+    from("mod-files") {
+        include "assets/**"
+        include "_info.txt"
+    }
+}
+
+// Task to deploy directly to the game's mod directory
+tasks.register("deployMod", Copy) {
+    dependsOn tasks.jar
+    group = "songs of syx"
+    description = "Deploys the compiled mod JAR, _info.txt, and assets directly to %APPDATA%/songsofsyx/mods/SyxAutoPlanner/"
+
+    def appData = System.getenv("APPDATA") ?: "${System.getProperty('user.home')}/AppData/Roaming"
+    def targetModDir = file("${appData}/songsofsyx/mods/SyxAutoPlanner")
+
+    doFirst {
+        println "Deploying Syx Auto-Planner to: ${targetModDir}"
+        targetModDir.mkdirs()
+    }
+
+    // Root metadata
+    into(targetModDir)
+    from("mod-files") {
+        include "_info.txt"
+    }
+
+    // Songs of Syx V71 version layout
+    into("V71/script") {
+        from(tasks.jar.archiveFile)
+    }
+
+    into("V71/assets") {
+        from("mod-files/assets")
+    }
+
+    // Also copy _Info.txt (capitalized) to satisfy any case-sensitive checks
+    doLast {
+        def infoFile = file("${targetModDir}/_info.txt")
+        def infoCapital = file("${targetModDir}/_Info.txt")
+        if (infoFile.exists() && !infoCapital.exists()) {
+            infoCapital.text = infoFile.text
+        }
+        println "Deployment complete! Mod ready in: ${targetModDir}"
+    }
+}
