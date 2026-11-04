@@ -22,8 +22,9 @@ import view.main.VIEW;
 
 /**
  * Main GUI control center for Syx Architect.
- * Elegant, strictly-structured 2-column grid layout with fixed button widths,
- * zero text clipping, zero emoji/encoding errors, and complete memory-safe lifecycle management.
+ * Generous 840px wide native Songs of Syx panel architecture.
+ * Features clean 2-column layout, dynamic button sizing, zero text clipping,
+ * and native Snake2D hover tooltips on every interactive element.
  */
 public final class ArchitectUI {
 
@@ -70,7 +71,7 @@ public final class ArchitectUI {
 
         isOpen = true;
         int screenH = (C.DIM() != null) ? C.DIM().height() : 720;
-        int width = 720;
+        int width = 840;
         int height = Math.min(680, Math.max(520, screenH - 40));
         int contentW = width - 40;
 
@@ -88,13 +89,15 @@ public final class ArchitectUI {
 
         GuiSection content = new GuiSection();
 
-        // --- Top Bar: Tab Switcher + Language Toggle + Tutorial [?] ---
+        // --- Top Bar: Tab Switcher + Language Toggle + Tutorial Guide ---
         GuiSection topBar = new GuiSection();
 
         // Tab 0: City & Economy
         GButt.ButtPanel tabCity = new GButt.ButtPanel((activeTab == 0 ? ">> " : "") + I18n.get("ui.tab.city"));
-        tabCity.setDim(180, 28);
+        tabCity.setDim(210, 30);
         tabCity.align(DIR.C);
+        tabCity.hoverTitleSet(I18n.get("ui.tab.city"));
+        tabCity.hoverInfoSet("Schaltet zu Bau, Wartung, Logistik, Wirtschaft und Sicherheits-Modulen.");
         tabCity.clickActionSet(new ACTION() {
             @Override
             public void exe() {
@@ -106,8 +109,10 @@ public final class ArchitectUI {
 
         // Tab 1: World & Population
         GButt.ButtPanel tabWorld = new GButt.ButtPanel((activeTab == 1 ? ">> " : "") + I18n.get("ui.tab.world"));
-        tabWorld.setDim(180, 28);
+        tabWorld.setDim(210, 30);
         tabWorld.align(DIR.C);
+        tabWorld.hoverTitleSet(I18n.get("ui.tab.world"));
+        tabWorld.hoverInfoSet("Schaltet zu Bevoelkerungs-Manager, Einwanderung, Atmosphaere und Natur.");
         tabWorld.clickActionSet(new ACTION() {
             @Override
             public void exe() {
@@ -119,8 +124,10 @@ public final class ArchitectUI {
 
         // Language toggle [EN] or [DE]
         GButt.ButtPanel btnLang = new GButt.ButtPanel("[" + I18n.getLanguage().code.toUpperCase() + "] " + I18n.get("btn.language"));
-        btnLang.setDim(160, 28);
+        btnLang.setDim(180, 30);
         btnLang.align(DIR.C);
+        btnLang.hoverTitleSet("Sprache / Language");
+        btnLang.hoverInfoSet("Schaltet die Mod-Sprache zwischen Deutsch und Englisch um.");
         btnLang.clickActionSet(new ACTION() {
             @Override
             public void exe() {
@@ -133,9 +140,11 @@ public final class ArchitectUI {
         topBar.addRight(12, btnLang);
 
         // Tutorial modal [? Guide]
-        GButt.ButtPanel btnTut = new GButt.ButtPanel("[? Guide]");
-        btnTut.setDim(100, 28);
+        GButt.ButtPanel btnTut = new GButt.ButtPanel(I18n.get("btn.tutorial"));
+        btnTut.setDim(110, 30);
         btnTut.align(DIR.C);
+        btnTut.hoverTitleSet(I18n.get("btn.tutorial"));
+        btnTut.hoverInfoSet("Oeffnet das ausfuehrliche In-Game Handbuch mit Erklaerungen zu allen Tiers.");
         btnTut.clickActionSet(new ACTION() {
             @Override
             public void exe() {
@@ -153,7 +162,7 @@ public final class ArchitectUI {
         }
 
         root.add(panel);
-        // Position content cleanly inside the inner boundary of the GPanel
+        // Position content cleanly inside panel inner boundaries
         content.body().moveX1Y1(panel.inner().x1() + 16, panel.inner().y1() + 8);
         root.add(content);
 
@@ -174,9 +183,11 @@ public final class ArchitectUI {
         int btnW3 = (contentW - 16) / 3;
 
         // Preset 1: God Mode
-        GButt.ButtPanel btnGod = new GButt.ButtPanel("[*] " + I18n.get("preset.god"));
-        btnGod.setDim(btnW3, 30);
+        GButt.ButtPanel btnGod = new GButt.ButtPanel(I18n.get("preset.god"));
+        btnGod.setDim(btnW3, 32);
         btnGod.align(DIR.C);
+        btnGod.hoverTitleSet(I18n.get("preset.god"));
+        btnGod.hoverInfoSet(I18n.get("preset.god.desc"));
         btnGod.clickActionSet(new ACTION() {
             @Override
             public void exe() {
@@ -195,9 +206,11 @@ public final class ArchitectUI {
         presetRow.add(btnGod);
 
         // Preset 2: Living City
-        GButt.ButtPanel btnLiving = new GButt.ButtPanel("[+] " + I18n.get("preset.living"));
-        btnLiving.setDim(btnW3, 30);
+        GButt.ButtPanel btnLiving = new GButt.ButtPanel(I18n.get("preset.living"));
+        btnLiving.setDim(btnW3, 32);
         btnLiving.align(DIR.C);
+        btnLiving.hoverTitleSet(I18n.get("preset.living"));
+        btnLiving.hoverInfoSet(I18n.get("preset.living.desc"));
         btnLiving.clickActionSet(new ACTION() {
             @Override
             public void exe() {
@@ -216,9 +229,11 @@ public final class ArchitectUI {
         presetRow.addRight(8, btnLiving);
 
         // Preset 3: Vanilla Reset
-        GButt.ButtPanel btnReset = new GButt.ButtPanel("[R] " + I18n.get("preset.vanilla"));
-        btnReset.setDim(btnW3, 30);
+        GButt.ButtPanel btnReset = new GButt.ButtPanel(I18n.get("preset.vanilla"));
+        btnReset.setDim(btnW3, 32);
         btnReset.align(DIR.C);
+        btnReset.hoverTitleSet(I18n.get("preset.vanilla"));
+        btnReset.hoverInfoSet(I18n.get("preset.vanilla.desc"));
         btnReset.clickActionSet(new ACTION() {
             @Override
             public void exe() {
@@ -231,8 +246,8 @@ public final class ArchitectUI {
 
         content.addDown(4, presetRow);
 
-        // --- 2. Semantic Modules & Cheat Toggles (Clean 2-Column Grid) ---
-        int btnW2 = (contentW - 12) / 2;
+        // --- 2. Main 2-Column Grid (392px per column - generous & readable) ---
+        int colW = (contentW - 16) / 2;
 
         GuiSection gridRow = new GuiSection();
 
@@ -246,8 +261,10 @@ public final class ArchitectUI {
         // Construction Tier Button
         String constrLabel = I18n.get("cheat.construction") + ": " + state.constructionTier.getLabel();
         GButt.ButtPanel btnConstr = new GButt.ButtPanel(constrLabel);
-        btnConstr.setDim(btnW2, 30);
+        btnConstr.setDim(colW, 32);
         btnConstr.align(DIR.W);
+        btnConstr.hoverTitleSet(I18n.get("cheat.construction"));
+        btnConstr.hoverInfoSet(I18n.get("cheat.construction.desc"));
         btnConstr.clickActionSet(new ACTION() {
             @Override
             public void exe() {
@@ -261,8 +278,10 @@ public final class ArchitectUI {
         // Maintenance Tier Button
         String maintLabel = I18n.get("cheat.maintenance") + ": " + state.maintenanceTier.getLabel();
         GButt.ButtPanel btnMaint = new GButt.ButtPanel(maintLabel);
-        btnMaint.setDim(btnW2, 30);
+        btnMaint.setDim(colW, 32);
         btnMaint.align(DIR.W);
+        btnMaint.hoverTitleSet(I18n.get("cheat.maintenance"));
+        btnMaint.hoverInfoSet(I18n.get("cheat.maintenance.desc"));
         btnMaint.clickActionSet(new ACTION() {
             @Override
             public void exe() {
@@ -276,8 +295,10 @@ public final class ArchitectUI {
         // Knowledge Tier Button
         String knowLabel = I18n.get("cheat.knowledge") + ": " + state.knowledgeTier.getLabel();
         GButt.ButtPanel btnKnow = new GButt.ButtPanel(knowLabel);
-        btnKnow.setDim(btnW2, 30);
+        btnKnow.setDim(colW, 32);
         btnKnow.align(DIR.W);
+        btnKnow.hoverTitleSet(I18n.get("cheat.knowledge"));
+        btnKnow.hoverInfoSet(I18n.get("cheat.knowledge.desc"));
         btnKnow.clickActionSet(new ACTION() {
             @Override
             public void exe() {
@@ -291,8 +312,10 @@ public final class ArchitectUI {
         // Spoilage Toggle Button
         String spoilLabel = I18n.get("cheat.spoilage") + ": " + (state.spoilageDisabled ? I18n.get("status.active") : I18n.get("status.inactive"));
         GButt.ButtPanel btnSpoil = new GButt.ButtPanel(spoilLabel);
-        btnSpoil.setDim(btnW2, 30);
+        btnSpoil.setDim(colW, 32);
         btnSpoil.align(DIR.W);
+        btnSpoil.hoverTitleSet(I18n.get("cheat.spoilage"));
+        btnSpoil.hoverInfoSet(I18n.get("cheat.spoilage.desc"));
         btnSpoil.clickActionSet(new ACTION() {
             @Override
             public void exe() {
@@ -315,8 +338,10 @@ public final class ArchitectUI {
         // Logistics Tier Button
         String logLabel = I18n.get("cheat.logistics") + ": " + state.logisticsTier.getLabel();
         GButt.ButtPanel btnLog = new GButt.ButtPanel(logLabel);
-        btnLog.setDim(btnW2, 30);
+        btnLog.setDim(colW, 32);
         btnLog.align(DIR.W);
+        btnLog.hoverTitleSet(I18n.get("cheat.logistics"));
+        btnLog.hoverInfoSet(I18n.get("cheat.logistics.desc"));
         btnLog.clickActionSet(new ACTION() {
             @Override
             public void exe() {
@@ -330,8 +355,10 @@ public final class ArchitectUI {
         // Treasury / Infinite Denari Button
         String denariLabel = I18n.get("cheat.infinite_denari") + ": " + (state.infiniteDenari ? I18n.get("status.active") : I18n.get("status.inactive"));
         GButt.ButtPanel btnDenari = new GButt.ButtPanel(denariLabel);
-        btnDenari.setDim(btnW2, 30);
+        btnDenari.setDim(colW, 32);
         btnDenari.align(DIR.W);
+        btnDenari.hoverTitleSet(I18n.get("cheat.infinite_denari"));
+        btnDenari.hoverInfoSet(I18n.get("cheat.infinite_denari.desc"));
         btnDenari.clickActionSet(new ACTION() {
             @Override
             public void exe() {
@@ -345,8 +372,10 @@ public final class ArchitectUI {
         // Loyalty & Happiness Button
         String loyaltyLabel = I18n.get("cheat.loyalty") + ": " + (state.loyaltyBoost ? I18n.get("status.active") : I18n.get("status.inactive"));
         GButt.ButtPanel btnLoyalty = new GButt.ButtPanel(loyaltyLabel);
-        btnLoyalty.setDim(btnW2, 30);
+        btnLoyalty.setDim(colW, 32);
         btnLoyalty.align(DIR.W);
+        btnLoyalty.hoverTitleSet(I18n.get("cheat.loyalty"));
+        btnLoyalty.hoverInfoSet(I18n.get("cheat.loyalty.desc"));
         btnLoyalty.clickActionSet(new ACTION() {
             @Override
             public void exe() {
@@ -360,8 +389,10 @@ public final class ArchitectUI {
         // Raid Immunity Button
         String raidLabel = I18n.get("cheat.raid_protection") + ": " + (state.raidImmunity ? I18n.get("status.active") : I18n.get("status.inactive"));
         GButt.ButtPanel btnRaid = new GButt.ButtPanel(raidLabel);
-        btnRaid.setDim(btnW2, 30);
+        btnRaid.setDim(colW, 32);
         btnRaid.align(DIR.W);
+        btnRaid.hoverTitleSet(I18n.get("cheat.raid_protection"));
+        btnRaid.hoverInfoSet(I18n.get("cheat.raid_protection.desc"));
         btnRaid.clickActionSet(new ACTION() {
             @Override
             public void exe() {
@@ -372,10 +403,11 @@ public final class ArchitectUI {
         });
         rightCol.addDown(4, btnRaid);
 
-        gridRow.addRight(12, rightCol);
+        gridRow.add(leftCol);
+        gridRow.addRight(16, rightCol);
         content.addDown(10, gridRow);
 
-        // --- 3. Instant 1-Click Action Buttons (4 Columns) ---
+        // --- 3. Instant 1-Click Action Buttons (4 Columns, ~190px each) ---
         GText lblActions = new GText(UI.FONT().M, "--- Instant 1-Click Actions ---");
         lblActions.lablify();
         content.addDown(10, lblActions);
@@ -385,8 +417,10 @@ public final class ArchitectUI {
 
         // 1-Click Instant Build
         GButt.ButtPanel btnInstantBuild = new GButt.ButtPanel(I18n.get("btn.instant_build_now"));
-        btnInstantBuild.setDim(btnW4, 30);
+        btnInstantBuild.setDim(btnW4, 32);
         btnInstantBuild.align(DIR.C);
+        btnInstantBuild.hoverTitleSet(I18n.get("btn.instant_build_now"));
+        btnInstantBuild.hoverInfoSet("Stellt alle derzeit geplanten Raeume, Strassen, Mauern und Daecher sofort fertig.");
         btnInstantBuild.clickActionSet(new ACTION() {
             @Override
             public void exe() {
@@ -397,8 +431,10 @@ public final class ArchitectUI {
 
         // 1-Click Fill All Crates to 100%
         GButt.ButtPanel btnFillCrates = new GButt.ButtPanel(I18n.get("btn.fill_crates_100"));
-        btnFillCrates.setDim(btnW4, 30);
+        btnFillCrates.setDim(btnW4, 32);
         btnFillCrates.align(DIR.C);
+        btnFillCrates.hoverTitleSet(I18n.get("btn.fill_crates_100"));
+        btnFillCrates.hoverInfoSet("Fuellt alle zugewiesenen Lagerkisten kartenweit sofort auf 100% Kapazitaet.");
         btnFillCrates.clickActionSet(new ACTION() {
             @Override
             public void exe() {
@@ -409,8 +445,10 @@ public final class ArchitectUI {
 
         // 1-Click Add 1,000,000 Denari
         GButt.ButtPanel btnAddDenari = new GButt.ButtPanel(I18n.get("btn.add_denari_1m"));
-        btnAddDenari.setDim(btnW4, 30);
+        btnAddDenari.setDim(btnW4, 32);
         btnAddDenari.align(DIR.C);
+        btnAddDenari.hoverTitleSet(I18n.get("btn.add_denari_1m"));
+        btnAddDenari.hoverInfoSet("Zahlt der staedtischen Schatzkammer sofort 1.000.000 Denari bar ein.");
         btnAddDenari.clickActionSet(new ACTION() {
             @Override
             public void exe() {
@@ -421,8 +459,10 @@ public final class ArchitectUI {
 
         // 1-Click Combat Auto-Win
         GButt.ButtPanel btnWinCombat = new GButt.ButtPanel(I18n.get("btn.win_combat_now"));
-        btnWinCombat.setDim(btnW4, 30);
+        btnWinCombat.setDim(btnW4, 32);
         btnWinCombat.align(DIR.C);
+        btnWinCombat.hoverTitleSet(I18n.get("btn.win_combat_now"));
+        btnWinCombat.hoverInfoSet("Bricht die Moral aller feindlichen Armeen auf allen aktiven Schlachtfeldern augenblicklich.");
         btnWinCombat.clickActionSet(new ACTION() {
             @Override
             public void exe() {
@@ -435,8 +475,10 @@ public final class ArchitectUI {
 
         // --- 4. Footer: Close Button ---
         GButt.ButtPanel btnClose = new GButt.ButtPanel(I18n.get("btn.close"));
-        btnClose.setDim(contentW, 30);
+        btnClose.setDim(contentW, 32);
         btnClose.align(DIR.C);
+        btnClose.hoverTitleSet(I18n.get("btn.close"));
+        btnClose.hoverInfoSet("Schliesst das Syx Architect Kontrollfenster. Kann jederzeit mit F10 wieder geoeffnet werden.");
         btnClose.clickActionSet(closeAction);
         content.addDown(10, btnClose);
     }
@@ -466,8 +508,10 @@ public final class ArchitectUI {
             GuiSection raceRow = new GuiSection();
 
             GButt.ButtPanel btnPrev = new GButt.ButtPanel("<<");
-            btnPrev.setDim(44, 28);
+            btnPrev.setDim(50, 32);
             btnPrev.align(DIR.C);
+            btnPrev.hoverTitleSet("Vorherige Spezies");
+            btnPrev.hoverInfoSet("Waehlt die vorherige Spezies in der Liste.");
             btnPrev.clickActionSet(new ACTION() {
                 @Override
                 public void exe() {
@@ -477,14 +521,18 @@ public final class ArchitectUI {
             });
             raceRow.add(btnPrev);
 
-            GButt.ButtPanel lblRace = new GButt.ButtPanel(I18n.get("world.population.species") + " " + raceName);
-            lblRace.setDim(contentW - 96, 28);
+            GButt.ButtPanel lblRace = new GButt.ButtPanel(I18n.get("world.population.species") + " [ " + raceName + " ]");
+            lblRace.setDim(contentW - 108, 32);
             lblRace.align(DIR.C);
+            lblRace.hoverTitleSet(raceName);
+            lblRace.hoverInfoSet("Aktuell ausgewaehlte Rasse fuer Sofort-Einwanderung.");
             raceRow.addRight(4, lblRace);
 
             GButt.ButtPanel btnNext = new GButt.ButtPanel(">>");
-            btnNext.setDim(44, 28);
+            btnNext.setDim(50, 32);
             btnNext.align(DIR.C);
+            btnNext.hoverTitleSet("Naechste Spezies");
+            btnNext.hoverInfoSet("Waehlt die naechste Spezies in der Liste.");
             btnNext.clickActionSet(new ACTION() {
                 @Override
                 public void exe() {
@@ -501,8 +549,10 @@ public final class ArchitectUI {
             int btnW4 = (contentW - 18) / 4;
 
             GButt.ButtPanel btn10 = new GButt.ButtPanel(I18n.get("world.btn.spawn10"));
-            btn10.setDim(btnW4, 30);
+            btn10.setDim(btnW4, 32);
             btn10.align(DIR.C);
+            btn10.hoverTitleSet("+10 Buerger");
+            btn10.hoverInfoSet("Spawnt sofort 10 Einwanderer der ausgewaehlten Spezies.");
             btn10.clickActionSet(new ACTION() {
                 @Override
                 public void exe() {
@@ -512,8 +562,10 @@ public final class ArchitectUI {
             spawnRow.add(btn10);
 
             GButt.ButtPanel btn50 = new GButt.ButtPanel(I18n.get("world.btn.spawn50"));
-            btn50.setDim(btnW4, 30);
+            btn50.setDim(btnW4, 32);
             btn50.align(DIR.C);
+            btn50.hoverTitleSet("+50 Buerger");
+            btn50.hoverInfoSet("Spawnt sofort 50 Einwanderer der ausgewaehlten Spezies.");
             btn50.clickActionSet(new ACTION() {
                 @Override
                 public void exe() {
@@ -523,8 +575,10 @@ public final class ArchitectUI {
             spawnRow.addRight(6, btn50);
 
             GButt.ButtPanel btn100 = new GButt.ButtPanel(I18n.get("world.btn.spawn100"));
-            btn100.setDim(btnW4, 30);
+            btn100.setDim(btnW4, 32);
             btn100.align(DIR.C);
+            btn100.hoverTitleSet("+100 Buerger");
+            btn100.hoverInfoSet("Spawnt sofort 100 Einwanderer der ausgewaehlten Spezies.");
             btn100.clickActionSet(new ACTION() {
                 @Override
                 public void exe() {
@@ -534,8 +588,10 @@ public final class ArchitectUI {
             spawnRow.addRight(6, btn100);
 
             GButt.ButtPanel btnAll25 = new GButt.ButtPanel(I18n.get("world.btn.spawn_all_25"));
-            btnAll25.setDim(btnW4, 30);
+            btnAll25.setDim(btnW4, 32);
             btnAll25.align(DIR.C);
+            btnAll25.hoverTitleSet("+25 Alle Rassen");
+            btnAll25.hoverInfoSet("Spawnt sofort 25 Buerger fuer jede spielbare Rasse zugleich.");
             btnAll25.clickActionSet(new ACTION() {
                 @Override
                 public void exe() {
@@ -552,16 +608,18 @@ public final class ArchitectUI {
         envTitle.lablify();
         content.addDown(12, envTitle);
 
-        int btnW2 = (contentW - 12) / 2;
+        int colW = (contentW - 16) / 2;
         GuiSection envGrid = new GuiSection();
 
-        // Left: Aging & Weather
+        // Left Column: Aging & Weather
         GuiSection envLeft = new GuiSection();
 
         String agingLabel = I18n.get("world.toggle.aging") + ": " + (state.disableAging ? I18n.get("status.active") : I18n.get("status.inactive"));
         GButt.ButtPanel btnAging = new GButt.ButtPanel(agingLabel);
-        btnAging.setDim(btnW2, 30);
+        btnAging.setDim(colW, 32);
         btnAging.align(DIR.W);
+        btnAging.hoverTitleSet(I18n.get("world.toggle.aging"));
+        btnAging.hoverInfoSet("Verhindert Alterstod voellig durch extreme Lebenszeit-Verlaengerung.");
         btnAging.clickActionSet(new ACTION() {
             @Override
             public void exe() {
@@ -574,8 +632,10 @@ public final class ArchitectUI {
 
         String weatherLabel = I18n.get("world.toggle.weather") + ": " + (state.freezeNiceWeather ? I18n.get("status.active") : I18n.get("status.inactive"));
         GButt.ButtPanel btnWeather = new GButt.ButtPanel(weatherLabel);
-        btnWeather.setDim(btnW2, 30);
+        btnWeather.setDim(colW, 32);
         btnWeather.align(DIR.W);
+        btnWeather.hoverTitleSet(I18n.get("world.toggle.weather"));
+        btnWeather.hoverInfoSet("Friert klares Tageslicht ein und vertreibt Regen, Schnee und Gewitter.");
         btnWeather.clickActionSet(new ACTION() {
             @Override
             public void exe() {
@@ -588,13 +648,15 @@ public final class ArchitectUI {
 
         envGrid.add(envLeft);
 
-        // Right: Soil Fertility
+        // Right Column: Soil Fertility
         GuiSection envRight = new GuiSection();
 
         String fertilityLabel = I18n.get("world.toggle.fertility") + ": " + (state.maxFertility ? I18n.get("status.active") : I18n.get("status.inactive"));
         GButt.ButtPanel btnFertility = new GButt.ButtPanel(fertilityLabel);
-        btnFertility.setDim(btnW2, 30);
+        btnFertility.setDim(colW, 32);
         btnFertility.align(DIR.W);
+        btnFertility.hoverTitleSet(I18n.get("world.toggle.fertility"));
+        btnFertility.hoverInfoSet("Haelt die Bodenfeuchte kartenweit permanent auf 100% fuer maximale Farm-Ertaege.");
         btnFertility.clickActionSet(new ACTION() {
             @Override
             public void exe() {
@@ -606,8 +668,10 @@ public final class ArchitectUI {
         envRight.addDown(0, btnFertility);
 
         GButt.ButtPanel btnFertilityNow = new GButt.ButtPanel(I18n.get("world.btn.fertility_now"));
-        btnFertilityNow.setDim(btnW2, 30);
+        btnFertilityNow.setDim(colW, 32);
         btnFertilityNow.align(DIR.W);
+        btnFertilityNow.hoverTitleSet(I18n.get("world.btn.fertility_now"));
+        btnFertilityNow.hoverInfoSet("Setzt sofort alle Bodenkacheln der Karte auf 100% Feuchtigkeit.");
         btnFertilityNow.clickActionSet(new ACTION() {
             @Override
             public void exe() {
@@ -616,14 +680,16 @@ public final class ArchitectUI {
         });
         envRight.addDown(4, btnFertilityNow);
 
-        envGrid.addRight(12, envRight);
+        envGrid.addRight(16, envRight);
         content.addDown(4, envGrid);
 
         // --- 3. Footer: Close Button ---
         GButt.ButtPanel btnClose = new GButt.ButtPanel(I18n.get("btn.close"));
-        btnClose.setDim(contentW, 30);
+        btnClose.setDim(contentW, 32);
         btnClose.align(DIR.C);
+        btnClose.hoverTitleSet(I18n.get("btn.close"));
+        btnClose.hoverInfoSet("Schliesst das Syx Architect Kontrollfenster. Kann jederzeit mit F10 wieder geoeffnet werden.");
         btnClose.clickActionSet(closeAction);
-        content.addDown(12, btnClose);
+        content.addDown(10, btnClose);
     }
 }

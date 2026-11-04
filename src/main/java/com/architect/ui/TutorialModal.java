@@ -19,7 +19,7 @@ import view.main.VIEW;
 
 /**
  * In-game bilingual tutorial and feature guide modal.
- * Clean, ASCII-safe formatting with strict boundary clamping.
+ * Spacious 840px wide layout with clean typography.
  */
 public final class TutorialModal {
 
@@ -63,13 +63,13 @@ public final class TutorialModal {
             return;
         }
 
-        int width = 680;
-        int height = 560;
+        int width = 840;
+        int height = 580;
         int contentW = width - 40;
 
         GuiSection root = new GuiSection();
         GPanel panel = new GPanel(width, height);
-        panel.setTitle(I18n.get("btn.tutorial"));
+        panel.setTitle("Syx Architect - " + I18n.get("btn.tutorial"));
 
         ACTION closeAction = new ACTION() {
             @Override
@@ -116,7 +116,7 @@ public final class TutorialModal {
 
         // Close button at bottom
         GButt.ButtPanel btnClose = new GButt.ButtPanel(I18n.get("btn.close"));
-        btnClose.setDim(contentW, 30);
+        btnClose.setDim(contentW, 32);
         btnClose.align(DIR.C);
         btnClose.clickActionSet(closeAction);
         content.addDown(12, btnClose);
