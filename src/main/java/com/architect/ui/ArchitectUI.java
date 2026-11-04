@@ -84,13 +84,7 @@ public final class ArchitectUI {
 
         isOpen = true;
         int screenH = (C.DIM() != null) ? C.DIM().height() : 720;
-        int width = 860;
-        int height = Math.min(640, Math.max(530, screenH - 40));
         int contentW = 790;
-
-        GPanel panel = new GPanel(width, height);
-        panel.setBig();
-        panel.setTitle(I18n.get("ui.title"));
 
         ACTION closeAction = new ACTION() {
             @Override
@@ -98,9 +92,43 @@ public final class ArchitectUI {
                 close();
             }
         };
-        panel.setCloseAction(closeAction);
 
-        GuiSection content = new GuiSection();
+        GuiSection root = new GuiSection() {
+            private boolean isDragging = false;
+            private int dragAnchorX = 0;
+            private int dragAnchorY = 0;
+
+            @Override
+            public void render(SPRITE_RENDERER r, float ds) {
+                COORDINATE m = CORE.getInput().getMouse().getCoo();
+                if (m != null) {
+                    if (MButt.LEFT.isDown()) {
+                        if (!isDragging) {
+                            // Title bar drag region: top 40px excluding top-right [X] close button
+                            int titleY1 = body().y1();
+                            int titleY2 = body().y1() + 40;
+                            int closeX = body().x2() - 40;
+                            if (m.y() >= titleY1 && m.y() <= titleY2 && m.x() >= body().x1() && m.x() <= closeX) {
+                                isDragging = true;
+                                dragAnchorX = m.x() - body().x1();
+                                dragAnchorY = m.y() - body().y1();
+                            }
+                        } else {
+                            int targetX = CLAMP.i(m.x() - dragAnchorX, 10, Math.max(10, C.WIDTH() - body().width() - 10));
+                            int targetY = CLAMP.i(m.y() - dragAnchorY, 10, Math.max(10, C.HEIGHT() - body().height() - 10));
+                            if (targetX != (int) body().x1() || targetY != (int) body().y1()) {
+                                windowX = targetX;
+                                windowY = targetY;
+                                body().moveX1Y1(targetX, targetY);
+                            }
+                        }
+                    } else {
+                        isDragging = false;
+                    }
+                }
+                super.render(r, ds);
+            }
+        };
 
         // =========================================================================
         // 1. TOP BAR: Native Tabs + Language + Manual
@@ -171,17 +199,27 @@ public final class ArchitectUI {
         });
         topBar.addRight(6, btnTut);
 
-        content.addDown(0, topBar);
-        content.addDown(6, GFrame.separator(contentW));
+        root.add(topBar, 0, 0);
+        root.addDown(6, GFrame.separator(contentW));
 
         if (activeTab == 0) {
-            buildCityTab(content, contentW, state, callback, closeAction);
+            buildCityTab(root, contentW, state, callback, closeAction);
         } else {
-            buildWorldTab(content, contentW, state, callback, closeAction);
+            buildWorldTab(root, contentW, state, callback, closeAction);
         }
 
-        int totalW = panel.body().width();
-        int totalH = panel.body().height();
+        root.pad(20, 16);
+
+        // Authentic grand game panel wrapping the modal content
+        GPanel panel = new GPanel(root.body()).setBig();
+        panel.setTitle(I18n.get("ui.title"));
+        panel.setCloseAction(closeAction);
+
+        root.add(panel);
+        root.moveLastToBack();
+
+        int totalW = root.body().width();
+        int totalH = root.body().height();
 
         if (windowX < 0 || windowY < 0) {
             windowX = (C.DIM() != null) ? (C.WIDTH() - totalW) / 2 : 100;
@@ -193,18 +231,7 @@ public final class ArchitectUI {
             windowY = CLAMP.i(windowY, 10, Math.max(10, C.HEIGHT() - totalH - 10));
         }
 
-        int dx = windowX - panel.body().x1();
-        int dy = windowY - panel.body().y1();
-        panel.inner().incrX(dx).incrY(dy);
-
-        DraggableModalSection root = new DraggableModalSection(panel, content);
-        root.add(panel);
-        // Symmetrically center content inside visible stone frame:
-        int contentX = panel.body().x1() + 434 - (contentW / 2);
-        int contentY = panel.body().y1() + 24;
-        content.body().moveX1Y1(contentX, contentY);
-        root.add(content);
-
+        root.body().moveX1Y1(windowX, windowY);
         VIEW.inters().section.activate(root);
     }
 
@@ -771,75 +798,5 @@ public final class ArchitectUI {
 
         row.add(control, ctrlX, (32 - control.body().height()) / 2);
         return row;
-    }
-
-    /**
-     * Fully draggable modal container allowing the user to reposition dialogs freely with the mouse.
-     */
-    private static class DraggableModalSection extends GuiSection {
-        private final GPanel panel;
-        private final GuiSection content;
-        private boolean isDragging = false;
-        private int dragAnchorX = 0;
-        private int dragAnchorY = 0;
-
-        public DraggableModalSection(GPanel panel, GuiSection content) {
-            this.panel = panel;
-            this.content = content;
-        }
-
-        @Override
-        public void render(SPRITE_RENDERER r, float ds) {
-            handleDrag();
-            super.render(r, ds);
-        }
-
-        private void handleDrag() {
-            COORDINATE m = CORE.getInput().getMouse().getCoo();
-            if (m == null) {
-                isDragging = false;
-                return;
-            }
-
-            if (MButt.LEFT.isDown()) {
-                if (!isDragging) {
-                    // Title bar drag region: panel top to panel.inner().y1() + 6
-                    // Avoiding the close button [X] at top-right
-                    int titleY1 = panel.body().y1();
-                    int titleY2 = panel.inner().y1() + 6;
-                    int closeBtnX = panel.body().x2() - 36;
-                    if (m.y() >= titleY1 && m.y() <= titleY2 && m.x() >= panel.body().x1() && m.x() <= closeBtnX) {
-                        isDragging = true;
-                        dragAnchorX = m.x() - windowX;
-                        dragAnchorY = m.y() - windowY;
-                    }
-                } else {
-                    int targetX = CLAMP.i(m.x() - dragAnchorX, 10, Math.max(10, C.WIDTH() - panel.body().width() - 10));
-                    int targetY = CLAMP.i(m.y() - dragAnchorY, 10, Math.max(10, C.HEIGHT() - panel.body().height() - 10));
-                    int dx = targetX - windowX;
-                    int dy = targetY - windowY;
-                    if (dx != 0 || dy != 0) {
-                        windowX = targetX;
-                        windowY = targetY;
-                        body().incrX(dx).incrY(dy);
-                        panel.inner().incrX(dx).incrY(dy);
-                        moveRecursive(content, dx, dy);
-                    }
-                }
-            } else {
-                isDragging = false;
-            }
-        }
-    }
-
-    private static void moveRecursive(RENDEROBJ obj, int dx, int dy) {
-        if (dx == 0 && dy == 0) return;
-        obj.body().incrX(dx).incrY(dy);
-        if (obj instanceof GuiSection) {
-            GuiSection sec = (GuiSection) obj;
-            for (RENDEROBJ child : sec.elements()) {
-                moveRecursive(child, dx, dy);
-            }
-        }
     }
 }
