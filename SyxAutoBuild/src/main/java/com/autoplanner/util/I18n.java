@@ -76,7 +76,7 @@ public final class I18n {
         EN_STRINGS.put("tooltip.quickfill", "Executes Auto-Strut and Auto-Furnish in one click");
         EN_STRINGS.put("tooltip.clear", "Removes all placed furniture in this room draft");
         EN_STRINGS.put("tooltip.settings", "Opens Auto-Planner configuration (styles, target efficiency)");
-        EN_STRINGS.put("tooltip.snap", "Snaps toolbar centered directly under the Room Editor panel");
+        EN_STRINGS.put("tooltip.snap", "Docks toolbar to the left outer edge (default position)");
 
         EN_STRINGS.put("msg.strut_success", "Auto-Strut: Placed {0} pillar(s). 0 yellow tiles remaining!");
         EN_STRINGS.put("msg.strut_none_needed", "Auto-Strut: Ceiling is already 100% supported!");
@@ -134,7 +134,7 @@ public final class I18n {
         DE_STRINGS.put("tooltip.quickfill", "Führt Auto-Stützen und Auto-Möblierung mit einem Klick aus");
         DE_STRINGS.put("tooltip.clear", "Entfernt alle platzierten Möbel aus diesem Entwurf");
         DE_STRINGS.put("tooltip.settings", "Öffnet die Auto-Planner Einstellungen (Stil, Ziel-Effizienz)");
-        DE_STRINGS.put("tooltip.snap", "Dockt die Toolbar wieder zentriert direkt unter dem Raum-Editor an");
+        DE_STRINGS.put("tooltip.snap", "Dockt die Toolbar links außen an (Standardposition)");
 
         DE_STRINGS.put("msg.strut_success", "Auto-Stützen: {0} Pfeiler gesetzt. 0 gelbe Bereiche übrig!");
         DE_STRINGS.put("msg.strut_none_needed", "Auto-Stützen: Die Decke ist bereits zu 100% gestützt!");

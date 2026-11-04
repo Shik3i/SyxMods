@@ -56,16 +56,22 @@ public final class PlannerOverlayUI {
     private int boxX = -1;
     private int boxY = -1;
     private boolean isCustomPosition = false;
-    private double relX = 0.5;
-    private double relY = 0.5;
+    private double relX = 0.02;
+    private double relY = 0.08;
     private boolean isDragging = false;
     private int dragAnchorX = 0;
     private int dragAnchorY = 0;
 
-    // Reflection cache for reading native SFrame bounds
-    private Field cachedFrameField = null;
-    private Field cachedSectionField = null;
-    private boolean reflectionInitialized = false;
+    // Sub-sections and Buttons for direct click & hover dispatch
+    private final GuiSection headerBar = new GuiSection();
+    private final GuiSection row1 = new GuiSection();
+    private final GuiSection row2 = new GuiSection();
+    private GButt.ButtPanel btnSnap;
+    private GButt.ButtPanel btnStrut;
+    private GButt.ButtPanel btnFurnish;
+    private GButt.ButtPanel btnQuick;
+    private GButt.ButtPanel btnClear;
+    private GButt.ButtPanel btnConfig;
 
     // Native Toolbar Section (compact 2-row card with authentic GButt.ButtPanel buttons)
     private final ToolbarSection toolbarSection = new ToolbarSection();
@@ -79,65 +85,38 @@ public final class PlannerOverlayUI {
     }
 
     /**
-     * Determines the exact bottom coordinate (y2) of the native room constructor panel,
-     * scaled automatically with C.SG across any resolution or aspect ratio.
+     * Default docking anchor: Left-aligned ("links außen") below top HUD panel.
+     * Leaves the entire center of the screen completely free for room drawing, wall selection, and floor choices.
      */
-    private int getNativePanelBottomY() {
-        if (!reflectionInitialized) {
-            try {
-                if (VIEW.s() != null && VIEW.s().tools != null) {
-                    ToolConfig tc = VIEW.s().tools.configCurrent();
-                    if (tc != null) {
-                        cachedFrameField = tc.getClass().getDeclaredField("frame");
-                        cachedFrameField.setAccessible(true);
-                        Object frame = cachedFrameField.get(tc);
-                        if (frame != null) {
-                            cachedSectionField = frame.getClass().getDeclaredField("section");
-                            cachedSectionField.setAccessible(true);
-                        }
-                    }
-                }
-            } catch (Throwable ignored) {
-            }
-            reflectionInitialized = true;
-        }
+    public int getDefaultDockX() {
+        return (int) (16 * C.SG);
+    }
 
-        if (cachedFrameField != null && cachedSectionField != null && VIEW.s() != null && VIEW.s().tools != null) {
-            try {
-                ToolConfig tc = VIEW.s().tools.configCurrent();
-                if (tc != null) {
-                    Object frame = cachedFrameField.get(tc);
-                    if (frame != null) {
-                        Object sec = cachedSectionField.get(frame);
-                        if (sec instanceof GuiSection) {
-                            int y2 = ((GuiSection) sec).body().y2();
-                            if (y2 > 0) {
-                                return y2;
-                            }
-                        }
-                    }
-                }
-            } catch (Throwable ignored) {
-            }
-        }
-
-        // Robust fallback based on native SFrame height and C.SG scaling
-        return (int) (C.SG * 80 + C.SG * 230);
+    public int getDefaultDockY() {
+        return (int) (60 * C.SG);
     }
 
     /**
      * Updates toolbar position:
-     * - Default: Docked dynamically centered right beneath the native Room Editor panel.
+     * - Default: Docked on the left side of the screen ("links außen"), completely clear of wall selection.
      * - Custom: Preserves user's dragged position, scaled proportionally with C.WIDTH / C.HEIGHT.
      */
     public void updatePosition() {
+        int targetX;
+        int targetY;
+
         if (!isCustomPosition) {
-            int nativeBottomY = getNativePanelBottomY();
-            boxX = (C.WIDTH() - toolbarSection.body().width()) / 2;
-            boxY = nativeBottomY + (int) (14 * C.SG);
+            targetX = getDefaultDockX();
+            targetY = getDefaultDockY();
         } else {
-            boxX = CLAMP.i((int) (relX * C.WIDTH()), 10, C.WIDTH() - toolbarSection.body().width() - 10);
-            boxY = CLAMP.i((int) (relY * C.HEIGHT()), 34, C.HEIGHT() - toolbarSection.body().height() - 10);
+            targetX = CLAMP.i((int) (relX * C.WIDTH()), 10, Math.max(10, C.WIDTH() - toolbarSection.body().width() - 10));
+            targetY = CLAMP.i((int) (relY * C.HEIGHT()), 34, Math.max(34, C.HEIGHT() - toolbarSection.body().height() - 10));
+        }
+
+        if (boxX != targetX || boxY != targetY || (int) toolbarSection.body().x1() != targetX || (int) toolbarSection.body().y1() != targetY) {
+            boxX = targetX;
+            boxY = targetY;
+            toolbarSection.body().moveX1Y1(boxX, boxY);
         }
     }
 
@@ -148,20 +127,27 @@ public final class PlannerOverlayUI {
     private void buildToolbar() {
         cachedLanguage = I18n.getLanguage();
         toolbarSection.clear();
+        headerBar.clear();
+        row1.clear();
+        row2.clear();
 
         // --- Drag & Dock Header Bar ---
-        GuiSection headerBar = new GuiSection();
         RENDEROBJ.Sprite dragIcon = new RENDEROBJ.Sprite(SPRITES.icons().m.openscroll);
         headerBar.add(dragIcon, 0, 0);
         GText titleText = new GText(UI.FONT().S, "Syx Auto-Planner").lablify();
         headerBar.addRightC(6, titleText);
 
-        // Snap / Re-Dock Button (Instantly snaps back centered beneath Room Editor)
-        GButt.ButtPanel btnSnap = new GButt.ButtPanel(SPRITES.icons().m.crossair) {
+        // Snap / Re-Dock Button (Instantly snaps back docked to left outer edge)
+        btnSnap = new GButt.ButtPanel(SPRITES.icons().m.crossair) {
             @Override
             protected void clickA() {
                 isCustomPosition = false;
-                updatePosition();
+                boxX = getDefaultDockX();
+                boxY = getDefaultDockY();
+                relX = (double) boxX / Math.max(1, C.WIDTH());
+                relY = (double) boxY / Math.max(1, C.HEIGHT());
+                toolbarSection.body().moveX1Y1(boxX, boxY);
+                setStatus(I18n.getLanguage() == Language.DE ? "Links angedockt" : "Docked to left", false);
             }
         };
         btnSnap.hoverTitleSet(I18n.get("btn.snap"));
@@ -170,7 +156,7 @@ public final class PlannerOverlayUI {
 
         // --- Row 1 Buttons (Primary Builders) ---
         // Button 1: Auto-Strut (Pillars)
-        GButt.ButtPanel btnStrut = new GButt.ButtPanel(I18n.get("btn.strut")) {
+        btnStrut = new GButt.ButtPanel(I18n.get("btn.strut")) {
             @Override
             protected void clickA() {
                 RoomPlacer placer = getActivePlacer();
@@ -183,7 +169,7 @@ public final class PlannerOverlayUI {
         btnStrut.hoverInfoSet(I18n.get("tooltip.strut"));
 
         // Button 2: Auto-Furnish (Workstations & Auxiliaries)
-        GButt.ButtPanel btnFurnish = new GButt.ButtPanel(I18n.get("btn.furnish")) {
+        btnFurnish = new GButt.ButtPanel(I18n.get("btn.furnish")) {
             @Override
             protected void clickA() {
                 RoomPlacer placer = getActivePlacer();
@@ -196,7 +182,7 @@ public final class PlannerOverlayUI {
         btnFurnish.hoverInfoSet(I18n.get("tooltip.furnish"));
 
         // Button 3: Quick-Build (Pillars + Furniture in one pass)
-        GButt.ButtPanel btnQuick = new GButt.ButtPanel(I18n.get("btn.quickfill")) {
+        btnQuick = new GButt.ButtPanel(I18n.get("btn.quickfill")) {
             @Override
             protected void clickA() {
                 RoomPlacer placer = getActivePlacer();
@@ -208,14 +194,13 @@ public final class PlannerOverlayUI {
         btnQuick.hoverTitleSet(I18n.get("btn.quickfill"));
         btnQuick.hoverInfoSet(I18n.get("tooltip.quickfill"));
 
-        GuiSection row1 = new GuiSection();
         row1.add(btnStrut, 0, 0);
         row1.addRightC(4, btnFurnish);
         row1.addRightC(4, btnQuick);
 
         // --- Row 2 Buttons (Secondary / Config) ---
         // Button 4: Clear Furniture
-        GButt.ButtPanel btnClear = new GButt.ButtPanel(I18n.get("btn.clear")) {
+        btnClear = new GButt.ButtPanel(I18n.get("btn.clear")) {
             @Override
             protected void clickA() {
                 RoomPlacer placer = getActivePlacer();
@@ -228,7 +213,7 @@ public final class PlannerOverlayUI {
         btnClear.hoverInfoSet(I18n.get("tooltip.clear"));
 
         // Button 5: Configuration Settings
-        GButt.ButtPanel btnConfig = new GButt.ButtPanel(I18n.get("btn.settings")) {
+        btnConfig = new GButt.ButtPanel(I18n.get("btn.settings")) {
             @Override
             protected void clickA() {
                 if (VIEW.inters().section != null && VIEW.inters().section.isActivated()) {
@@ -241,7 +226,6 @@ public final class PlannerOverlayUI {
         btnConfig.hoverTitleSet(I18n.get("btn.settings"));
         btnConfig.hoverInfoSet(I18n.get("tooltip.settings"));
 
-        GuiSection row2 = new GuiSection();
         row2.add(btnClear, 0, 0);
         row2.addRightC(8, btnConfig);
 
@@ -255,6 +239,15 @@ public final class PlannerOverlayUI {
         toolbarSection.addDown(4, row2);
 
         toolbarSection.pad(8, 6);
+
+        // Initial left docking
+        if (boxX == -1 || boxY == -1) {
+            boxX = getDefaultDockX();
+            boxY = getDefaultDockY();
+            relX = (double) boxX / Math.max(1, C.WIDTH());
+            relY = (double) boxY / Math.max(1, C.HEIGHT());
+        }
+        toolbarSection.body().moveX1Y1(boxX, boxY);
     }
 
     public void update(double ds) {
@@ -307,23 +300,43 @@ public final class PlannerOverlayUI {
 
         COORDINATE m = CORE.getInput().getMouse().getCoo();
 
-        // Handle active drag
-        if (isDragging) {
-            if (m != null && MButt.LEFT.isDown()) {
-                boxX = CLAMP.i(m.x() - dragAnchorX, 10, C.WIDTH() - toolbarSection.body().width() - 10);
-                boxY = CLAMP.i(m.y() - dragAnchorY, 34, C.HEIGHT() - toolbarSection.body().height() - 10);
-                isCustomPosition = true;
-                relX = (double) boxX / Math.max(1, C.WIDTH());
-                relY = (double) boxY / Math.max(1, C.HEIGHT());
+        // Handle active drag & drop
+        if (m != null) {
+            if (MButt.LEFT.isDown()) {
+                if (!isDragging) {
+                    // Check if mouse down in header bar (excluding btnSnap)
+                    int hX1 = toolbarSection.body().x1();
+                    int hX2 = (btnSnap != null) ? btnSnap.body().x1() - 4 : toolbarSection.body().x2();
+                    int hY1 = toolbarSection.body().y1();
+                    int hY2 = hY1 + (int) (32 * C.SG);
+
+                    if (m.x() >= hX1 && m.x() <= hX2 && m.y() >= hY1 && m.y() <= hY2) {
+                        isDragging = true;
+                        isCustomPosition = true;
+                        dragAnchorX = m.x() - (int) toolbarSection.body().x1();
+                        dragAnchorY = m.y() - (int) toolbarSection.body().y1();
+                    }
+                } else {
+                    int targetX = CLAMP.i(m.x() - dragAnchorX, 10, Math.max(10, C.WIDTH() - toolbarSection.body().width() - 10));
+                    int targetY = CLAMP.i(m.y() - dragAnchorY, 34, Math.max(34, C.HEIGHT() - toolbarSection.body().height() - 10));
+                    if (targetX != boxX || targetY != boxY) {
+                        boxX = targetX;
+                        boxY = targetY;
+                        relX = (double) boxX / Math.max(1, C.WIDTH());
+                        relY = (double) boxY / Math.max(1, C.HEIGHT());
+                        toolbarSection.body().moveX1Y1(boxX, boxY);
+                    }
+                }
             } else {
                 isDragging = false;
             }
         } else {
-            updatePosition();
+            isDragging = false;
         }
 
-        toolbarSection.body().moveX1(boxX);
-        toolbarSection.body().moveY1(boxY);
+        if (!isDragging) {
+            updatePosition();
+        }
 
         // Keep hover state responsive
         if (m != null && !isDragging) {
@@ -380,19 +393,70 @@ public final class PlannerOverlayUI {
         }
 
         if (toolbarSection.body().holdsPoint(m.x(), m.y())) {
-            toolbarSection.hover(m);
-
-            // First check if an individual button consumed the click
-            boolean consumed = toolbarSection.click();
-            if (consumed) {
+            // If dragging, consume click so it doesn't click into the game world
+            if (isDragging) {
                 CORE.getInput().clearAllInput();
                 return true;
             }
 
-            // Otherwise, start dragging the box!
-            isDragging = true;
-            dragAnchorX = m.x() - boxX;
-            dragAnchorY = m.y() - boxY;
+            // 1. Check Snap button
+            if (btnSnap != null && btnSnap.body().holdsPoint(m.x(), m.y())) {
+                btnSnap.hover(m);
+                btnSnap.click();
+                CORE.getInput().clearAllInput();
+                return true;
+            }
+
+            // 2. Check Row 1 buttons
+            if (btnStrut != null && btnStrut.body().holdsPoint(m.x(), m.y())) {
+                btnStrut.hover(m);
+                btnStrut.click();
+                CORE.getInput().clearAllInput();
+                return true;
+            }
+            if (btnFurnish != null && btnFurnish.body().holdsPoint(m.x(), m.y())) {
+                btnFurnish.hover(m);
+                btnFurnish.click();
+                CORE.getInput().clearAllInput();
+                return true;
+            }
+            if (btnQuick != null && btnQuick.body().holdsPoint(m.x(), m.y())) {
+                btnQuick.hover(m);
+                btnQuick.click();
+                CORE.getInput().clearAllInput();
+                return true;
+            }
+
+            // 3. Check Row 2 buttons
+            if (btnClear != null && btnClear.body().holdsPoint(m.x(), m.y())) {
+                btnClear.hover(m);
+                btnClear.click();
+                CORE.getInput().clearAllInput();
+                return true;
+            }
+            if (btnConfig != null && btnConfig.body().holdsPoint(m.x(), m.y())) {
+                btnConfig.hover(m);
+                btnConfig.click();
+                CORE.getInput().clearAllInput();
+                return true;
+            }
+
+            // 4. If clicked on header bar, initiate dragging immediately
+            int hX1 = toolbarSection.body().x1();
+            int hX2 = (btnSnap != null) ? btnSnap.body().x1() - 4 : toolbarSection.body().x2();
+            int hY1 = toolbarSection.body().y1();
+            int hY2 = hY1 + (int) (32 * C.SG);
+
+            if (m.x() >= hX1 && m.x() <= hX2 && m.y() >= hY1 && m.y() <= hY2) {
+                isDragging = true;
+                isCustomPosition = true;
+                dragAnchorX = m.x() - (int) toolbarSection.body().x1();
+                dragAnchorY = m.y() - (int) toolbarSection.body().y1();
+                CORE.getInput().clearAllInput();
+                return true;
+            }
+
+            // Clicked inside panel padding / background: consume click
             CORE.getInput().clearAllInput();
             return true;
         }
