@@ -57,6 +57,7 @@ public final class I18n {
         EN_STRINGS.put("msg.strut_success", "Auto-Strut: Placed {0} pillar(s). 0 yellow tiles remaining!");
         EN_STRINGS.put("msg.strut_none_needed", "Auto-Strut: Ceiling is already 100% supported!");
         EN_STRINGS.put("msg.furnish_success", "Auto-Furnish: Placed {0} workstation(s) & {1} module(s). Eff: {2}%.");
+        EN_STRINGS.put("msg.furnish_virtual_door", "Auto-Furnish: Placed {0} workstation(s) & {1} module(s) ({2}% eff). No door set - reserved path to wall ({3}, {4})!");
         EN_STRINGS.put("msg.furnish_fail_doors", "Auto-Furnish: Please place at least one door first!");
         EN_STRINGS.put("msg.furnish_no_workstations", "Auto-Furnish: No workstation items found for this blueprint.");
         EN_STRINGS.put("msg.clear_success", "Cleared all furniture from current room draft.");
@@ -84,6 +85,7 @@ public final class I18n {
         DE_STRINGS.put("msg.strut_success", "Auto-Stützen: {0} Pfeiler gesetzt. 0 gelbe Bereiche übrig!");
         DE_STRINGS.put("msg.strut_none_needed", "Auto-Stützen: Die Decke ist bereits zu 100% gestützt!");
         DE_STRINGS.put("msg.furnish_success", "Auto-Möblieren: {0} Station(en) & {1} Modul(e) platziert. Eff: {2}%.");
+        DE_STRINGS.put("msg.furnish_virtual_door", "Auto-Möblieren: {0} Station(en) & {1} Modul(e) ({2}% Eff.). Keine Tür gesetzt - Pfad zu Wand ({3}, {4}) reserviert!");
         DE_STRINGS.put("msg.furnish_fail_doors", "Auto-Möblieren: Bitte zuerst mindestens eine Tür setzen!");
         DE_STRINGS.put("msg.furnish_no_workstations", "Auto-Möblieren: Keine Arbeitsstationen für diesen Raumtyp.");
         DE_STRINGS.put("msg.clear_success", "Alle Einrichtungsgegenstände im Raum-Entwurf entfernt.");

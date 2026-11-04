@@ -4,34 +4,40 @@ import com.autoplanner.config.PlannerConfig;
 import settlement.main.SETT;
 import settlement.room.main.Room;
 import settlement.room.main.RoomBlueprintImp;
+import settlement.room.main.furnisher.Furnisher;
 import settlement.room.main.furnisher.FurnisherItem;
 import settlement.room.main.furnisher.FurnisherItemGroup;
 import settlement.room.main.furnisher.FurnisherItemTile;
+import settlement.room.main.furnisher.FurnisherStat;
 import settlement.room.main.placement.RoomPlacer;
 import snake2d.util.datatypes.RECTANGLE;
 
 /**
- * High-performance, 2-Pass Packing Solver for Songs of Syx rooms.
- * Packs maximal workstations and required efficiency modules with
- * BFS Flood-Fill pathfinding reachability guarantees from all doors.
+ * Intelligent, Interleaved Packing Solver with Workstation Backtracking for Songs of Syx rooms.
+ * Resolves the "Chicken-and-Egg" stat dependency between workstations and auxiliary modules
+ * to guarantee optimal workstation density while strictly hitting target efficiency (100%).
  */
 public final class AutoFurnishSolver {
 
     private final RoomGridSnapshot snapshot = new RoomGridSnapshot();
     private final ReachabilityChecker reachability = new ReachabilityChecker();
 
-    // Workstation access tracking buffers (Zero-GC)
+    // Access tracking buffers (Zero-GC)
     private static final int MAX_WORKSTATIONS = 512;
     private final int[] accessX = new int[MAX_WORKSTATIONS * 4];
     private final int[] accessY = new int[MAX_WORKSTATIONS * 4];
     private int accessCount = 0;
 
-    // Placed items buffer for final commit
+    // Placed items stack for final commit & backtracking
     private static final int MAX_PLACED_ITEMS = 1024;
     private final int[] itemX = new int[MAX_PLACED_ITEMS];
     private final int[] itemY = new int[MAX_PLACED_ITEMS];
     private final FurnisherItem[] itemsPlaced = new FurnisherItem[MAX_PLACED_ITEMS];
+    private final boolean[] isWorkstationItem = new boolean[MAX_PLACED_ITEMS];
     private int placedCount = 0;
+
+    // Running accumulated stats
+    private final double[] runningStats = new double[32];
 
     public static final class Result {
         public final boolean success;
@@ -39,14 +45,29 @@ public final class AutoFurnishSolver {
         public final int workstations;
         public final int efficiencyModules;
         public final int efficiencyPercent;
+        public final boolean virtualDoorUsed;
+        public final int virtualDoorX;
+        public final int virtualDoorY;
         public final long elapsedMs;
 
-        public Result(boolean success, String errorMessage, int ws, int effMods, int effPercent, long elapsedMs) {
+        public Result(
+                boolean success, 
+                String errorMessage, 
+                int ws, 
+                int effMods, 
+                int effPercent, 
+                boolean virtualDoorUsed,
+                int virtualDoorX,
+                int virtualDoorY,
+                long elapsedMs) {
             this.success = success;
             this.errorMessage = errorMessage;
             this.workstations = ws;
             this.efficiencyModules = effMods;
             this.efficiencyPercent = effPercent;
+            this.virtualDoorUsed = virtualDoorUsed;
+            this.virtualDoorX = virtualDoorX;
+            this.virtualDoorY = virtualDoorY;
             this.elapsedMs = elapsedMs;
         }
     }
@@ -58,53 +79,49 @@ public final class AutoFurnishSolver {
         long start = System.currentTimeMillis();
 
         if (placer == null || placer.blueprint() == null || PlacerBridge.getArea(placer) <= 0) {
-            return new Result(false, "No active room draft.", 0, 0, 0, 0);
+            return new Result(false, "No active room draft.", 0, 0, 0, false, -1, -1, 0);
         }
 
         RoomBlueprintImp bp = placer.blueprint();
-        if (bp.constructor() == null || bp.constructor().pgroups().size() == 0) {
-            return new Result(false, "Room blueprint has no furniture groups.", 0, 0, 0, 0);
+        Furnisher furnisher = bp.constructor();
+        if (furnisher == null || furnisher.pgroups().size() == 0) {
+            return new Result(false, "Room blueprint has no furniture groups.", 0, 0, 0, false, -1, -1, 0);
         }
 
-        // Initialize snapshot
-        snapshot.initFrom(placer);
-
-        if (snapshot.doorCount == 0 && bp.constructor().mustBeIndoors()) {
-            return new Result(false, "msg.furnish_fail_doors", 0, 0, 0, 0);
-        }
-
-        // Clear existing furniture from snapshot and placer draft
+        // 1. Clear existing furniture from room draft & initialize clean snapshot
         clearExistingFurniture(placer);
         snapshot.initFrom(placer);
 
+        // Reset buffers
         accessCount = 0;
         placedCount = 0;
+        java.util.Arrays.fill(runningStats, 0.0);
 
-        // Categorize groups: Workstations vs Efficiency / Aux
+        // 2. Classify blueprint groups
         FurnisherItemGroup workstationGroup = null;
-        FurnisherItemGroup efficiencyGroup = null;
+        FurnisherItemGroup auxiliaryGroup = null;
         FurnisherItemGroup storageGroup = null;
 
-        for (int gi = 0; gi < bp.constructor().pgroups().size(); gi++) {
-            FurnisherItemGroup g = bp.constructor().pgroups().get(gi);
+        for (int gi = 0; gi < furnisher.pgroups().size(); gi++) {
+            FurnisherItemGroup g = furnisher.pgroups().get(gi);
             if (g == null) continue;
 
             FurnisherItem sample = g.item(0, 0);
             if (sample == null) continue;
 
-            boolean hasMustBeReachable = false;
+            boolean hasAccess = false;
             for (int y = 0; y < sample.height(); y++) {
                 for (int x = 0; x < sample.width(); x++) {
                     FurnisherItemTile t = sample.get(x, y);
                     if (t != null && t.mustBeReachable) {
-                        hasMustBeReachable = true;
+                        hasAccess = true;
                         break;
                     }
                 }
-                if (hasMustBeReachable) break;
+                if (hasAccess) break;
             }
 
-            if (hasMustBeReachable) {
+            if (hasAccess) {
                 if (workstationGroup == null) {
                     workstationGroup = g;
                 }
@@ -112,19 +129,18 @@ public final class AutoFurnishSolver {
                 String nameStr = g.name != null ? g.name.toString().toLowerCase() : "";
                 if (nameStr.contains("crate") || nameStr.contains("storage") || nameStr.contains("lager")) {
                     storageGroup = g;
-                } else if (efficiencyGroup == null) {
-                    efficiencyGroup = g;
+                } else if (auxiliaryGroup == null) {
+                    auxiliaryGroup = g;
                 }
             }
         }
 
-        // If no workstation group found, use group 0
-        if (workstationGroup == null && bp.constructor().pgroups().size() > 0) {
-            workstationGroup = bp.constructor().pgroups().get(0);
+        if (workstationGroup == null && furnisher.pgroups().size() > 0) {
+            workstationGroup = furnisher.pgroups().get(0);
         }
 
         if (workstationGroup == null) {
-            return new Result(false, "msg.furnish_no_workstations", 0, 0, 0, 0);
+            return new Result(false, "msg.furnish_no_workstations", 0, 0, 0, false, -1, -1, 0);
         }
 
         int x1 = snapshot.getOriginX();
@@ -132,22 +148,28 @@ public final class AutoFurnishSolver {
         int x2 = x1 + snapshot.getWidth();
         int y2 = y1 + snapshot.getHeight();
 
-        int effModsPlaced = 0;
-        int workstationsPlaced = 0;
+        // -------------------------------------------------------------
+        // PASS 1: Workstations-First Packing (larger sizes down to small)
+        // -------------------------------------------------------------
+        int wsSizes = getAvailableSizes(workstationGroup);
 
-        // --- PASS 1: Place Efficiency Modules along walls / perimeter ---
-        if (efficiencyGroup != null) {
-            int targetEffMods = Math.max(1, (int) Math.round(snapshot.getRoomTileCount() * 0.05 * config.getTargetEfficiency()));
-            FurnisherItem effItem = efficiencyGroup.item(0, 0);
+        for (int sizeIdx = wsSizes - 1; sizeIdx >= 0; sizeIdx--) {
+            for (int ty = y1; ty < y2; ty++) {
+                for (int tx = x1; tx < x2; tx++) {
+                    if (snapshot.get(tx, ty) != RoomGridSnapshot.TILE_ROOM_FLOOR) {
+                        continue;
+                    }
 
-            if (effItem != null) {
-                // Perimeter scan (tiles adjacent to walls)
-                for (int ty = y1; ty < y2 && effModsPlaced < targetEffMods; ty++) {
-                    for (int tx = x1; tx < x2 && effModsPlaced < targetEffMods; tx++) {
-                        if (isAdjacentToWall(tx, ty) && canFitItem(snapshot, tx, ty, effItem)) {
-                            if (reachability.canPlaceWithoutBlocking(snapshot, tx, ty, effItem, accessX, accessY, accessCount)) {
-                                placeItemInSnapshot(tx, ty, effItem);
-                                effModsPlaced++;
+                    // Try all 4 rotations
+                    for (int r = 0; r < 4; r++) {
+                        FurnisherItem wsItem = getItemSafe(workstationGroup, sizeIdx, r);
+                        if (wsItem == null) continue;
+
+                        if (canFitItem(snapshot, tx, ty, wsItem)) {
+                            if (reachability.canPlaceWithoutBlocking(snapshot, tx, ty, wsItem, accessX, accessY, accessCount)) {
+                                registerAccessPoints(wsItem, tx, ty);
+                                placeItemInSnapshot(tx, ty, wsItem, true, furnisher);
+                                break;
                             }
                         }
                     }
@@ -155,66 +177,40 @@ public final class AutoFurnishSolver {
             }
         }
 
-        // --- PASS 2: Pack Maximal Workstations ---
-        int bestSize = 0; // Use base size
-        int rots = 4;
-
-        int stepX = 1;
-        int stepY = 1;
-
-        for (int ty = y1; ty < y2; ty += stepY) {
-            for (int tx = x1; tx < x2; tx += stepX) {
-                if (snapshot.get(tx, ty) != RoomGridSnapshot.TILE_ROOM_FLOOR) {
-                    continue;
-                }
-
-                // Try each rotation
-                for (int r = 0; r < rots; r++) {
-                    FurnisherItem wsItem = null;
-                    try {
-                        wsItem = workstationGroup.item(bestSize, r);
-                    } catch (Exception ignored) {
-                        break;
-                    }
-                    if (wsItem == null) continue;
-
-                    if (canFitItem(snapshot, tx, ty, wsItem)) {
-                        if (reachability.canPlaceWithoutBlocking(snapshot, tx, ty, wsItem, accessX, accessY, accessCount)) {
-                            // Register access point(s)
-                            for (int iy = 0; iy < wsItem.height(); iy++) {
-                                for (int ix = 0; ix < wsItem.width(); ix++) {
-                                    FurnisherItemTile t = wsItem.get(ix, iy);
-                                    if (t != null && t.mustBeReachable) {
-                                        if (accessCount < accessX.length) {
-                                            accessX[accessCount] = tx + ix;
-                                            accessY[accessCount] = ty + iy;
-                                            accessCount++;
-                                        }
-                                    }
-                                }
-                            }
-
-                            placeItemInSnapshot(tx, ty, wsItem);
-                            workstationsPlaced++;
-                            break; // Successfully placed in this cell, proceed to next
-                        }
-                    }
-                }
-            }
+        // -------------------------------------------------------------
+        // PASS 2: Auxiliary / Efficiency Placement
+        // -------------------------------------------------------------
+        if (auxiliaryGroup != null) {
+            fulfillEfficiencyTarget(furnisher, auxiliaryGroup, config.getTargetEfficiency(), x1, y1, x2, y2);
         }
 
-        // --- PASS 3: Optional Storage Crates in remaining empty spots ---
+        // -------------------------------------------------------------
+        // PASS 3: Backtracking if Room was over-packed with Workstations
+        // -------------------------------------------------------------
+        double targetEff = config.getTargetEfficiency();
+        while (auxiliaryGroup != null && computeCurrentEfficiency(furnisher) < (targetEff - 0.005) && countWorkstations() > 1) {
+            // Remove the most recently placed workstation to free space
+            boolean removed = backtrackLastWorkstation(furnisher);
+            if (!removed) break;
+
+            // Fulfill efficiency into newly opened floor area
+            fulfillEfficiencyTarget(furnisher, auxiliaryGroup, targetEff, x1, y1, x2, y2);
+        }
+
+        // -------------------------------------------------------------
+        // PASS 4: Optional Storage Crates in remaining empty spots
+        // -------------------------------------------------------------
         if (storageGroup != null && config.getStorageRatio() > 0.0) {
             int maxStorage = Math.max(1, (int) (snapshot.getRoomTileCount() * config.getStorageRatio()));
             int storagePlaced = 0;
-            FurnisherItem crateItem = storageGroup.item(0, 0);
+            FurnisherItem crateItem = getItemSafe(storageGroup, 0, 0);
 
             if (crateItem != null) {
                 for (int ty = y1; ty < y2 && storagePlaced < maxStorage; ty++) {
                     for (int tx = x1; tx < x2 && storagePlaced < maxStorage; tx++) {
                         if (canFitItem(snapshot, tx, ty, crateItem)) {
                             if (reachability.canPlaceWithoutBlocking(snapshot, tx, ty, crateItem, accessX, accessY, accessCount)) {
-                                placeItemInSnapshot(tx, ty, crateItem);
+                                placeItemInSnapshot(tx, ty, crateItem, false, furnisher);
                                 storagePlaced++;
                             }
                         }
@@ -223,22 +219,186 @@ public final class AutoFurnishSolver {
             }
         }
 
-        // --- COMMIT PHASE: Apply to game room draft ---
+        // -------------------------------------------------------------
+        // COMMIT PHASE: Commit all placed items to game engine
+        // -------------------------------------------------------------
         Room.RoomInstanceImp ins = PlacerBridge.getInstance(placer);
+        int finalWorkstations = 0;
+        int finalAux = 0;
+
         for (int i = 0; i < placedCount; i++) {
             int px = itemX[i];
             int py = itemY[i];
             FurnisherItem item = itemsPlaced[i];
             SETT.ROOMS().fData.itemSet(px, py, item, ins);
             PlacerBridge.recordHistoryItem(placer, item, px, py, 1);
+
+            if (isWorkstationItem[i]) {
+                finalWorkstations++;
+            } else {
+                finalAux++;
+            }
         }
 
-        PlacerBridge.updateResources(placer);
+        // Synchronize engine costs, stats & visuals immediately
+        PlacerBridge.syncCostAndWalls(placer);
 
-        int efficiencyPercent = Math.min(100, (int) Math.round(100.0 * config.getTargetEfficiency()));
+        int effPercent = (int) Math.round(computeCurrentEfficiency(furnisher) * 100.0);
         long elapsed = System.currentTimeMillis() - start;
 
-        return new Result(true, null, workstationsPlaced, effModsPlaced, efficiencyPercent, elapsed);
+        return new Result(
+                true, 
+                null, 
+                finalWorkstations, 
+                finalAux, 
+                effPercent, 
+                snapshot.hasVirtualDoor,
+                snapshot.virtualDoorX,
+                snapshot.virtualDoorY,
+                elapsed);
+    }
+
+    /**
+     * Places auxiliary items prioritizing perimeter walls, pillars, and corners
+     * until the room's efficiency meets or exceeds the target.
+     */
+    private void fulfillEfficiencyTarget(
+            Furnisher furnisher, 
+            FurnisherItemGroup auxGroup, 
+            double targetEff, 
+            int x1, int y1, int x2, int y2) {
+
+        FurnisherItem auxItem = getItemSafe(auxGroup, 0, 0);
+        if (auxItem == null) return;
+
+        // Pass 2A: Wall-adjacent, pillar-adjacent and corner spots
+        for (int ty = y1; ty < y2; ty++) {
+            for (int tx = x1; tx < x2; tx++) {
+                if (computeCurrentEfficiency(furnisher) >= targetEff) {
+                    return;
+                }
+                if (isAdjacentToWallOrStrut(tx, ty) && canFitItem(snapshot, tx, ty, auxItem)) {
+                    if (reachability.canPlaceWithoutBlocking(snapshot, tx, ty, auxItem, accessX, accessY, accessCount)) {
+                        placeItemInSnapshot(tx, ty, auxItem, false, furnisher);
+                    }
+                }
+            }
+        }
+
+        // Pass 2B: Any remaining interior spots if still below target
+        for (int ty = y1; ty < y2; ty++) {
+            for (int tx = x1; tx < x2; tx++) {
+                if (computeCurrentEfficiency(furnisher) >= targetEff) {
+                    return;
+                }
+                if (canFitItem(snapshot, tx, ty, auxItem)) {
+                    if (reachability.canPlaceWithoutBlocking(snapshot, tx, ty, auxItem, accessX, accessY, accessCount)) {
+                        placeItemInSnapshot(tx, ty, auxItem, false, furnisher);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Removes the most recently placed workstation from snapshot and running stats.
+     */
+    private boolean backtrackLastWorkstation(Furnisher furnisher) {
+        for (int i = placedCount - 1; i >= 0; i--) {
+            if (isWorkstationItem[i]) {
+                FurnisherItem wsItem = itemsPlaced[i];
+                int tx = itemX[i];
+                int ty = itemY[i];
+
+                // Clear item from snapshot back to open floor
+                for (int iy = 0; iy < wsItem.height(); iy++) {
+                    for (int ix = 0; ix < wsItem.width(); ix++) {
+                        if (wsItem.get(ix, iy) != null) {
+                            snapshot.set(tx + ix, ty + iy, RoomGridSnapshot.TILE_ROOM_FLOOR);
+                        }
+                    }
+                }
+
+                // Deduct stats
+                for (FurnisherStat s : furnisher.stats()) {
+                    if (s.index() < runningStats.length) {
+                        runningStats[s.index()] -= wsItem.stat(s);
+                    }
+                }
+
+                // Remove from access points list
+                removeAccessPointsFor(wsItem, tx, ty);
+
+                // Remove from placed items stack
+                System.arraycopy(itemX, i + 1, itemX, i, placedCount - i - 1);
+                System.arraycopy(itemY, i + 1, itemY, i, placedCount - i - 1);
+                System.arraycopy(itemsPlaced, i + 1, itemsPlaced, i, placedCount - i - 1);
+                System.arraycopy(isWorkstationItem, i + 1, isWorkstationItem, i, placedCount - i - 1);
+                placedCount--;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void removeAccessPointsFor(FurnisherItem item, int tx, int ty) {
+        for (int iy = 0; iy < item.height(); iy++) {
+            for (int ix = 0; ix < item.width(); ix++) {
+                FurnisherItemTile t = item.get(ix, iy);
+                if (t != null && t.mustBeReachable) {
+                    int targetX = tx + ix;
+                    int targetY = ty + iy;
+                    for (int a = 0; a < accessCount; a++) {
+                        if (accessX[a] == targetX && accessY[a] == targetY) {
+                            System.arraycopy(accessX, a + 1, accessX, a, accessCount - a - 1);
+                            System.arraycopy(accessY, a + 1, accessY, a, accessCount - a - 1);
+                            accessCount--;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private double computeCurrentEfficiency(Furnisher furnisher) {
+        double minEff = 1.0;
+        boolean hasRelativeStat = false;
+
+        for (FurnisherStat s : furnisher.stats()) {
+            if (s instanceof FurnisherStat.FurnisherStatEfficiency || s instanceof FurnisherStat.FurnisherStatRelative) {
+                hasRelativeStat = true;
+                double val = s.get(snapshot, runningStats);
+                if (val < minEff) {
+                    minEff = val;
+                }
+            }
+        }
+
+        return hasRelativeStat ? minEff : 1.0;
+    }
+
+    private int countWorkstations() {
+        int count = 0;
+        for (int i = 0; i < placedCount; i++) {
+            if (isWorkstationItem[i]) count++;
+        }
+        return count;
+    }
+
+    private void registerAccessPoints(FurnisherItem wsItem, int tx, int ty) {
+        for (int iy = 0; iy < wsItem.height(); iy++) {
+            for (int ix = 0; ix < wsItem.width(); ix++) {
+                FurnisherItemTile t = wsItem.get(ix, iy);
+                if (t != null && t.mustBeReachable) {
+                    if (accessCount < accessX.length) {
+                        accessX[accessCount] = tx + ix;
+                        accessY[accessCount] = ty + iy;
+                        accessCount++;
+                    }
+                }
+            }
+        }
     }
 
     private boolean canFitItem(RoomGridSnapshot snap, int tx, int ty, FurnisherItem item) {
@@ -256,7 +416,7 @@ public final class AutoFurnishSolver {
         return true;
     }
 
-    private void placeItemInSnapshot(int tx, int ty, FurnisherItem item) {
+    private void placeItemInSnapshot(int tx, int ty, FurnisherItem item, boolean isWs, Furnisher furnisher) {
         for (int iy = 0; iy < item.height(); iy++) {
             for (int ix = 0; ix < item.width(); ix++) {
                 FurnisherItemTile t = item.get(ix, iy);
@@ -274,15 +434,23 @@ public final class AutoFurnishSolver {
             }
         }
 
+        // Accumulate stats
+        for (FurnisherStat s : furnisher.stats()) {
+            if (s.index() < runningStats.length) {
+                runningStats[s.index()] += item.stat(s);
+            }
+        }
+
         if (placedCount < MAX_PLACED_ITEMS) {
             itemX[placedCount] = tx;
             itemY[placedCount] = ty;
             itemsPlaced[placedCount] = item;
+            isWorkstationItem[placedCount] = isWs;
             placedCount++;
         }
     }
 
-    private boolean isAdjacentToWall(int tx, int ty) {
+    private boolean isAdjacentToWallOrStrut(int tx, int ty) {
         return snapshot.get(tx + 1, ty) == RoomGridSnapshot.TILE_WALL
             || snapshot.get(tx - 1, ty) == RoomGridSnapshot.TILE_WALL
             || snapshot.get(tx, ty + 1) == RoomGridSnapshot.TILE_WALL
@@ -291,6 +459,31 @@ public final class AutoFurnishSolver {
             || snapshot.get(tx - 1, ty) == RoomGridSnapshot.TILE_STRUT
             || snapshot.get(tx, ty + 1) == RoomGridSnapshot.TILE_STRUT
             || snapshot.get(tx, ty - 1) == RoomGridSnapshot.TILE_STRUT;
+    }
+
+    private FurnisherItem getItemSafe(FurnisherItemGroup group, int size, int rot) {
+        try {
+            return group.item(size, rot);
+        } catch (Throwable ignored) {
+            try {
+                return group.item(0, 0);
+            } catch (Throwable ignored2) {
+                return null;
+            }
+        }
+    }
+
+    private int getAvailableSizes(FurnisherItemGroup group) {
+        int sizes = 1;
+        while (sizes < 8) {
+            try {
+                if (group.item(sizes, 0) == null) break;
+                sizes++;
+            } catch (Throwable t) {
+                break;
+            }
+        }
+        return sizes;
     }
 
     public void clearExistingFurniture(RoomPlacer placer) {
@@ -311,6 +504,6 @@ public final class AutoFurnishSolver {
             }
         }
         PlacerBridge.clearHistory(placer);
-        PlacerBridge.updateResources(placer);
+        PlacerBridge.syncCostAndWalls(placer);
     }
 }

@@ -6,6 +6,7 @@ import java.lang.reflect.Method;
 import settlement.room.main.Room;
 import settlement.room.main.furnisher.FurnisherItem;
 import settlement.room.main.placement.RoomPlacer;
+import settlement.room.main.placement.UtilExtraCost;
 import snake2d.util.datatypes.RECTANGLE;
 
 /**
@@ -22,6 +23,8 @@ public final class PlacerBridge {
     private static Field fieldHistory;
     private static Method methodHistoryPlaceItem;
     private static Method methodHistoryClear;
+    private static Field fieldCost;
+    private static Field fieldCostTick;
 
     private static boolean initialized = false;
 
@@ -46,6 +49,11 @@ public final class PlacerBridge {
             methodHistoryPlaceItem.setAccessible(true);
             methodHistoryClear = fieldHistory.getType().getDeclaredMethod("clear");
             methodHistoryClear.setAccessible(true);
+
+            fieldCost = RoomPlacer.class.getDeclaredField("cost");
+            fieldCost.setAccessible(true);
+            fieldCostTick = fieldCost.getType().getDeclaredField("tick");
+            fieldCostTick.setAccessible(true);
 
             initialized = true;
         } catch (Throwable t) {
@@ -135,5 +143,39 @@ public final class PlacerBridge {
         } catch (Throwable t) {
             System.err.println("[SyxAutoPlanner] clearHistory failed: " + t.getMessage());
         }
+    }
+
+    /**
+     * Synchronizes ceiling cost overlay, dExpensive data, and engine UI state.
+     * Forces immediate recalculation of UtilExtraCost.psupport() and turns all supported tiles green.
+     */
+    public static void syncCostAndWalls(RoomPlacer placer) {
+        if (placer == null || placer.blueprint() == null) return;
+
+        Room.RoomInstanceImp ins = getInstance(placer);
+        if (ins != null && placer.blueprint().constructor() != null) {
+            try {
+                // 1. Force re-evaluation of engine support raytracer
+                UtilExtraCost.psupport(ins, placer.blueprint());
+
+                // 2. Invalidate cost cache tick so next frame re-queries fresh data
+                if (fieldCost != null && fieldCostTick != null) {
+                    Object costObj = fieldCost.get(placer);
+                    if (costObj != null) {
+                        fieldCostTick.setInt(costObj, -1);
+                    }
+                }
+            } catch (Throwable t) {
+                System.err.println("[SyxAutoPlanner] syncCostAndWalls cost update: " + t.getMessage());
+            }
+        }
+
+        // 3. Trigger immediate rendering refresh
+        try {
+            placer.renderExpense();
+        } catch (Throwable ignored) {}
+
+        // 4. Update resources & stats
+        updateResources(placer);
     }
 }

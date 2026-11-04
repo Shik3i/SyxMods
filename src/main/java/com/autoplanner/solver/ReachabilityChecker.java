@@ -204,6 +204,11 @@ public final class ReachabilityChecker {
             return false;
         }
 
+        // Must be pure available room floor (never reserved door landing or existing items)
+        if (snapshot.get(tx, ty) != RoomGridSnapshot.TILE_ROOM_FLOOR) {
+            return false;
+        }
+
         // Must not be adjacent to a door entrance (door threshold must remain completely clear)
         for (int i = 0; i < snapshot.doorCount; i++) {
             int dx = snapshot.doorX[i];

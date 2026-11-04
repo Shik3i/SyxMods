@@ -5,6 +5,7 @@ import settlement.room.main.construction.ConstructionData;
 import settlement.room.main.furnisher.FurnisherItem;
 import settlement.room.main.furnisher.FurnisherItemTile;
 import settlement.room.main.placement.RoomPlacer;
+import settlement.room.main.placement.UtilWallPlacability;
 import snake2d.util.datatypes.AREA;
 import snake2d.util.datatypes.COORDINATE;
 import snake2d.util.datatypes.DIR;
@@ -14,6 +15,7 @@ import snake2d.util.datatypes.Rec;
 /**
  * High-performance, Zero-GC 2D grid snapshot representing the active room draft.
  * Backed by pre-allocated flat arrays to eliminate heap allocations during solving.
+ * Includes deterministic virtual door fallback when player has not yet placed any doors.
  */
 public final class RoomGridSnapshot implements AREA {
 
@@ -25,6 +27,7 @@ public final class RoomGridSnapshot implements AREA {
     public static final int TILE_FURNITURE_BLOCK = 5;
     public static final int TILE_FURNITURE_WALKABLE = 6;
     public static final int TILE_WORKSTATION_ACCESS = 7;
+    public static final int TILE_RESERVED_DOOR_AISLE = 8; // Reserved corridor to future door!
 
     private static final int MAX_BUFFER_DIM = 256;
     private final int[] grid = new int[MAX_BUFFER_DIM * MAX_BUFFER_DIM];
@@ -40,6 +43,13 @@ public final class RoomGridSnapshot implements AREA {
     public final int[] doorX = new int[MAX_DOORS];
     public final int[] doorY = new int[MAX_DOORS];
     public int doorCount = 0;
+
+    // Virtual door fallback state
+    public boolean hasVirtualDoor = false;
+    public int virtualDoorX = -1;
+    public int virtualDoorY = -1;
+    public int virtualInteriorX = -1;
+    public int virtualInteriorY = -1;
 
     public void initFrom(RoomPlacer placer) {
         RECTANGLE bounds = PlacerBridge.getBounds(placer);
@@ -66,6 +76,11 @@ public final class RoomGridSnapshot implements AREA {
 
         roomTileCount = 0;
         doorCount = 0;
+        hasVirtualDoor = false;
+        virtualDoorX = -1;
+        virtualDoorY = -1;
+        virtualInteriorX = -1;
+        virtualInteriorY = -1;
 
         // 1. Populate room interior
         for (int ly = 0; ly < height; ly++) {
@@ -81,7 +96,7 @@ public final class RoomGridSnapshot implements AREA {
             }
         }
 
-        // 2. Classify surrounding walls & detect doors
+        // 2. Classify surrounding walls & detect real doors
         for (int ly = 0; ly < height; ly++) {
             int ty = originY + ly;
             for (int lx = 0; lx < width; lx++) {
@@ -99,7 +114,7 @@ public final class RoomGridSnapshot implements AREA {
                     int nty = ty + d.y();
                     if (isRoom(ntx, nty)) {
                         adjToRoom = true;
-                        // Check if door opening mask is set on this border tile
+                        // Check if door opening bitmask is set on this border tile
                         int m = ConstructionData.dWall.get(ntx, nty) & 0x0F;
                         if (m != 0) {
                             grid[idx] = TILE_DOOR;
@@ -128,32 +143,12 @@ public final class RoomGridSnapshot implements AREA {
             }
         }
 
-        // Fallback: If no explicit door opening found yet, assume any walkable border tile is an entrance
-        if (doorCount == 0) {
-            for (int ly = 0; ly < height && doorCount < MAX_DOORS; ly++) {
-                int ty = originY + ly;
-                for (int lx = 0; lx < width && doorCount < MAX_DOORS; lx++) {
-                    int tx = originX + lx;
-                    int idx = ly * width + lx;
-                    if (grid[idx] == TILE_WALL || grid[idx] == TILE_OUTSIDE) {
-                        for (DIR d : DIR.ORTHO) {
-                            int ntx = tx + d.x();
-                            int nty = ty + d.y();
-                            if (isRoom(ntx, nty) && SETT.PATH().getAvailability(tx, ty) != null 
-                                    && SETT.PATH().getAvailability(tx, ty).player >= 0) {
-                                grid[idx] = TILE_DOOR;
-                                doorX[doorCount] = tx;
-                                doorY[doorCount] = ty;
-                                doorCount++;
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
+        // 3. Fallback: If 0 doors placed, determine deterministic virtual door anchor
+        if (doorCount == 0 && roomTileCount > 0) {
+            setupVirtualDoorAnchor(bounds);
         }
 
-        // 3. Mark existing items if any
+        // 4. Mark existing items if any
         for (int ly = 0; ly < height; ly++) {
             int ty = originY + ly;
             for (int lx = 0; lx < width; lx++) {
@@ -178,6 +173,92 @@ public final class RoomGridSnapshot implements AREA {
         }
     }
 
+    /**
+     * Finds the best outer border tile to act as a virtual doorway into the room.
+     * Keeps the doorway tile and the adjacent interior landing tile permanently reserved.
+     */
+    private void setupVirtualDoorAnchor(RECTANGLE bounds) {
+        int bestDoorX = -1;
+        int bestDoorY = -1;
+        int bestInX = -1;
+        int bestInY = -1;
+        double bestScore = -Double.MAX_VALUE;
+
+        int midX = bounds.cX();
+        int midY = bounds.cY();
+
+        // Scan all room interior tiles that border the outside
+        for (int ly = 0; ly < height; ly++) {
+            int ty = originY + ly;
+            for (int lx = 0; lx < width; lx++) {
+                int tx = originX + lx;
+                if (grid[ly * width + lx] != TILE_ROOM_FLOOR) {
+                    continue;
+                }
+
+                for (DIR d : DIR.ORTHO) {
+                    int ox = tx + d.x();
+                    int oy = ty + d.y();
+
+                    if (!SETT.IN_BOUNDS(ox, oy)) continue;
+
+                    int olx = ox - originX;
+                    int oly = oy - originY;
+                    if (olx < 0 || olx >= width || oly < 0 || oly >= height) continue;
+
+                    int otype = grid[oly * width + olx];
+                    if (otype == TILE_WALL || otype == TILE_OUTSIDE) {
+                        // Check if passable on terrain (not a mountain/impassable rock)
+                        if (SETT.TERRAIN().MOUNTAIN.is(ox, oy)) {
+                            continue;
+                        }
+
+                        // Score candidate: favor midpoint of walls, favor South > East > West > North
+                        double distFromCenter = Math.abs(tx - midX) + Math.abs(ty - midY);
+                        double score = 100.0 - distFromCenter;
+                        if (d == DIR.S) score += 30.0;
+                        else if (d == DIR.E) score += 20.0;
+                        else if (d == DIR.W) score += 15.0;
+
+                        if (score > bestScore) {
+                            bestScore = score;
+                            bestDoorX = ox;
+                            bestDoorY = oy;
+                            bestInX = tx;
+                            bestInY = ty;
+                        }
+                    }
+                }
+            }
+        }
+
+        if (bestDoorX != -1 && bestInX != -1) {
+            hasVirtualDoor = true;
+            virtualDoorX = bestDoorX;
+            virtualDoorY = bestDoorY;
+            virtualInteriorX = bestInX;
+            virtualInteriorY = bestInY;
+
+            // Register virtual door
+            doorX[0] = bestDoorX;
+            doorY[0] = bestDoorY;
+            doorCount = 1;
+
+            int dlx = bestDoorX - originX;
+            int dly = bestDoorY - originY;
+            if (dlx >= 0 && dlx < width && dly >= 0 && dly < height) {
+                grid[dly * width + dlx] = TILE_DOOR;
+            }
+
+            // Reserve the interior landing tile as an open aisle!
+            int ilx = bestInX - originX;
+            int ily = bestInY - originY;
+            if (ilx >= 0 && ilx < width && ily >= 0 && ily < height) {
+                grid[ily * width + ilx] = TILE_RESERVED_DOOR_AISLE;
+            }
+        }
+    }
+
     public void clear() {
         originX = 0;
         originY = 0;
@@ -185,6 +266,11 @@ public final class RoomGridSnapshot implements AREA {
         height = 0;
         roomTileCount = 0;
         doorCount = 0;
+        hasVirtualDoor = false;
+        virtualDoorX = -1;
+        virtualDoorY = -1;
+        virtualInteriorX = -1;
+        virtualInteriorY = -1;
     }
 
     public int get(int tx, int ty) {
@@ -207,13 +293,15 @@ public final class RoomGridSnapshot implements AREA {
     public boolean isRoom(int tx, int ty) {
         int t = get(tx, ty);
         return t == TILE_ROOM_FLOOR || t == TILE_FURNITURE_BLOCK 
-            || t == TILE_FURNITURE_WALKABLE || t == TILE_WORKSTATION_ACCESS;
+            || t == TILE_FURNITURE_WALKABLE || t == TILE_WORKSTATION_ACCESS
+            || t == TILE_RESERVED_DOOR_AISLE;
     }
 
     public boolean isWalkable(int tx, int ty) {
         int t = get(tx, ty);
         return t == TILE_ROOM_FLOOR || t == TILE_DOOR 
-            || t == TILE_FURNITURE_WALKABLE || t == TILE_WORKSTATION_ACCESS;
+            || t == TILE_FURNITURE_WALKABLE || t == TILE_WORKSTATION_ACCESS
+            || t == TILE_RESERVED_DOOR_AISLE;
     }
 
     public boolean isObstacle(int tx, int ty) {
@@ -221,6 +309,10 @@ public final class RoomGridSnapshot implements AREA {
         return t == TILE_WALL || t == TILE_STRUT || t == TILE_FURNITURE_BLOCK || t == TILE_OUTSIDE;
     }
 
+    /**
+     * Returns true ONLY if tile is pure floor ready to receive furniture.
+     * Specifically excludes reserved door aisles and struts!
+     */
     public boolean isAvailableFloor(int tx, int ty) {
         return get(tx, ty) == TILE_ROOM_FLOOR;
     }

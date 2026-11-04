@@ -3,12 +3,12 @@ package com.autoplanner.ui;
 import com.autoplanner.config.PlannerConfig;
 import com.autoplanner.solver.AutoFurnishSolver;
 import com.autoplanner.solver.AutoStrutSolver;
-import com.autoplanner.solver.PlacerBridge;
 import com.autoplanner.util.I18n;
 
 import init.constant.C;
 import init.sprite.UI.UI;
 import settlement.main.SETT;
+import settlement.room.main.RoomBlueprintImp;
 import settlement.room.main.placement.RoomPlacer;
 import snake2d.CORE;
 import snake2d.MButt;
@@ -26,7 +26,8 @@ import view.main.VIEW;
 
 /**
  * Compact HUD Overlay & Modal Configuration Center for Syx Auto-Planner.
- * Dynamically surfaces when the player is drawing/editing a room.
+ * Dynamically surfaces when the player is drawing/editing a furnisher room.
+ * Strictly guarantees ZERO object allocations during 60Hz render and update loops.
  */
 public final class PlannerOverlayUI {
 
@@ -45,6 +46,17 @@ public final class PlannerOverlayUI {
     private final Rec btnQuickBounds = new Rec();
     private final Rec btnClearBounds = new Rec();
     private final Rec btnConfigBounds = new Rec();
+
+    // Zero-GC String Cache for 60Hz Render Loop
+    private RoomBlueprintImp cachedBlueprint = null;
+    private int cachedArea = -1;
+    private I18n.Language cachedLanguage = null;
+    private String cachedHeader = "";
+    private String cachedBtnStrut = "";
+    private String cachedBtnFurnish = "";
+    private String cachedBtnQuick = "";
+    private String cachedBtnClear = "";
+    private String cachedBtnConfig = "";
 
     public PlannerOverlayUI(PlannerConfig config, AutoStrutSolver strutSolver, AutoFurnishSolver furnishSolver) {
         this.config = config;
@@ -67,8 +79,36 @@ public final class PlannerOverlayUI {
         }
 
         RoomPlacer placer = getActivePlacer();
-        if (placer == null || placer.blueprint() == null || PlacerBridge.getArea(placer) <= 0) {
+        if (placer == null || placer.blueprint() == null || placer.blueprint().constructor() == null) {
             return;
+        }
+
+        // Only active for actual area-based furnisher rooms (ignores pastures, roads, canals, farms without area constructor)
+        if (!placer.blueprint().constructor().usesArea()) {
+            return;
+        }
+
+        int currentArea = placer.size();
+        if (currentArea <= 0) {
+            return;
+        }
+
+        RoomBlueprintImp bp = placer.blueprint();
+        I18n.Language currentLang = I18n.getLanguage();
+
+        // Zero-GC cache update: Only re-format strings when area, room blueprint or language changes
+        if (cachedBlueprint != bp || cachedArea != currentArea || cachedLanguage != currentLang) {
+            cachedBlueprint = bp;
+            cachedArea = currentArea;
+            cachedLanguage = currentLang;
+
+            CharSequence roomName = bp.info != null ? bp.info.name : "";
+            cachedHeader = I18n.get("ui.overlay.room", roomName, currentArea);
+            cachedBtnStrut = I18n.get("btn.strut");
+            cachedBtnFurnish = I18n.get("btn.furnish");
+            cachedBtnQuick = I18n.get("btn.quickfill");
+            cachedBtnClear = I18n.get("btn.clear");
+            cachedBtnConfig = I18n.get("btn.settings");
         }
 
         // Compute HUD Bar position (Top Center of screen)
@@ -84,10 +124,8 @@ public final class PlannerOverlayUI {
         COLOR.BLACK.render(r, panelBounds);
         COLOR.WHITE50.render(r, panelBounds, 1);
 
-        // Header: Room Name + Tile Count
-        CharSequence roomName = placer.blueprint().info.name;
-        String header = I18n.get("ui.overlay.room", roomName, PlacerBridge.getArea(placer));
-        UI.FONT().S.render(r, header, panelX + 10, panelY + 4);
+        // Header: Room Name + Tile Count (Cached string)
+        UI.FONT().S.render(r, cachedHeader, panelX + 10, panelY + 4);
 
         // Buttons Row
         int btnY = panelY + 22;
@@ -97,31 +135,31 @@ public final class PlannerOverlayUI {
         int btn1W = 105;
         int btn1X = panelX + 8;
         btnStrutBounds.set(btn1X, btn1X + btn1W, btnY, btnY + btnH);
-        renderButton(r, btnStrutBounds, I18n.get("btn.strut"));
+        renderButton(r, btnStrutBounds, cachedBtnStrut);
 
         // Button 2: Auto-Furnish
         int btn2W = 110;
         int btn2X = btn1X + btn1W + 6;
         btnFurnishBounds.set(btn2X, btn2X + btn2W, btnY, btnY + btnH);
-        renderButton(r, btnFurnishBounds, I18n.get("btn.furnish"));
+        renderButton(r, btnFurnishBounds, cachedBtnFurnish);
 
         // Button 3: Quick Build
         int btn3W = 110;
         int btn3X = btn2X + btn2W + 6;
         btnQuickBounds.set(btn3X, btn3X + btn3W, btnY, btnY + btnH);
-        renderButton(r, btnQuickBounds, I18n.get("btn.quickfill"));
+        renderButton(r, btnQuickBounds, cachedBtnQuick);
 
         // Button 4: Clear
         int btn4W = 85;
         int btn4X = btn3X + btn3W + 6;
         btnClearBounds.set(btn4X, btn4X + btn4W, btnY, btnY + btnH);
-        renderButton(r, btnClearBounds, I18n.get("btn.clear"));
+        renderButton(r, btnClearBounds, cachedBtnClear);
 
         // Button 5: Config / Options
         int btn5W = 65;
         int btn5X = btn4X + btn4W + 6;
         btnConfigBounds.set(btn5X, btn5X + btn5W, btnY, btnY + btnH);
-        renderButton(r, btnConfigBounds, I18n.get("btn.settings"));
+        renderButton(r, btnConfigBounds, cachedBtnConfig);
 
         // Status Feedback Message (if active)
         if (!statusMessage.isEmpty()) {
@@ -155,7 +193,7 @@ public final class PlannerOverlayUI {
         }
 
         RoomPlacer placer = getActivePlacer();
-        if (placer == null || placer.blueprint() == null || PlacerBridge.getArea(placer) <= 0) {
+        if (placer == null || placer.blueprint() == null || placer.blueprint().constructor() == null || placer.size() <= 0) {
             return false;
         }
 
@@ -203,7 +241,11 @@ public final class PlannerOverlayUI {
     public void triggerAutoFurnish(RoomPlacer placer) {
         AutoFurnishSolver.Result res = furnishSolver.solve(placer, config);
         if (res.success) {
-            setStatus(I18n.get("msg.furnish_success", res.workstations, res.efficiencyModules, res.efficiencyPercent));
+            if (res.virtualDoorUsed) {
+                setStatus(I18n.get("msg.furnish_virtual_door", res.workstations, res.efficiencyModules, res.efficiencyPercent, res.virtualDoorX, res.virtualDoorY));
+            } else {
+                setStatus(I18n.get("msg.furnish_success", res.workstations, res.efficiencyModules, res.efficiencyPercent));
+            }
         } else {
             setStatus(I18n.get(res.errorMessage));
         }
@@ -214,7 +256,11 @@ public final class PlannerOverlayUI {
         AutoFurnishSolver.Result fRes = furnishSolver.solve(placer, config);
 
         if (fRes.success) {
-            setStatus(I18n.get("msg.furnish_success", fRes.workstations, fRes.efficiencyModules, fRes.efficiencyPercent));
+            if (fRes.virtualDoorUsed) {
+                setStatus(I18n.get("msg.furnish_virtual_door", fRes.workstations, fRes.efficiencyModules, fRes.efficiencyPercent, fRes.virtualDoorX, fRes.virtualDoorY));
+            } else {
+                setStatus(I18n.get("msg.furnish_success", fRes.workstations, fRes.efficiencyModules, fRes.efficiencyPercent));
+            }
         } else {
             setStatus(I18n.get(fRes.errorMessage));
         }
@@ -308,6 +354,7 @@ public final class PlannerOverlayUI {
             @Override
             public void exe() {
                 I18n.toggleLanguage();
+                cachedLanguage = null; // force cache refresh
                 openConfigModal();
             }
         });

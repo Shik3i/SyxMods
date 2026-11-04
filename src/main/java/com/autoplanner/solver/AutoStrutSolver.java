@@ -126,9 +126,8 @@ public final class AutoStrutSolver {
             }
         }
 
-        if (strutCount > 0) {
-            PlacerBridge.updateResources(placer);
-        }
+        // Force engine state re-evaluation: recalculate ceiling support & reset yellow overlay
+        PlacerBridge.syncCostAndWalls(placer);
 
         long elapsed = System.currentTimeMillis() - start;
         return new Result(strutCount, initialYellow, yellowCount, elapsed);
