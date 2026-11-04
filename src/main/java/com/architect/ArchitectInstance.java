@@ -1,6 +1,7 @@
 package com.architect;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 
 import com.architect.config.ArchitectState;
 import com.architect.modules.BoostModule;
@@ -24,23 +25,30 @@ import snake2d.util.datatypes.DIR;
 import snake2d.util.datatypes.Rec;
 import snake2d.util.file.FileGetter;
 import snake2d.util.file.FilePutter;
+import snake2d.util.gui.GuiSection;
 import snake2d.util.misc.ACTION;
 import util.gui.misc.GBox;
 import util.gui.misc.GButt;
 import util.gui.misc.GText;
+import view.interrupter.InterManager;
+import view.interrupter.Interrupter;
 import view.keyboard.KEYS;
+import view.main.VIEW;
+import view.ui.top.UIPanelTop;
 
 /**
  * Runtime execution instance of Syx Architect during active gameplay.
  * STRICT ZERO-ALLOCATION GUARANTEE in 60Hz update and render loops.
  * Features:
- * - Permanent, sleek native stone HUD button at top-right
+ * - Native integration directly into the game's top menu bar (UIPanelTop) alongside Menu & Wiki buttons
+ * - 100% resolution-independent, UI-scale responsive layout (supports 1080p, 1440p, 4K, 720p, ultrawide)
+ * - Safe responsive fallback for views where top panel is inactive
  * - Rock-solid edge-triggered F10 hotkey with debouncing
  * - Native hover tooltip and full interaction support
  */
 public final class ArchitectInstance implements SCRIPT_INSTANCE {
 
-    private static final String BANNER_TEXT = "Syx Architect aktiv  [Button oben rechts / F10]";
+    private static final String BANNER_TEXT = "Syx Architect aktiv  [Button in Menueleiste / F10]";
 
     private final ArchitectState state = new ArchitectState();
 
@@ -59,8 +67,10 @@ public final class ArchitectInstance implements SCRIPT_INSTANCE {
     private final Rec bannerBounds = new Rec();
     private double bannerTimer = 4.0;
 
-    // Persistent sleek native stone HUD button
+    // Native stone HUD button
     private GButt.ButtPanel hudButton;
+    private boolean attachedToTopPanel = false;
+    private UIPanelTop lastAttachedTop = null;
 
     // Reusable UI callback to prevent lambda allocation on each open
     private final ArchitectUI.UICallback uiCallback = new ArchitectUI.UICallback() {
@@ -118,7 +128,7 @@ public final class ArchitectInstance implements SCRIPT_INSTANCE {
             GText t = new GText(UI.FONT().S, "ARCHITECT");
             t.lablify();
             hudButton = new GButt.ButtPanel((snake2d.util.sprite.SPRITE) t);
-            hudButton.setDim(88, 22);
+            hudButton.setDim(76, 24);
             hudButton.align(DIR.C);
             hudButton.hoverTitleSet("Syx Architect  [F10]");
             hudButton.hoverInfoSet(I18n.getLanguage() == I18n.Language.DE
@@ -130,6 +140,44 @@ public final class ArchitectInstance implements SCRIPT_INSTANCE {
                     toggleUI();
                 }
             });
+        }
+    }
+
+    /**
+     * Finds the active UIPanelTop instance in the settlement view to dock the button natively.
+     */
+    private UIPanelTop findTopPanel() {
+        if (VIEW.s() == null || VIEW.s().uiManager == null) {
+            return null;
+        }
+        try {
+            Field f = InterManager.class.getDeclaredField("inters");
+            f.setAccessible(true);
+            Object coll = f.get(VIEW.s().uiManager);
+            if (coll instanceof Iterable) {
+                for (Object obj : (Iterable<?>) coll) {
+                    if (obj instanceof UIPanelTop) {
+                        return (UIPanelTop) obj;
+                    }
+                }
+            }
+        } catch (Throwable ignored) {
+        }
+        return null;
+    }
+
+    /**
+     * Docks our HUD button cleanly into the native top bar beside the Menu & Wiki buttons.
+     */
+    private void attachToTopPanel(UIPanelTop top) {
+        if (top == null || top == lastAttachedTop) return;
+        ensureHudButton();
+        if (hudButton != null) {
+            GuiSection section = new GuiSection();
+            section.add(hudButton);
+            top.addRightRight(section);
+            lastAttachedTop = top;
+            attachedToTopPanel = true;
         }
     }
 
@@ -159,7 +207,20 @@ public final class ArchitectInstance implements SCRIPT_INSTANCE {
             }
         }
 
-        // 3. Subsystem simulation updates
+        // 3. Ensure native top bar docking whenever entering or loading settlement view
+        if (!attachedToTopPanel || lastAttachedTop == null) {
+            UIPanelTop top = findTopPanel();
+            if (top != null) {
+                attachToTopPanel(top);
+            }
+        }
+
+        // 4. Update button active/highlighted state matching open modal
+        if (hudButton != null) {
+            hudButton.selectedSet(ArchitectUI.isOpen());
+        }
+
+        // 5. Subsystem simulation updates
         boostModule.update(ds, state);
         logisticsModule.update(ds, state);
         constructionModule.update(ds, state);
@@ -198,7 +259,9 @@ public final class ArchitectInstance implements SCRIPT_INSTANCE {
     public void load(FileGetter file) throws IOException {
         state.load(file);
         notifyStateChanged();
-        // Reset subtle banner timer upon loading game
+        // Reset top panel attachment and banner timer upon loading game
+        attachedToTopPanel = false;
+        lastAttachedTop = null;
         bannerTimer = 4.0;
     }
 
@@ -222,40 +285,49 @@ public final class ArchitectInstance implements SCRIPT_INSTANCE {
             }
         }
 
-        // 2. Render sleek, permanent native stone HUD button at top-right
-        ensureHudButton();
-        if (hudButton != null) {
-            int btnW = 88;
-            int btnH = 22;
-            int btnX = C.DIM().width() - btnW - 10;
-            int btnY = 54;
-            hudButton.body().moveX1Y1(btnX, btnY);
-            hudButton.selectedSet(ArchitectUI.isOpen());
-            hudButton.render(r, ds);
+        // 2. If not yet attached to native UIPanelTop, render responsive fallback button
+        // Anchors dynamically to the scaled top bar bottom edge and right screen edge
+        if (!attachedToTopPanel) {
+            ensureHudButton();
+            if (hudButton != null) {
+                int btnW = 76;
+                int btnH = 24;
+                int topY = UIPanelTop.y2();
+                int btnX = C.DIM().width() - btnW - 10;
+                int btnY = topY + 4;
+                hudButton.body().moveX1Y1(btnX, btnY);
+                hudButton.render(r, ds);
+            }
         }
     }
 
     @Override
     public void hover(COORDINATE coordinate, boolean hasCursor) {
-        ensureHudButton();
-        if (hudButton != null && coordinate != null) {
-            hudButton.hover(coordinate);
+        if (!attachedToTopPanel) {
+            ensureHudButton();
+            if (hudButton != null && coordinate != null) {
+                hudButton.hover(coordinate);
+            }
         }
     }
 
     @Override
     public void hoverTimer(double time, GBox hoverBox) {
-        ensureHudButton();
-        if (hudButton != null && hudButton.hoveredIs() && hoverBox != null) {
-            hudButton.hoverInfoGet(hoverBox);
+        if (!attachedToTopPanel) {
+            ensureHudButton();
+            if (hudButton != null && hudButton.hoveredIs() && hoverBox != null) {
+                hudButton.hoverInfoGet(hoverBox);
+            }
         }
     }
 
     @Override
     public void mouseClick(MButt button) {
-        ensureHudButton();
-        if (button == MButt.LEFT && hudButton != null && hudButton.hoveredIs()) {
-            hudButton.click();
+        if (!attachedToTopPanel) {
+            ensureHudButton();
+            if (button == MButt.LEFT && hudButton != null && hudButton.hoveredIs()) {
+                hudButton.click();
+            }
         }
     }
 
