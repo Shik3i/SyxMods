@@ -1,0 +1,35 @@
+================================================================================
+                           SYX ARCHITECT - CREATIVE SUITE
+================================================================================
+
+Willkommen bei Syx Architect!
+Diese Suite verleiht dir vollständige kreative Kontrolle und Sandbox-Freiheit
+über deine Siedlung in Songs of Syx.
+
+KERNFUNKTIONEN:
+1. Forschung & Innovation:
+   Beschleunige Forschung, Innovationspunkte und Tech-Fortschritt mit flexiblen
+   Multiplikator-Stufen (2x, 5x, 10x, 100x).
+
+2. Verschleißfrei & Haltbar:
+   Halte alle Gebäude dauerhaft in perfektem Zustand, ganz ohne Wartungsaufwand
+   oder Hausmeister. Nahrung und Waren verderben in Lagern niemals.
+
+3. Instant Build & Schönbau:
+   Entwerfe monumentale Paläste, kunstvolle Straßennetze und gigantische
+   Distrikte ohne Wartezeit auf Transporte oder Materialbeschaffung.
+
+4. Logistik & Lagerkapazität:
+   Vervielfache die Kapazität von Lagerkisten und Halden, um Engpässe sofort
+   zu beseitigen.
+
+5. Sandbox-Frieden & Raid-Schutz:
+   Konzentriere dich ungestört auf Stadtplanung und Ästhetik – feindliche
+   Überfälle und Raids können automatisch neutralisiert werden.
+
+ÖFFNEN IM SPIEL:
+- Über das Debug-Menü oben rechts oder die konfigurierte Tastenkombination.
+- Wähle 'Syx Architect' aus, um das Kontrollfenster jederzeit aufzurufen.
+
+Viel Freude beim Erschaffen deiner Traumstadt!
+================================================================================

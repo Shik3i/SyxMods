@@ -1,0 +1,33 @@
+================================================================================
+                           SYX ARCHITECT - CREATIVE SUITE
+================================================================================
+
+Welcome to Syx Architect!
+This suite gives you full creative and sandbox control over your Songs of Syx city.
+
+KEY FEATURES:
+1. Boosts & Innovation:
+   Instantly boost technology progression, research speed, and city innovation
+   points with customizable multiplier tiers (2x, 5x, 10x, 100x).
+
+2. Zero Degradation & Spoilage:
+   Keep every structure in pristine condition forever without maintenance costs.
+   Food, rations, and perishable resources will never spoil in your granaries.
+
+3. Instant Build & Creative Schönbau:
+   Layout ambitious monuments, intricate road networks, and palatial districts
+   without waiting for haulers, brickmakers, or scaffolding builders.
+
+4. Logistics & Warehousing:
+   Multiply crate storage sizes to eliminate micro-management bottlenecks.
+
+5. Sandbox Peace & Raid Immunity:
+   Focus entirely on architecture and city aesthetics without worrying about
+   unexpected devastation from barbarian raids.
+
+HOW TO OPEN IN-GAME:
+- Press the configured hotkey or open the debug panel in the top-right menu.
+- Select 'Syx Architect' to toggle this control panel at any time.
+
+Enjoy building your dream metropolis!
+================================================================================
