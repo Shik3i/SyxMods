@@ -19,14 +19,15 @@ import snake2d.util.datatypes.Rec;
 import snake2d.util.gui.GuiSection;
 import snake2d.util.misc.ACTION;
 import util.colors.GCOLOR;
+import util.gui.misc.GBox;
 import util.gui.misc.GButt;
 import util.gui.misc.GText;
 import util.gui.panel.GPanel;
 import view.main.VIEW;
 
 /**
- * Compact HUD Overlay & Modal Configuration Center for Syx Auto-Planner.
- * Dynamically surfaces when the player is drawing/editing a furnisher room.
+ * Native-integrated Room Editor Toolbar & Config Center for Syx Auto-Planner.
+ * Strictly docks above the active room constructor frame, completely isolated from top bar elements.
  * Strictly guarantees ZERO object allocations during 60Hz render and update loops.
  */
 public final class PlannerOverlayUI {
@@ -39,6 +40,10 @@ public final class PlannerOverlayUI {
     private String statusMessage = "";
     private double statusTimer = 0.0;
 
+    // Fixed toolbar geometry
+    private static final int TOOLBAR_WIDTH = 460;
+    private static final int TOOLBAR_HEIGHT = 32;
+
     // HUD Button Bounds (in screen pixels)
     private final Rec panelBounds = new Rec();
     private final Rec btnStrutBounds = new Rec();
@@ -48,10 +53,7 @@ public final class PlannerOverlayUI {
     private final Rec btnConfigBounds = new Rec();
 
     // Zero-GC String Cache for 60Hz Render Loop
-    private RoomBlueprintImp cachedBlueprint = null;
-    private int cachedArea = -1;
     private I18n.Language cachedLanguage = null;
-    private String cachedHeader = "";
     private String cachedBtnStrut = "";
     private String cachedBtnFurnish = "";
     private String cachedBtnQuick = "";
@@ -73,37 +75,46 @@ public final class PlannerOverlayUI {
         }
     }
 
-    public void render(Renderer r, float ds) {
+    /**
+     * Strictest possible active-check:
+     * Returns true ONLY if player is actively in settlement mode, has the RoomPlacer tool selected,
+     * an area-based room blueprint is being drafted, at least 1 tile has been drawn,
+     * and NO modal popup / menu is blocking the screen.
+     */
+    public boolean isPlacerActive() {
         if (!config.isShowOverlay()) {
-            return;
+            return false;
         }
-
-        RoomPlacer placer = getActivePlacer();
+        if (VIEW.s() == null || VIEW.s().tools == null || VIEW.s().tools.placer == null) {
+            return false;
+        }
+        if (!VIEW.s().tools.placer.isActivated() || VIEW.s().tools.current() != VIEW.s().tools.placer) {
+            return false;
+        }
+        if (VIEW.inters() != null && VIEW.inters().section != null && VIEW.inters().section.isActivated()) {
+            return false;
+        }
+        if (SETT.ROOMS() == null || SETT.ROOMS().placement == null) {
+            return false;
+        }
+        RoomPlacer placer = SETT.ROOMS().placement.placer;
         if (placer == null || placer.blueprint() == null || placer.blueprint().constructor() == null) {
-            return;
+            return false;
         }
-
-        // Only active for actual area-based furnisher rooms (ignores pastures, roads, canals, farms without area constructor)
         if (!placer.blueprint().constructor().usesArea()) {
+            return false;
+        }
+        return placer.size() > 0;
+    }
+
+    public void render(Renderer r, float ds) {
+        if (!isPlacerActive()) {
             return;
         }
 
-        int currentArea = placer.size();
-        if (currentArea <= 0) {
-            return;
-        }
-
-        RoomBlueprintImp bp = placer.blueprint();
         I18n.Language currentLang = I18n.getLanguage();
-
-        // Zero-GC cache update: Only re-format strings when area, room blueprint or language changes
-        if (cachedBlueprint != bp || cachedArea != currentArea || cachedLanguage != currentLang) {
-            cachedBlueprint = bp;
-            cachedArea = currentArea;
+        if (cachedLanguage != currentLang) {
             cachedLanguage = currentLang;
-
-            CharSequence roomName = bp.info != null ? bp.info.name : "";
-            cachedHeader = I18n.get("ui.overlay.room", roomName, currentArea);
             cachedBtnStrut = I18n.get("btn.strut");
             cachedBtnFurnish = I18n.get("btn.furnish");
             cachedBtnQuick = I18n.get("btn.quickfill");
@@ -111,67 +122,71 @@ public final class PlannerOverlayUI {
             cachedBtnConfig = I18n.get("btn.settings");
         }
 
-        // Compute HUD Bar position (Top Center of screen)
+        // Compute docking position:
+        // Native Songs of Syx RoomPlacer frame sits at y1 = C.SG * 80.
+        // We dock directly 4px above it, completely clear of the top HUD bar (y <= 30).
         int screenWidth = C.WIDTH();
-        int panelWidth = 510;
-        int panelHeight = statusMessage.isEmpty() ? 56 : 74;
-        int panelX = (screenWidth - panelWidth) / 2;
-        int panelY = 12;
+        int nativeFrameY1 = (int) (C.SG * 80);
 
-        panelBounds.set(panelX, panelX + panelWidth, panelY, panelY + panelHeight);
+        int panelW = TOOLBAR_WIDTH;
+        int panelH = TOOLBAR_HEIGHT;
+        int panelX = (screenWidth - panelW) / 2;
+        int panelY = Math.max(34, nativeFrameY1 - panelH - 4);
+
+        panelBounds.set(panelX, panelX + panelW, panelY, panelY + panelH);
 
         // Render Background Panel Box
         COLOR.BLACK.render(r, panelBounds);
-        COLOR.WHITE50.render(r, panelBounds, 1);
+        COLOR.WHITE35.render(r, panelBounds, 1);
 
-        // Header: Room Name + Tile Count (Cached string)
-        UI.FONT().S.render(r, cachedHeader, panelX + 10, panelY + 4);
+        // Buttons Row (Vertically centered at panelY + 4, height 24px)
+        int btnY = panelY + 4;
+        int btnH = 24;
 
-        // Buttons Row
-        int btnY = panelY + 22;
-        int btnH = 26;
-
-        // Button 1: Auto-Strut
-        int btn1W = 105;
-        int btn1X = panelX + 8;
+        // Button 1: Auto-Strut (92px)
+        int btn1W = 92;
+        int btn1X = panelX + 6;
         btnStrutBounds.set(btn1X, btn1X + btn1W, btnY, btnY + btnH);
         renderButton(r, btnStrutBounds, cachedBtnStrut);
 
-        // Button 2: Auto-Furnish
-        int btn2W = 110;
+        // Button 2: Auto-Furnish (96px)
+        int btn2W = 96;
         int btn2X = btn1X + btn1W + 6;
         btnFurnishBounds.set(btn2X, btn2X + btn2W, btnY, btnY + btnH);
         renderButton(r, btnFurnishBounds, cachedBtnFurnish);
 
-        // Button 3: Quick Build
-        int btn3W = 110;
+        // Button 3: Quick Build (92px)
+        int btn3W = 92;
         int btn3X = btn2X + btn2W + 6;
         btnQuickBounds.set(btn3X, btn3X + btn3W, btnY, btnY + btnH);
         renderButton(r, btnQuickBounds, cachedBtnQuick);
 
-        // Button 4: Clear
-        int btn4W = 85;
+        // Button 4: Clear (70px)
+        int btn4W = 70;
         int btn4X = btn3X + btn3W + 6;
         btnClearBounds.set(btn4X, btn4X + btn4W, btnY, btnY + btnH);
         renderButton(r, btnClearBounds, cachedBtnClear);
 
-        // Button 5: Config / Options
-        int btn5W = 65;
+        // Button 5: Config (74px)
+        int btn5W = 74;
         int btn5X = btn4X + btn4W + 6;
         btnConfigBounds.set(btn5X, btn5X + btn5W, btnY, btnY + btnH);
         renderButton(r, btnConfigBounds, cachedBtnConfig);
 
-        // Status Feedback Message (if active)
+        // Status Feedback Message (Floating centered directly above the toolbar)
         if (!statusMessage.isEmpty()) {
             GCOLOR.MAP().OK.bind();
-            UI.FONT().S.render(r, statusMessage, panelX + 10, panelY + 52);
+            int msgW = UI.FONT().S.width(statusMessage);
+            int msgX = panelX + (panelW - msgW) / 2;
+            int msgY = panelY - 15;
+            UI.FONT().S.render(r, statusMessage, msgX, msgY);
             COLOR.unbind();
         }
     }
 
     private void renderButton(Renderer r, Rec b, String text) {
         COORDINATE m = CORE.getInput().getMouse().getCoo();
-        boolean hover = b.holdsPoint(m.x(), m.y());
+        boolean hover = m != null && b.holdsPoint(m.x(), m.y());
 
         if (hover) {
             COLOR.WHITE35.render(r, b);
@@ -192,41 +207,64 @@ public final class PlannerOverlayUI {
             return false;
         }
 
-        RoomPlacer placer = getActivePlacer();
-        if (placer == null || placer.blueprint() == null || placer.blueprint().constructor() == null || placer.size() <= 0) {
+        if (!isPlacerActive()) {
             return false;
         }
 
+        RoomPlacer placer = SETT.ROOMS().placement.placer;
         COORDINATE m = CORE.getInput().getMouse().getCoo();
+        if (m == null) {
+            return false;
+        }
+        int mx = m.x();
+        int my = m.y();
+
+        if (panelBounds.holdsPoint(mx, my)) {
+            if (btnStrutBounds.holdsPoint(mx, my)) {
+                triggerAutoStrut(placer);
+            } else if (btnFurnishBounds.holdsPoint(mx, my)) {
+                triggerAutoFurnish(placer);
+            } else if (btnQuickBounds.holdsPoint(mx, my)) {
+                triggerQuickBuild(placer);
+            } else if (btnClearBounds.holdsPoint(mx, my)) {
+                triggerClearFurniture(placer);
+            } else if (btnConfigBounds.holdsPoint(mx, my)) {
+                openConfigModal();
+            }
+
+            // Consume click so downstream settlement clicks or tile placements are suppressed
+            CORE.getInput().clearAllInput();
+            return true;
+        }
+
+        return false;
+    }
+
+    public void hoverTimer(double mouseTimer, GBox text) {
+        if (!isPlacerActive() || text == null) {
+            return;
+        }
+        COORDINATE m = CORE.getInput().getMouse().getCoo();
+        if (m == null) return;
         int mx = m.x();
         int my = m.y();
 
         if (btnStrutBounds.holdsPoint(mx, my)) {
-            triggerAutoStrut(placer);
-            return true;
+            text.title(I18n.get("btn.strut"));
+            text.text(I18n.get("tooltip.strut"));
+        } else if (btnFurnishBounds.holdsPoint(mx, my)) {
+            text.title(I18n.get("btn.furnish"));
+            text.text(I18n.get("tooltip.furnish"));
+        } else if (btnQuickBounds.holdsPoint(mx, my)) {
+            text.title(I18n.get("btn.quickfill"));
+            text.text(I18n.get("tooltip.quickfill"));
+        } else if (btnClearBounds.holdsPoint(mx, my)) {
+            text.title(I18n.get("btn.clear"));
+            text.text(I18n.get("tooltip.clear"));
+        } else if (btnConfigBounds.holdsPoint(mx, my)) {
+            text.title(I18n.get("btn.settings"));
+            text.text(I18n.get("tooltip.settings"));
         }
-
-        if (btnFurnishBounds.holdsPoint(mx, my)) {
-            triggerAutoFurnish(placer);
-            return true;
-        }
-
-        if (btnQuickBounds.holdsPoint(mx, my)) {
-            triggerQuickBuild(placer);
-            return true;
-        }
-
-        if (btnClearBounds.holdsPoint(mx, my)) {
-            triggerClearFurniture(placer);
-            return true;
-        }
-
-        if (btnConfigBounds.holdsPoint(mx, my)) {
-            openConfigModal();
-            return true;
-        }
-
-        return panelBounds.holdsPoint(mx, my);
     }
 
     public void triggerAutoStrut(RoomPlacer placer) {
@@ -240,7 +278,7 @@ public final class PlannerOverlayUI {
         } catch (Throwable t) {
             snake2d.LOG.err("AutoPlanner: AutoStrut exception: " + t.getMessage());
             t.printStackTrace();
-            setStatus("[Error] Strut solver encountered an error");
+            setStatus("[Error] Strut solver failed");
         }
     }
 
@@ -259,7 +297,7 @@ public final class PlannerOverlayUI {
         } catch (Throwable t) {
             snake2d.LOG.err("AutoPlanner: AutoFurnish exception: " + t.getMessage());
             t.printStackTrace();
-            setStatus("[Error] Furnish solver encountered an error");
+            setStatus("[Error] Furnish solver failed");
         }
     }
 
@@ -280,7 +318,7 @@ public final class PlannerOverlayUI {
         } catch (Throwable t) {
             snake2d.LOG.err("AutoPlanner: QuickBuild exception: " + t.getMessage());
             t.printStackTrace();
-            setStatus("[Error] QuickBuild encountered an error");
+            setStatus("[Error] QuickBuild failed");
         }
     }
 
@@ -291,20 +329,13 @@ public final class PlannerOverlayUI {
         } catch (Throwable t) {
             snake2d.LOG.err("AutoPlanner: ClearFurniture exception: " + t.getMessage());
             t.printStackTrace();
-            setStatus("[Error] ClearFurniture encountered an error");
+            setStatus("[Error] ClearFurniture failed");
         }
     }
 
     private void setStatus(String msg) {
         this.statusMessage = msg;
-        this.statusTimer = 5.0; // Show for 5 seconds
-    }
-
-    private RoomPlacer getActivePlacer() {
-        if (SETT.ROOMS() == null || SETT.ROOMS().placement == null) {
-            return null;
-        }
-        return SETT.ROOMS().placement.placer;
+        this.statusTimer = 4.0; // Show for 4 seconds
     }
 
     public void openConfigModal() {

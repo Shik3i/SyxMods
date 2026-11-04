@@ -43,6 +43,11 @@ public final class AutoPlannerInstance implements SCRIPT_INSTANCE {
     }
 
     @Override
+    public void hoverTimer(double mouseTimer, util.gui.misc.GBox text) {
+        overlayUI.hoverTimer(mouseTimer, text);
+    }
+
+    @Override
     public void keyPush(KEYS key) {
         // Can be extended with custom key bindings if desired
     }

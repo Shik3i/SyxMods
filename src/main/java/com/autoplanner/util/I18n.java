@@ -39,13 +39,13 @@ public final class I18n {
         EN_STRINGS.put("mod.desc", "Intelligent room builder assistant: Auto-Strut & Auto-Furnish for Songs of Syx.");
         
         EN_STRINGS.put("ui.overlay.title", "Auto-Planner");
-        EN_STRINGS.put("ui.overlay.room", "Room: {0} ({1} tiles)");
+        EN_STRINGS.put("ui.overlay.room", "{0} ({1} tiles)");
         EN_STRINGS.put("ui.overlay.no_room", "No active room draft");
         
-        EN_STRINGS.put("btn.strut", "Auto-Strut (Pillars)");
-        EN_STRINGS.put("btn.furnish", "Auto-Furnish (Max)");
-        EN_STRINGS.put("btn.quickfill", "Quick Build (All)");
-        EN_STRINGS.put("btn.clear", "Clear Furniture");
+        EN_STRINGS.put("btn.strut", "Auto-Strut");
+        EN_STRINGS.put("btn.furnish", "Auto-Furnish");
+        EN_STRINGS.put("btn.quickfill", "Quick-Build");
+        EN_STRINGS.put("btn.clear", "Clear");
         EN_STRINGS.put("btn.settings", "Config");
         EN_STRINGS.put("btn.style.compact", "Style: Compact");
         EN_STRINGS.put("btn.style.balanced", "Style: Balanced");
@@ -53,6 +53,12 @@ public final class I18n {
         EN_STRINGS.put("btn.storage_ratio", "Storage: {0}%");
         EN_STRINGS.put("btn.language", "Language: EN");
         EN_STRINGS.put("btn.close", "Close");
+
+        EN_STRINGS.put("tooltip.strut", "Punches minimal support pillars to eliminate 100% yellow ceiling tiles");
+        EN_STRINGS.put("tooltip.furnish", "Fills room with maximum workstations at 100% target efficiency");
+        EN_STRINGS.put("tooltip.quickfill", "Executes Auto-Strut and Auto-Furnish in one click");
+        EN_STRINGS.put("tooltip.clear", "Removes all placed furniture in this room draft");
+        EN_STRINGS.put("tooltip.settings", "Opens Auto-Planner configuration (styles, target efficiency)");
 
         EN_STRINGS.put("msg.strut_success", "Auto-Strut: Placed {0} pillar(s). 0 yellow tiles remaining!");
         EN_STRINGS.put("msg.strut_none_needed", "Auto-Strut: Ceiling is already 100% supported!");
@@ -67,13 +73,13 @@ public final class I18n {
         DE_STRINGS.put("mod.desc", "Intelligenter Bau-Assistent: Automatische Stützpfeiler & Möblierung für Songs of Syx.");
         
         DE_STRINGS.put("ui.overlay.title", "Auto-Planer");
-        DE_STRINGS.put("ui.overlay.room", "Raum: {0} ({1} Felder)");
+        DE_STRINGS.put("ui.overlay.room", "{0} ({1} Felder)");
         DE_STRINGS.put("ui.overlay.no_room", "Kein Raum im Entwurf");
         
-        DE_STRINGS.put("btn.strut", "Auto-Stützen (Pfeiler)");
-        DE_STRINGS.put("btn.furnish", "Auto-Möblieren (Max)");
-        DE_STRINGS.put("btn.quickfill", "Schnellbau (Alles)");
-        DE_STRINGS.put("btn.clear", "Möbel leeren");
+        DE_STRINGS.put("btn.strut", "Auto-Stützen");
+        DE_STRINGS.put("btn.furnish", "Auto-Möbel");
+        DE_STRINGS.put("btn.quickfill", "Schnellbau");
+        DE_STRINGS.put("btn.clear", "Leeren");
         DE_STRINGS.put("btn.settings", "Optionen");
         DE_STRINGS.put("btn.style.compact", "Stil: Kompakt");
         DE_STRINGS.put("btn.style.balanced", "Stil: Ausgewogen");
@@ -81,6 +87,12 @@ public final class I18n {
         DE_STRINGS.put("btn.storage_ratio", "Lager: {0}%");
         DE_STRINGS.put("btn.language", "Sprache: DE");
         DE_STRINGS.put("btn.close", "Schließen");
+
+        DE_STRINGS.put("tooltip.strut", "Setzt minimale Pfeiler, um 100% gelbe/teure Deckenbereiche zu entfernen");
+        DE_STRINGS.put("tooltip.furnish", "Füllt den Raum mit maximalen Workstations bei 100% Ziel-Effizienz");
+        DE_STRINGS.put("tooltip.quickfill", "Führt Auto-Stützen und Auto-Möblierung mit einem Klick aus");
+        DE_STRINGS.put("tooltip.clear", "Entfernt alle platzierten Möbel aus diesem Entwurf");
+        DE_STRINGS.put("tooltip.settings", "Öffnet die Auto-Planner Einstellungen (Stil, Ziel-Effizienz)");
 
         DE_STRINGS.put("msg.strut_success", "Auto-Stützen: {0} Pfeiler gesetzt. 0 gelbe Bereiche übrig!");
         DE_STRINGS.put("msg.strut_none_needed", "Auto-Stützen: Die Decke ist bereits zu 100% gestützt!");
