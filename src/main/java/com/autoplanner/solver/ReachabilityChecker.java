@@ -46,9 +46,6 @@ public final class ReachabilityChecker {
         if (snapshot == null || snapshot.doorCount == 0) {
             return false;
         }
-        if (accessCount <= 0) {
-            return true;
-        }
 
         int stamp = nextStamp();
         int head = 0;
@@ -135,8 +132,8 @@ public final class ReachabilityChecker {
                 continue;
             }
 
-            // Case B: The access tile itself is a blocker tile (e.g. solid machine/workbench).
-            // Per Songs of Syx UtilPlacability, the worker interacts from an orthogonal adjacent walkable tile.
+            // Case B: The access tile itself is a blocker tile (e.g. solid machine/workbench/crate).
+            // Per Songs of Syx UtilPlacability, the worker interacts from an orthogonal adjacent walkable tile inside the room.
             boolean neighborReached = false;
             for (DIR d : DIR.ORTHO) {
                 int nx = ax + d.x();
@@ -146,7 +143,7 @@ public final class ReachabilityChecker {
 
                 if (nlx >= 0 && nlx < width && nly >= 0 && nly < height) {
                     int nidx = nly * width + nlx;
-                    if (visitedStamp[nidx] == stamp && snapshot.isWalkable(nx, ny)) {
+                    if (visitedStamp[nidx] == stamp && snapshot.isRoom(nx, ny) && snapshot.isWalkable(nx, ny)) {
                         neighborReached = true;
                         break;
                     }
@@ -154,7 +151,21 @@ public final class ReachabilityChecker {
             }
 
             if (!neighborReached) {
-                return false; // Neither the access point nor any adjacent walkable spot is reachable!
+                return false; // Neither the access point nor any adjacent interior walkable spot is reachable!
+            }
+        }
+
+        // Verify no walkable room floor tile was sealed off into an isolated pocket (UtilPlacability WillBlockRoom)
+        for (int ly = 0; ly < height; ly++) {
+            int ty = originY + ly;
+            int rowOffset = ly * width;
+            for (int lx = 0; lx < width; lx++) {
+                int tx = originX + lx;
+                if (snapshot.isRoom(tx, ty) && snapshot.isWalkable(tx, ty)) {
+                    if (visitedStamp[rowOffset + lx] != stamp) {
+                        return false;
+                    }
+                }
             }
         }
 

@@ -14,11 +14,13 @@ public final class AutoStrutSolver {
 
     private final TileRayTracer tracer = new TileRayTracer(4);
     private final RoomGridSnapshot snapshot = new RoomGridSnapshot();
+    private final ReachabilityChecker reachability = new ReachabilityChecker();
 
-    // Fixed buffers for yellow tile coordinates (Zero-GC)
+    // Fixed buffers for yellow tile coordinates & base support (Zero-GC)
     private static final int MAX_TRACKED_YELLOW = 4096;
     private final int[] yellowX = new int[MAX_TRACKED_YELLOW];
     private final int[] yellowY = new int[MAX_TRACKED_YELLOW];
+    private final double[] yellowBaseSupport = new double[MAX_TRACKED_YELLOW];
     private int yellowCount = 0;
 
     // Buffer for placed pillar coordinates
@@ -87,6 +89,11 @@ public final class AutoStrutSolver {
             for (int iter = 0; iter < maxIterationsPerPass && yellowCount > 0; iter++) {
                 if (System.currentTimeMillis() - start > 1800) break;
 
+                // Precompute baseline support of all remaining yellow tiles before testing candidates
+                for (int i = 0; i < yellowCount; i++) {
+                    yellowBaseSupport[i] = CLAMP.d(computeSupport(yellowX[i], yellowY[i]), 0.0, 1.0);
+                }
+
                 int bestX = -1;
                 int bestY = -1;
                 double bestScore = -1.0;
@@ -96,19 +103,26 @@ public final class AutoStrutSolver {
                         if (!PlacerBridge.isTileInRoom(placer, cx, cy)) {
                             continue;
                         }
-                        if (!canPlacePillar(snapshot, cx, cy)) {
+                        if (!canPlacePillar(snapshot, cx, cy, pass)) {
                             continue;
                         }
 
-                        // Evaluate candidate support gain using exact raytracer
+                        // Evaluate candidate marginal support gain using exact 16-ray physics
                         snapshot.set(cx, cy, RoomGridSnapshot.TILE_STRUT);
-                        double score = 0;
+                        double score = 0.0;
                         for (int i = 0; i < yellowCount; i++) {
                             int yx = yellowX[i];
                             int yy = yellowY[i];
                             if (Math.abs(yx - cx) <= 4 && Math.abs(yy - cy) <= 4) {
                                 double sup = computeSupport(yx, yy);
-                                score += CLAMP.d(sup, 0.0, 1.0);
+                                double clampedSup = CLAMP.d(sup, 0.0, 1.0);
+                                double gain = clampedSup - yellowBaseSupport[i];
+                                if (gain > 0.0) {
+                                    score += gain;
+                                    if (sup >= 1.0) {
+                                        score += 0.25; // Bonus for fully resolving a yellow tile
+                                    }
+                                }
                             }
                         }
                         snapshot.set(cx, cy, RoomGridSnapshot.TILE_ROOM_FLOOR);
@@ -199,22 +213,15 @@ public final class AutoStrutSolver {
         }
     }
 
-    private boolean canPlacePillar(RoomGridSnapshot snapshot, int tx, int ty) {
-        // Must not be immediately adjacent to any door threshold (dist <= 1)
-        if (snapshot.doorCount > 0) {
-            for (int i = 0; i < snapshot.doorCount; i++) {
-                int dist = Math.abs(tx - snapshot.doorX[i]) + Math.abs(ty - snapshot.doorY[i]);
-                if (dist <= 1) return false;
-            }
-        }
-        if (snapshot.hasVirtualDoor) {
-            int dist = Math.abs(tx - snapshot.virtualDoorX) + Math.abs(ty - snapshot.virtualDoorY);
-            if (dist <= 1) return false;
-            if (tx == snapshot.virtualInteriorX && ty == snapshot.virtualInteriorY) return false;
+    private boolean canPlacePillar(RoomGridSnapshot snapshot, int tx, int ty, int pass) {
+        // Verify pure floor availability, door distance >= 2, and topological simple-point connectivity
+        if (!reachability.canPlaceStrutWithoutBlocking(snapshot, tx, ty)) {
+            return false;
         }
 
-        // Must not be hugging outer walls (outer walls already support 3 tiles inwards)
-        if (isNearWall(tx, ty, 1)) {
+        // In pass 0, avoid hugging outer walls (solid walls already support 3.5 tiles inwards).
+        // In pass >= 1, allow near-wall placement if an adjacent room border provided 0 wall support.
+        if (pass == 0 && isNearWall(tx, ty, 1)) {
             return false;
         }
 
@@ -230,39 +237,15 @@ public final class AutoStrutSolver {
         return true;
     }
 
-    private int scoreCandidate(int cx, int cy) {
-        int score = 0;
-        for (int i = 0; i < yellowCount; i++) {
-            int dx = Math.abs(yellowX[i] - cx);
-            int dy = Math.abs(yellowY[i] - cy);
-            int d2 = dx * dx + dy * dy;
-            // Radius 3.5 circle: d2 <= 13 (since 3.6^2 ~ 13)
-            if (d2 <= 13) {
-                score += (14 - d2);
-            }
-        }
-        return score;
-    }
-
-    private void removeCoveredYellowTiles(int cx, int cy) {
-        int writeIdx = 0;
-        for (int i = 0; i < yellowCount; i++) {
-            int dx = Math.abs(yellowX[i] - cx);
-            int dy = Math.abs(yellowY[i] - cy);
-            int d2 = dx * dx + dy * dy;
-            if (d2 > 13) { // not yet covered by any placed pillar
-                yellowX[writeIdx] = yellowX[i];
-                yellowY[writeIdx] = yellowY[i];
-                writeIdx++;
-            }
-        }
-        yellowCount = writeIdx;
-    }
-
     /**
      * Exact 1:1 reproduction of Songs of Syx UtilExtraCost.support() ceiling physics.
      */
     public double computeSupport(int tx, int ty) {
+        // A tile that is no longer room interior (e.g., converted to a pillar/wall) requires 0 ceiling support
+        if (!snapshot.isRoom(tx, ty)) {
+            return 1.0;
+        }
+
         double s = 0;
         tracer.checkInit();
 
@@ -271,13 +254,13 @@ public final class AutoStrutSolver {
                 int dx = tx + r.get(i).x();
                 int dy = ty + r.get(i).y();
 
-                if (!SETT.IN_BOUNDS(dx, dy)) {
+                if (!snapshot.inSnapshotBounds(dx, dy)) {
                     break;
                 }
 
-                if (!snapshot.isRoom(dx, dy) || snapshot.get(dx, dy) == RoomGridSnapshot.TILE_STRUT 
-                        || snapshot.get(dx, dy) == RoomGridSnapshot.TILE_WALL) {
-                    if (tracer.check(r.get(i))) {
+                if (!snapshot.isRoom(dx, dy)) {
+                    // Per UtilExtraCost.support, existing adjacent rooms do not provide solid wall support
+                    if (!snapshot.isExistingRoom(dx, dy) && tracer.check(r.get(i))) {
                         s += CLAMP.d((3.5 - i) / 3.5, 0, 1);
                     }
                     break;

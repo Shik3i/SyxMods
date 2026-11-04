@@ -502,7 +502,20 @@ public final class AutoFurnishSolver {
         return group.size();
     }
 
-    private int[] getSortedSizeIndices(FurnisherItemGroup group) {
+    public static double computeItemPackingScore(FurnisherItem item) {
+        if (item == null) {
+            return -1.0;
+        }
+        int area = Math.max(1, item.area > 0 ? item.area : (item.width() * item.height()));
+        double stats = item.multiplierStats > 0.0 ? item.multiplierStats : area;
+        double density = stats / area;
+        int maxDim = Math.max(item.width(), item.height());
+        // Prioritize effective storage/workstation output (stats) weighted by spatial density (stats/area)
+        // and elongated block length (maxDim). Demotes low-density 2x2/2x3 blocks below 1x3/1x5 wall rows.
+        return stats * (0.65 + 0.35 * density) + (maxDim * 0.05);
+    }
+
+    public int[] getSortedSizeIndices(FurnisherItemGroup group) {
         if (group == null || group.size() <= 0) {
             return new int[0];
         }
@@ -512,17 +525,15 @@ public final class AutoFurnishSolver {
             indices[i] = i;
         }
 
-        // Sort descending by area (width * height), tie-break by max dimension (longer blocks prefered)
+        // Sort descending by effective capacity & spatial density (multiplierStats + density + maxDim)
         for (int i = 0; i < count - 1; i++) {
             for (int j = i + 1; j < count; j++) {
                 FurnisherItem itemI = getItemSafe(group, indices[i], 0);
                 FurnisherItem itemJ = getItemSafe(group, indices[j], 0);
-                int areaI = itemI != null ? itemI.width() * itemI.height() : 0;
-                int areaJ = itemJ != null ? itemJ.width() * itemJ.height() : 0;
-                int maxDimI = itemI != null ? Math.max(itemI.width(), itemI.height()) : 0;
-                int maxDimJ = itemJ != null ? Math.max(itemJ.width(), itemJ.height()) : 0;
+                double scoreI = computeItemPackingScore(itemI);
+                double scoreJ = computeItemPackingScore(itemJ);
 
-                if (areaJ > areaI || (areaJ == areaI && maxDimJ > maxDimI)) {
+                if (scoreJ > scoreI) {
                     int tmp = indices[i];
                     indices[i] = indices[j];
                     indices[j] = tmp;

@@ -31,6 +31,7 @@ public final class RoomGridSnapshot implements AREA {
 
     private static final int MAX_BUFFER_DIM = 256;
     private final int[] grid = new int[MAX_BUFFER_DIM * MAX_BUFFER_DIM];
+    private final boolean[] existingRoom = new boolean[MAX_BUFFER_DIM * MAX_BUFFER_DIM];
 
     private int originX;
     private int originY;
@@ -72,6 +73,7 @@ public final class RoomGridSnapshot implements AREA {
         int totalCells = width * height;
         for (int i = 0; i < totalCells; i++) {
             grid[i] = TILE_OUTSIDE;
+            existingRoom[i] = false;
         }
 
         roomTileCount = 0;
@@ -82,7 +84,7 @@ public final class RoomGridSnapshot implements AREA {
         virtualInteriorX = -1;
         virtualInteriorY = -1;
 
-        // 1. Populate room interior
+        // 1. Populate room interior & cache existing built room map
         for (int ly = 0; ly < height; ly++) {
             int ty = originY + ly;
             for (int lx = 0; lx < width; lx++) {
@@ -92,6 +94,8 @@ public final class RoomGridSnapshot implements AREA {
                 if (PlacerBridge.isTileInRoom(placer, tx, ty)) {
                     grid[idx] = TILE_ROOM_FLOOR;
                     roomTileCount++;
+                } else if (SETT.ROOMS() != null && SETT.ROOMS().map != null) {
+                    existingRoom[idx] = SETT.ROOMS().map.is(tx, ty);
                 }
             }
         }
@@ -114,22 +118,21 @@ public final class RoomGridSnapshot implements AREA {
                     int nty = ty + d.y();
                     if (isRoom(ntx, nty)) {
                         adjToRoom = true;
-                        // Check if door opening bitmask is set on this border tile
-                        int m = ConstructionData.dWall.get(ntx, nty) & 0x0F;
-                        if (m != 0) {
-                            grid[idx] = TILE_DOOR;
-                            if (doorCount < MAX_DOORS) {
-                                doorX[doorCount] = tx;
-                                doorY[doorCount] = ty;
-                                doorCount++;
-                            }
-                        }
                         break;
                     }
                 }
 
-                if (adjToRoom && grid[idx] != TILE_DOOR) {
-                    if (SETT.ROOMS().map.is(tx, ty) && SETT.PATH().getAvailability(tx, ty).player > 0) {
+                if (adjToRoom) {
+                    boolean isDoor = ConstructionData.dWall != null && (ConstructionData.dWall.get(tx, ty) & 0x0F) != 0;
+                    if (isDoor) {
+                        grid[idx] = TILE_DOOR;
+                        if (doorCount < MAX_DOORS) {
+                            doorX[doorCount] = tx;
+                            doorY[doorCount] = ty;
+                            doorCount++;
+                        }
+                    } else if (SETT.ROOMS() != null && SETT.ROOMS().map != null && SETT.ROOMS().map.is(tx, ty)
+                            && SETT.PATH() != null && SETT.PATH().getAvailability(tx, ty).player > 0) {
                         grid[idx] = TILE_DOOR;
                         if (doorCount < MAX_DOORS) {
                             doorX[doorCount] = tx;
@@ -287,8 +290,27 @@ public final class RoomGridSnapshot implements AREA {
         int lx = tx - originX;
         int ly = ty - originY;
         if (lx >= 0 && lx < width && ly >= 0 && ly < height) {
-            grid[ly * width + lx] = type;
+            int idx = ly * width + lx;
+            grid[idx] = type;
+            if (type == TILE_STRUT) {
+                existingRoom[idx] = false;
+            }
         }
+    }
+
+    public boolean inSnapshotBounds(int tx, int ty) {
+        int lx = tx - originX;
+        int ly = ty - originY;
+        return lx >= 0 && lx < width && ly >= 0 && ly < height;
+    }
+
+    public boolean isExistingRoom(int tx, int ty) {
+        int lx = tx - originX;
+        int ly = ty - originY;
+        if (lx < 0 || lx >= width || ly < 0 || ly >= height) {
+            return false;
+        }
+        return existingRoom[ly * width + lx];
     }
 
     public boolean isRoom(int tx, int ty) {

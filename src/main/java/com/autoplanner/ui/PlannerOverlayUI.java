@@ -512,6 +512,8 @@ public final class PlannerOverlayUI {
     public void openConfigModal() {
         int contentWidth = 750;
 
+        final GPanel[] panelRef = new GPanel[1];
+
         GuiSection modal = new GuiSection() {
             private boolean isDragging = false;
             private int dragAnchorX = 0;
@@ -539,6 +541,10 @@ public final class PlannerOverlayUI {
                                 configModalX = targetX;
                                 configModalY = targetY;
                                 body().moveX1Y1(targetX, targetY);
+                                if (panelRef[0] != null) {
+                                    // Compensate vanilla GPanel$1.moveY1 bug (missing +8 closeAction offset)
+                                    panelRef[0].inner().incrY(8);
+                                }
                             }
                         }
                     } else {
@@ -673,6 +679,7 @@ public final class PlannerOverlayUI {
                 VIEW.inters().section.close();
             }
         });
+        panelRef[0] = panel;
 
         // Add panel to modal and send behind all interactive elements
         modal.add(panel);
@@ -693,6 +700,8 @@ public final class PlannerOverlayUI {
         }
 
         modal.body().moveX1Y1(configModalX, configModalY);
+        // Compensate vanilla GPanel$1.moveY1 bug (missing +8 closeAction offset)
+        panel.inner().incrY(8);
         VIEW.inters().section.activate(modal);
     }
 

@@ -29,6 +29,7 @@ repositories {
 
 dependencies {
     compileOnly files(songsJarPath)
+    testImplementation files(songsJarPath)
 }
 
 jar {
@@ -42,6 +43,23 @@ jar {
         include "_Info.txt"
         include "_info.txt"
     }
+}
+
+tasks.register('sanityCheck', JavaExec) {
+    dependsOn tasks.jar, tasks.testClasses
+    group = "verification"
+    description = "Executes automated physics, packing, reachability and UI sanity tests"
+    workingDir = projectDir
+    classpath = sourceSets.test.runtimeClasspath + files(songsJarPath)
+    mainClass = "com.autoplanner.SanityTest"
+}
+
+tasks.named('test') {
+    enabled = false
+}
+
+tasks.named('check') {
+    dependsOn 'sanityCheck'
 }
 
 // Task to deploy directly to the game's mod directory
