@@ -11,9 +11,15 @@ import init.constant.C;
 import init.race.RACES;
 import init.race.Race;
 import init.sprite.UI.UI;
+import snake2d.CORE;
+import snake2d.MButt;
+import snake2d.SPRITE_RENDERER;
+import snake2d.util.datatypes.COORDINATE;
 import snake2d.util.datatypes.DIR;
 import snake2d.util.gui.GuiSection;
+import snake2d.util.gui.renderable.RENDEROBJ;
 import snake2d.util.misc.ACTION;
+import snake2d.util.misc.CLAMP;
 import snake2d.util.sets.LIST;
 import util.gui.misc.GButt;
 import util.gui.misc.GHeader;
@@ -80,7 +86,7 @@ public final class ArchitectUI {
         int height = Math.min(630, Math.max(540, screenH - 40));
         int contentW = 820;
 
-        GuiSection root = new GuiSection();
+        DraggableModalSection root = new DraggableModalSection();
         GPanel panel = new GPanel(width, height);
         panel.setBig();
         panel.setTitle(I18n.get("ui.title"));
@@ -748,5 +754,58 @@ public final class ArchitectUI {
         int ctrlX = width - control.body().width() - 4;
         row.add(control, ctrlX, (32 - control.body().height()) / 2);
         return row;
+    }
+
+    /**
+     * Fully draggable modal container allowing the user to reposition dialogs freely with the mouse.
+     */
+    private static class DraggableModalSection extends GuiSection {
+        private boolean isDragging = false;
+        private int dragAnchorX = 0;
+        private int dragAnchorY = 0;
+
+        public void moveDelta(int dx, int dy) {
+            if (dx == 0 && dy == 0) return;
+            body().incrX(dx).incrY(dy);
+            for (RENDEROBJ r : elements()) {
+                r.body().incrX(dx).incrY(dy);
+            }
+        }
+
+        @Override
+        public void render(SPRITE_RENDERER r, float ds) {
+            COORDINATE m = CORE.getInput().getMouse().getCoo();
+            if (isDragging) {
+                if (m != null && MButt.LEFT.isDown()) {
+                    int targetX = CLAMP.i(m.x() - dragAnchorX, 10, C.WIDTH() - body().width() - 10);
+                    int targetY = CLAMP.i(m.y() - dragAnchorY, 10, C.HEIGHT() - body().height() - 10);
+                    int dx = targetX - body().x1();
+                    int dy = targetY - body().y1();
+                    moveDelta(dx, dy);
+                } else {
+                    isDragging = false;
+                }
+            }
+            super.render(r, ds);
+        }
+
+        @Override
+        public boolean click() {
+            COORDINATE m = CORE.getInput().getMouse().getCoo();
+            boolean clickedChild = super.click();
+            if (clickedChild) {
+                return true;
+            }
+            if (m != null) {
+                int headerY2 = body().y1() + 48;
+                if (m.y() >= body().y1() && m.y() <= headerY2 && m.x() >= body().x1() && m.x() <= body().x2()) {
+                    isDragging = true;
+                    dragAnchorX = m.x() - body().x1();
+                    dragAnchorY = m.y() - body().y1();
+                    return true;
+                }
+            }
+            return false;
+        }
     }
 }
