@@ -80,6 +80,12 @@ public final class PlannerConfig {
         }
     }
 
+    public void resetDefaults() {
+        this.style = LayoutStyle.COMPACT;
+        this.targetEfficiency = 1.0;
+        this.storageRatio = 0.05;
+    }
+
     public boolean isAutoStrutOnPlace() {
         return autoStrutOnPlace;
     }

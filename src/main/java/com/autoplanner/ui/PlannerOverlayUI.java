@@ -1,33 +1,39 @@
 package com.autoplanner.ui;
 
 import com.autoplanner.config.PlannerConfig;
+import com.autoplanner.config.PlannerConfig.LayoutStyle;
 import com.autoplanner.solver.AutoFurnishSolver;
 import com.autoplanner.solver.AutoStrutSolver;
 import com.autoplanner.util.I18n;
+import com.autoplanner.util.I18n.Language;
 
 import init.constant.C;
+import init.sprite.SPRITES;
 import init.sprite.UI.UI;
 import settlement.main.SETT;
-import settlement.room.main.RoomBlueprintImp;
 import settlement.room.main.placement.RoomPlacer;
 import snake2d.CORE;
 import snake2d.MButt;
 import snake2d.Renderer;
+import snake2d.SPRITE_RENDERER;
 import snake2d.util.color.COLOR;
 import snake2d.util.datatypes.COORDINATE;
 import snake2d.util.datatypes.Rec;
 import snake2d.util.gui.GuiSection;
+import snake2d.util.gui.renderable.RENDEROBJ;
 import snake2d.util.misc.ACTION;
+import snake2d.util.sprite.SPRITE;
 import util.colors.GCOLOR;
 import util.gui.misc.GBox;
 import util.gui.misc.GButt;
+import util.gui.misc.GHeader;
 import util.gui.misc.GText;
 import util.gui.panel.GPanel;
 import view.main.VIEW;
 
 /**
- * Native-integrated Room Editor Toolbar & Config Center for Syx Auto-Planner.
- * Strictly docks above the active room constructor frame, completely isolated from top bar elements.
+ * 100% Native-Integrated Room Editor Toolbar & Configuration Suite for Syx Auto-Planner.
+ * Uses authentic Songs of Syx UI panels, buttons, sound effects, fonts and official icons.
  * Strictly guarantees ZERO object allocations during 60Hz render and update loops.
  */
 public final class PlannerOverlayUI {
@@ -36,34 +42,105 @@ public final class PlannerOverlayUI {
     private final AutoStrutSolver strutSolver;
     private final AutoFurnishSolver furnishSolver;
 
-    private static boolean isModalOpen = false;
     private String statusMessage = "";
+    private boolean statusIsError = false;
     private double statusTimer = 0.0;
 
-    // Fixed toolbar geometry
-    private static final int TOOLBAR_WIDTH = 460;
-    private static final int TOOLBAR_HEIGHT = 32;
+    // Toast Notification Bounds
+    private final Rec toastBounds = new Rec();
 
-    // HUD Button Bounds (in screen pixels)
-    private final Rec panelBounds = new Rec();
-    private final Rec btnStrutBounds = new Rec();
-    private final Rec btnFurnishBounds = new Rec();
-    private final Rec btnQuickBounds = new Rec();
-    private final Rec btnClearBounds = new Rec();
-    private final Rec btnConfigBounds = new Rec();
-
-    // Zero-GC String Cache for 60Hz Render Loop
-    private I18n.Language cachedLanguage = null;
-    private String cachedBtnStrut = "";
-    private String cachedBtnFurnish = "";
-    private String cachedBtnQuick = "";
-    private String cachedBtnClear = "";
-    private String cachedBtnConfig = "";
+    // Native Toolbar Section (holds authentic GButt.ButtPanel buttons)
+    private final ToolbarSection toolbarSection = new ToolbarSection();
+    private Language cachedLanguage = null;
 
     public PlannerOverlayUI(PlannerConfig config, AutoStrutSolver strutSolver, AutoFurnishSolver furnishSolver) {
         this.config = config;
         this.strutSolver = strutSolver;
         this.furnishSolver = furnishSolver;
+        buildToolbar();
+    }
+
+    /**
+     * Rebuilds the native toolbar with localized labels and official icons.
+     * Called only on initialization and when the interface language changes.
+     */
+    private void buildToolbar() {
+        cachedLanguage = I18n.getLanguage();
+        toolbarSection.clear();
+
+        // Button 1: Auto-Strut (Pillars)
+        GButt.ButtPanel btnStrut = new GButt.ButtPanel(I18n.get("btn.strut")) {
+            @Override
+            protected void clickA() {
+                RoomPlacer placer = getActivePlacer();
+                if (placer != null) {
+                    triggerAutoStrut(placer);
+                }
+            }
+        }.icon(SPRITES.icons().m.wallceiling);
+        btnStrut.hoverTitleSet(I18n.get("btn.strut"));
+        btnStrut.hoverInfoSet(I18n.get("tooltip.strut"));
+
+        // Button 2: Auto-Furnish (Workstations & Auxiliaries)
+        GButt.ButtPanel btnFurnish = new GButt.ButtPanel(I18n.get("btn.furnish")) {
+            @Override
+            protected void clickA() {
+                RoomPlacer placer = getActivePlacer();
+                if (placer != null) {
+                    triggerAutoFurnish(placer);
+                }
+            }
+        }.icon(SPRITES.icons().m.furniture);
+        btnFurnish.hoverTitleSet(I18n.get("btn.furnish"));
+        btnFurnish.hoverInfoSet(I18n.get("tooltip.furnish"));
+
+        // Button 3: Quick-Build (Pillars + Furniture in one pass)
+        GButt.ButtPanel btnQuick = new GButt.ButtPanel(I18n.get("btn.quickfill")) {
+            @Override
+            protected void clickA() {
+                RoomPlacer placer = getActivePlacer();
+                if (placer != null) {
+                    triggerQuickBuild(placer);
+                }
+            }
+        }.icon(SPRITES.icons().m.fast_forw);
+        btnQuick.hoverTitleSet(I18n.get("btn.quickfill"));
+        btnQuick.hoverInfoSet(I18n.get("tooltip.quickfill"));
+
+        // Button 4: Clear Furniture
+        GButt.ButtPanel btnClear = new GButt.ButtPanel(I18n.get("btn.clear")) {
+            @Override
+            protected void clickA() {
+                RoomPlacer placer = getActivePlacer();
+                if (placer != null) {
+                    triggerClearFurniture(placer);
+                }
+            }
+        }.icon(SPRITES.icons().m.trash);
+        btnClear.hoverTitleSet(I18n.get("btn.clear"));
+        btnClear.hoverInfoSet(I18n.get("tooltip.clear"));
+
+        // Button 5: Configuration Settings
+        GButt.ButtPanel btnConfig = new GButt.ButtPanel(I18n.get("btn.settings")) {
+            @Override
+            protected void clickA() {
+                if (VIEW.inters().section != null && VIEW.inters().section.isActivated()) {
+                    VIEW.inters().section.close();
+                } else {
+                    openConfigModal();
+                }
+            }
+        }.icon(SPRITES.icons().m.cog);
+        btnConfig.hoverTitleSet(I18n.get("btn.settings"));
+        btnConfig.hoverInfoSet(I18n.get("tooltip.settings"));
+
+        // Assemble toolbar elements horizontally with consistent spacing
+        toolbarSection.add(btnStrut, 0, 0);
+        toolbarSection.addRightC(4, btnFurnish);
+        toolbarSection.addRightC(4, btnQuick);
+        toolbarSection.addRightC(4, btnClear);
+        toolbarSection.addRightC(4, btnConfig);
+        toolbarSection.pad(6, 4);
     }
 
     public void update(double ds) {
@@ -94,10 +171,7 @@ public final class PlannerOverlayUI {
         if (VIEW.inters() != null && VIEW.inters().section != null && VIEW.inters().section.isActivated()) {
             return false;
         }
-        if (SETT.ROOMS() == null || SETT.ROOMS().placement == null) {
-            return false;
-        }
-        RoomPlacer placer = SETT.ROOMS().placement.placer;
+        RoomPlacer placer = getActivePlacer();
         if (placer == null || placer.blueprint() == null || placer.blueprint().constructor() == null) {
             return false;
         }
@@ -112,127 +186,78 @@ public final class PlannerOverlayUI {
             return;
         }
 
-        I18n.Language currentLang = I18n.getLanguage();
-        if (cachedLanguage != currentLang) {
-            cachedLanguage = currentLang;
-            cachedBtnStrut = I18n.get("btn.strut");
-            cachedBtnFurnish = I18n.get("btn.furnish");
-            cachedBtnQuick = I18n.get("btn.quickfill");
-            cachedBtnClear = I18n.get("btn.clear");
-            cachedBtnConfig = I18n.get("btn.settings");
+        if (cachedLanguage != I18n.getLanguage()) {
+            buildToolbar();
         }
 
-        // Compute docking position:
-        // Native Songs of Syx RoomPlacer frame sits at y1 = C.SG * 80.
-        // We dock directly 4px above it, completely clear of the top HUD bar (y <= 30).
-        int screenWidth = C.WIDTH();
+        // Dock directly above the native Songs of Syx RoomPlacer frame (C.SG * 80)
         int nativeFrameY1 = (int) (C.SG * 80);
-
-        int panelW = TOOLBAR_WIDTH;
-        int panelH = TOOLBAR_HEIGHT;
-        int panelX = (screenWidth - panelW) / 2;
+        int panelH = toolbarSection.body().height();
         int panelY = Math.max(34, nativeFrameY1 - panelH - 4);
 
-        panelBounds.set(panelX, panelX + panelW, panelY, panelY + panelH);
+        toolbarSection.body().moveCX(C.WIDTH() / 2);
+        toolbarSection.body().moveY1(panelY);
 
-        // Render Background Panel Box
-        COLOR.BLACK.render(r, panelBounds);
-        COLOR.WHITE35.render(r, panelBounds, 1);
-
-        // Buttons Row (Vertically centered at panelY + 4, height 24px)
-        int btnY = panelY + 4;
-        int btnH = 24;
-
-        // Button 1: Auto-Strut (92px)
-        int btn1W = 92;
-        int btn1X = panelX + 6;
-        btnStrutBounds.set(btn1X, btn1X + btn1W, btnY, btnY + btnH);
-        renderButton(r, btnStrutBounds, cachedBtnStrut);
-
-        // Button 2: Auto-Furnish (96px)
-        int btn2W = 96;
-        int btn2X = btn1X + btn1W + 6;
-        btnFurnishBounds.set(btn2X, btn2X + btn2W, btnY, btnY + btnH);
-        renderButton(r, btnFurnishBounds, cachedBtnFurnish);
-
-        // Button 3: Quick Build (92px)
-        int btn3W = 92;
-        int btn3X = btn2X + btn2W + 6;
-        btnQuickBounds.set(btn3X, btn3X + btn3W, btnY, btnY + btnH);
-        renderButton(r, btnQuickBounds, cachedBtnQuick);
-
-        // Button 4: Clear (70px)
-        int btn4W = 70;
-        int btn4X = btn3X + btn3W + 6;
-        btnClearBounds.set(btn4X, btn4X + btn4W, btnY, btnY + btnH);
-        renderButton(r, btnClearBounds, cachedBtnClear);
-
-        // Button 5: Config (74px)
-        int btn5W = 74;
-        int btn5X = btn4X + btn4W + 6;
-        btnConfigBounds.set(btn5X, btn5X + btn5W, btnY, btnY + btnH);
-        renderButton(r, btnConfigBounds, cachedBtnConfig);
-
-        // Status Feedback Message (Floating centered directly above the toolbar)
-        if (!statusMessage.isEmpty()) {
-            GCOLOR.MAP().OK.bind();
-            int msgW = UI.FONT().S.width(statusMessage);
-            int msgX = panelX + (panelW - msgW) / 2;
-            int msgY = panelY - 15;
-            UI.FONT().S.render(r, statusMessage, msgX, msgY);
-            COLOR.unbind();
+        // Keep hover state responsive
+        COORDINATE m = CORE.getInput().getMouse().getCoo();
+        if (m != null) {
+            toolbarSection.hover(m);
         }
+
+        // Render the authentic beveled button panel
+        toolbarSection.render(r, ds);
+
+        // Render polished floating status toast if active
+        renderStatusToast(r, panelY);
     }
 
-    private void renderButton(Renderer r, Rec b, String text) {
-        COORDINATE m = CORE.getInput().getMouse().getCoo();
-        boolean hover = m != null && b.holdsPoint(m.x(), m.y());
-
-        if (hover) {
-            COLOR.WHITE35.render(r, b);
-            COLOR.WHITE100.render(r, b, 1);
-        } else {
-            COLOR.WHITE15.render(r, b);
-            COLOR.WHITE50.render(r, b, 1);
+    private void renderStatusToast(Renderer r, int panelY) {
+        if (statusTimer <= 0.0 || statusMessage.isEmpty()) {
+            return;
         }
 
-        int textW = UI.FONT().S.width(text);
-        int tx = b.x1() + (b.width() - textW) / 2;
-        int ty = b.y1() + (b.height() - UI.FONT().S.height()) / 2;
-        UI.FONT().S.render(r, text, tx, ty);
+        int textW = UI.FONT().S.width(statusMessage);
+        int toastW = textW + 42;
+        int toastH = 26;
+        int toastX = (C.WIDTH() - toastW) / 2;
+        int toastY = panelY - toastH - 6;
+
+        toastBounds.set(toastX, toastX + toastW, toastY, toastY + toastH);
+
+        // Native thin panel frame
+        UI.PANEL().thin.render(r, toastBounds, 0);
+
+        // Status indicator icon
+        SPRITE statusIcon = statusIsError ? SPRITES.icons().m.cancel : SPRITES.icons().m.ok;
+        statusIcon.renderCY(r, toastX + 6, toastY + toastH / 2);
+
+        // Text rendered in warm gold header font
+        GCOLOR.T().H1.bind();
+        UI.FONT().S.renderCY(r, toastX + 34, toastY + toastH / 2, statusMessage);
+        COLOR.unbind();
+    }
+
+    public void hover(COORDINATE mCoo, boolean mouseHasMoved) {
+        if (isPlacerActive() && mCoo != null) {
+            toolbarSection.hover(mCoo);
+        }
     }
 
     public boolean mouseClick(MButt button) {
-        if (button != MButt.LEFT) {
+        if (button != MButt.LEFT || !isPlacerActive()) {
             return false;
         }
 
-        if (!isPlacerActive()) {
-            return false;
-        }
-
-        RoomPlacer placer = SETT.ROOMS().placement.placer;
         COORDINATE m = CORE.getInput().getMouse().getCoo();
         if (m == null) {
             return false;
         }
-        int mx = m.x();
-        int my = m.y();
 
-        if (panelBounds.holdsPoint(mx, my)) {
-            if (btnStrutBounds.holdsPoint(mx, my)) {
-                triggerAutoStrut(placer);
-            } else if (btnFurnishBounds.holdsPoint(mx, my)) {
-                triggerAutoFurnish(placer);
-            } else if (btnQuickBounds.holdsPoint(mx, my)) {
-                triggerQuickBuild(placer);
-            } else if (btnClearBounds.holdsPoint(mx, my)) {
-                triggerClearFurniture(placer);
-            } else if (btnConfigBounds.holdsPoint(mx, my)) {
-                openConfigModal();
-            }
+        toolbarSection.hover(m);
 
-            // Consume click so downstream settlement clicks or tile placements are suppressed
+        if (toolbarSection.body().holdsPoint(m.x(), m.y())) {
+            toolbarSection.click();
+            // Fully consume click so settlement tile placement / selection is suppressed
             CORE.getInput().clearAllInput();
             return true;
         }
@@ -244,26 +269,8 @@ public final class PlannerOverlayUI {
         if (!isPlacerActive() || text == null) {
             return;
         }
-        COORDINATE m = CORE.getInput().getMouse().getCoo();
-        if (m == null) return;
-        int mx = m.x();
-        int my = m.y();
-
-        if (btnStrutBounds.holdsPoint(mx, my)) {
-            text.title(I18n.get("btn.strut"));
-            text.text(I18n.get("tooltip.strut"));
-        } else if (btnFurnishBounds.holdsPoint(mx, my)) {
-            text.title(I18n.get("btn.furnish"));
-            text.text(I18n.get("tooltip.furnish"));
-        } else if (btnQuickBounds.holdsPoint(mx, my)) {
-            text.title(I18n.get("btn.quickfill"));
-            text.text(I18n.get("tooltip.quickfill"));
-        } else if (btnClearBounds.holdsPoint(mx, my)) {
-            text.title(I18n.get("btn.clear"));
-            text.text(I18n.get("tooltip.clear"));
-        } else if (btnConfigBounds.holdsPoint(mx, my)) {
-            text.title(I18n.get("btn.settings"));
-            text.text(I18n.get("tooltip.settings"));
+        if (toolbarSection.hoveredIs()) {
+            toolbarSection.hoverInfoGet(text);
         }
     }
 
@@ -271,14 +278,14 @@ public final class PlannerOverlayUI {
         try {
             AutoStrutSolver.Result res = strutSolver.solve(placer);
             if (res.pillarsPlaced > 0) {
-                setStatus(I18n.get("msg.strut_success", res.pillarsPlaced));
+                setStatus(I18n.get("msg.strut_success", res.pillarsPlaced), false);
             } else {
-                setStatus(I18n.get("msg.strut_none_needed"));
+                setStatus(I18n.get("msg.strut_none_needed"), false);
             }
         } catch (Throwable t) {
             snake2d.LOG.err("AutoPlanner: AutoStrut exception: " + t.getMessage());
             t.printStackTrace();
-            setStatus("[Error] Strut solver failed");
+            setStatus("[Error] Auto-Strut solver failed", true);
         }
     }
 
@@ -287,17 +294,17 @@ public final class PlannerOverlayUI {
             AutoFurnishSolver.Result res = furnishSolver.solve(placer, config);
             if (res.success) {
                 if (res.virtualDoorUsed) {
-                    setStatus(I18n.get("msg.furnish_virtual_door", res.workstations, res.efficiencyModules, res.efficiencyPercent, res.virtualDoorX, res.virtualDoorY));
+                    setStatus(I18n.get("msg.furnish_virtual_door", res.workstations, res.efficiencyModules, res.efficiencyPercent, res.virtualDoorX, res.virtualDoorY), false);
                 } else {
-                    setStatus(I18n.get("msg.furnish_success", res.workstations, res.efficiencyModules, res.efficiencyPercent));
+                    setStatus(I18n.get("msg.furnish_success", res.workstations, res.efficiencyModules, res.efficiencyPercent), false);
                 }
             } else {
-                setStatus(I18n.get(res.errorMessage));
+                setStatus(I18n.get(res.errorMessage), true);
             }
         } catch (Throwable t) {
             snake2d.LOG.err("AutoPlanner: AutoFurnish exception: " + t.getMessage());
             t.printStackTrace();
-            setStatus("[Error] Furnish solver failed");
+            setStatus("[Error] Auto-Furnish solver failed", true);
         }
     }
 
@@ -308,119 +315,178 @@ public final class PlannerOverlayUI {
 
             if (fRes.success) {
                 if (fRes.virtualDoorUsed) {
-                    setStatus(I18n.get("msg.furnish_virtual_door", fRes.workstations, fRes.efficiencyModules, fRes.efficiencyPercent, fRes.virtualDoorX, fRes.virtualDoorY));
+                    setStatus(I18n.get("msg.furnish_virtual_door", fRes.workstations, fRes.efficiencyModules, fRes.efficiencyPercent, fRes.virtualDoorX, fRes.virtualDoorY), false);
                 } else {
-                    setStatus(I18n.get("msg.furnish_success", fRes.workstations, fRes.efficiencyModules, fRes.efficiencyPercent));
+                    setStatus(I18n.get("msg.furnish_success", fRes.workstations, fRes.efficiencyModules, fRes.efficiencyPercent), false);
                 }
             } else {
-                setStatus(I18n.get(fRes.errorMessage));
+                setStatus(I18n.get(fRes.errorMessage), true);
             }
         } catch (Throwable t) {
             snake2d.LOG.err("AutoPlanner: QuickBuild exception: " + t.getMessage());
             t.printStackTrace();
-            setStatus("[Error] QuickBuild failed");
+            setStatus("[Error] Quick-Build solver failed", true);
         }
     }
 
     public void triggerClearFurniture(RoomPlacer placer) {
         try {
             furnishSolver.clearExistingFurniture(placer);
-            setStatus(I18n.get("msg.clear_success"));
+            setStatus(I18n.get("msg.clear_success"), false);
         } catch (Throwable t) {
             snake2d.LOG.err("AutoPlanner: ClearFurniture exception: " + t.getMessage());
             t.printStackTrace();
-            setStatus("[Error] ClearFurniture failed");
+            setStatus("[Error] Clear-Furniture failed", true);
         }
     }
 
-    private void setStatus(String msg) {
+    private void setStatus(String msg, boolean isError) {
         this.statusMessage = msg;
-        this.statusTimer = 4.0; // Show for 4 seconds
+        this.statusIsError = isError;
+        this.statusTimer = 4.0;
     }
 
-    public void openConfigModal() {
-        if (isModalOpen) {
-            VIEW.inters().section.close();
-            isModalOpen = false;
-            return;
+    private RoomPlacer getActivePlacer() {
+        if (SETT.ROOMS() == null || SETT.ROOMS().placement == null) {
+            return null;
         }
+        return SETT.ROOMS().placement.placer;
+    }
 
-        isModalOpen = true;
+    /**
+     * Opens or refreshes the ornate Songs of Syx Configuration Center modal dialog.
+     */
+    public void openConfigModal() {
         GuiSection root = new GuiSection();
-        GPanel panel = new GPanel(450, 300);
-        panel.setTitle(I18n.get("ui.panel.title"));
+        GuiSection content = new GuiSection();
+        int contentWidth = 500;
+
+        // Header Subtitle
+        GText subTitle = new GText(UI.FONT().S, I18n.get("ui.panel.subtitle")).normalify();
+        content.add(subTitle, 0, 0);
+
+        // Divider
+        content.addDown(8, new HorizontalSeparator(contentWidth));
+
+        // Row 1: Packing Strategy
+        String styleLabel = config.getStyle() == LayoutStyle.COMPACT 
+                ? I18n.get("ui.panel.style.compact") 
+                : I18n.get("ui.panel.style.balanced");
+        GButt.ButtPanel btnStyle = new GButt.ButtPanel(styleLabel) {
+            @Override
+            protected void clickA() {
+                config.cycleStyle();
+                openConfigModal();
+            }
+        };
+        btnStyle.body().setWidth(160);
+        content.addDown(8, createOptionRow(SPRITES.icons().m.place_fill, 
+                I18n.get("ui.panel.style"), 
+                I18n.get("ui.panel.style.desc"), 
+                btnStyle, contentWidth));
+
+        // Divider
+        content.addDown(8, new HorizontalSeparator(contentWidth));
+
+        // Row 2: Target Room Efficiency
+        int effPct = (int) Math.round(config.getTargetEfficiency() * 100);
+        String effLabel = I18n.get("btn.target_eff", effPct);
+        GButt.ButtPanel btnEff = new GButt.ButtPanel(effLabel) {
+            @Override
+            protected void clickA() {
+                config.cycleTargetEfficiency();
+                openConfigModal();
+            }
+        };
+        btnEff.body().setWidth(160);
+        content.addDown(8, createOptionRow(SPRITES.icons().m.ok, 
+                I18n.get("ui.panel.target_eff"), 
+                I18n.get("ui.panel.target_eff.desc"), 
+                btnEff, contentWidth));
+
+        // Divider
+        content.addDown(8, new HorizontalSeparator(contentWidth));
+
+        // Row 3: Internal Storage Ratio
+        String storageLabel = config.getStorageRatio() <= 0.001 
+                ? I18n.get("ui.panel.storage.none") 
+                : I18n.get("btn.storage_ratio", (int) Math.round(config.getStorageRatio() * 100));
+        GButt.ButtPanel btnStorage = new GButt.ButtPanel(storageLabel) {
+            @Override
+            protected void clickA() {
+                config.cycleStorageRatio();
+                openConfigModal();
+            }
+        };
+        btnStorage.body().setWidth(160);
+        content.addDown(8, createOptionRow(SPRITES.icons().m.storage_push, 
+                I18n.get("ui.panel.storage"), 
+                I18n.get("ui.panel.storage.desc"), 
+                btnStorage, contentWidth));
+
+        // Divider
+        content.addDown(8, new HorizontalSeparator(contentWidth));
+
+        // Row 4: Interface Language
+        String langLabel = I18n.getLanguage() == Language.DE ? "Deutsch [DE]" : "English [EN]";
+        GButt.ButtPanel btnLang = new GButt.ButtPanel(langLabel) {
+            @Override
+            protected void clickA() {
+                I18n.toggleLanguage();
+                buildToolbar();
+                openConfigModal();
+            }
+        };
+        btnLang.body().setWidth(160);
+        content.addDown(8, createOptionRow(SPRITES.icons().m.openscroll, 
+                I18n.get("ui.panel.language"), 
+                I18n.get("ui.panel.language.desc"), 
+                btnLang, contentWidth));
+
+        // Divider
+        content.addDown(8, new HorizontalSeparator(contentWidth));
+
+        // Footer Action Bar: Reset Defaults & Close/Done
+        GuiSection footer = new GuiSection();
+        footer.body().setWidth(contentWidth);
+
+        GButt.ButtPanel btnReset = new GButt.ButtPanel(I18n.get("btn.reset")) {
+            @Override
+            protected void clickA() {
+                config.resetDefaults();
+                openConfigModal();
+            }
+        }.icon(SPRITES.icons().m.trash);
+
+        GButt.ButtPanel btnClose = new GButt.ButtPanel(I18n.get("btn.close")) {
+            @Override
+            protected void clickA() {
+                VIEW.inters().section.close();
+            }
+        }.icon(SPRITES.icons().m.ok);
+
+        footer.add(btnReset, 0, 0);
+        btnClose.body().moveX2(contentWidth);
+        footer.add(btnClose);
+
+        content.addDown(12, footer);
+        content.pad(16, 12);
+
+        // Ornate Grand Game Panel
+        GPanel panel = new GPanel().setBig();
+        panel.inner().set(content.body());
+        panel.setTitle(I18n.get("ui.panel.title"), UI.FONT().H1);
 
         ACTION closeAction = new ACTION() {
             @Override
             public void exe() {
-                isModalOpen = false;
                 VIEW.inters().section.close();
             }
         };
         panel.setCloseAction(closeAction);
 
-        GuiSection content = new GuiSection();
-        content.pad(16);
-
-        // Row 1: Layout Style Toggle
-        GText lblStyle = new GText(UI.FONT().M, I18n.get("ui.panel.style"));
-        content.add(lblStyle, 0, 0);
-
-        String styleKey = config.getStyle() == PlannerConfig.LayoutStyle.COMPACT 
-                ? "ui.panel.style.compact" : "ui.panel.style.balanced";
-        GButt.ButtPanel btnStyle = new GButt.ButtPanel(I18n.get(styleKey));
-        btnStyle.clickActionSet(new ACTION() {
-            @Override
-            public void exe() {
-                config.cycleStyle();
-                openConfigModal();
-            }
-        });
-        content.addRight(12, btnStyle);
-
-        // Row 2: Target Efficiency
-        content.addDown(16, new GText(UI.FONT().M, I18n.get("ui.panel.target_eff", (int) Math.round(config.getTargetEfficiency() * 100))));
-        GButt.ButtPanel btnEff = new GButt.ButtPanel(I18n.get("btn.target_eff", (int) Math.round(config.getTargetEfficiency() * 100)));
-        btnEff.clickActionSet(new ACTION() {
-            @Override
-            public void exe() {
-                config.cycleTargetEfficiency();
-                openConfigModal();
-            }
-        });
-        content.addRight(12, btnEff);
-
-        // Row 3: Storage Allowance
-        content.addDown(16, new GText(UI.FONT().M, I18n.get("ui.panel.storage_ratio", (int) Math.round(config.getStorageRatio() * 100))));
-        GButt.ButtPanel btnStorage = new GButt.ButtPanel(I18n.get("btn.storage_ratio", (int) Math.round(config.getStorageRatio() * 100)));
-        btnStorage.clickActionSet(new ACTION() {
-            @Override
-            public void exe() {
-                config.cycleStorageRatio();
-                openConfigModal();
-            }
-        });
-        content.addRight(12, btnStorage);
-
-        // Row 4: Language Toggle
-        content.addDown(20, new GText(UI.FONT().M, I18n.get("btn.language")));
-        GButt.ButtPanel btnLang = new GButt.ButtPanel("[" + I18n.getLanguage().code.toUpperCase() + "]");
-        btnLang.clickActionSet(new ACTION() {
-            @Override
-            public void exe() {
-                I18n.toggleLanguage();
-                cachedLanguage = null; // force cache refresh
-                openConfigModal();
-            }
-        });
-        content.addRight(12, btnLang);
-
-        // Footer: Close Button
-        GButt.ButtPanel btnClose = new GButt.ButtPanel(I18n.get("btn.close"));
-        btnClose.clickActionSet(closeAction);
-        content.addDown(16, btnClose);
-
         root.add(panel);
+        content.body().centerIn(panel.inner());
         root.add(content);
 
         if (C.DIM() != null) {
@@ -428,5 +494,57 @@ public final class PlannerOverlayUI {
         }
 
         VIEW.inters().section.activate(root);
+    }
+
+    private GuiSection createOptionRow(SPRITE icon, String title, String desc, GButt.ButtPanel actionBtn, int width) {
+        GuiSection row = new GuiSection();
+        row.body().setWidth(width);
+
+        // Left Information Block (Icon + Title + Description)
+        GuiSection leftBlock = new GuiSection();
+        RENDEROBJ.Sprite iconObj = new RENDEROBJ.Sprite(icon);
+        leftBlock.add(iconObj, 0, 0);
+
+        GuiSection textBlock = new GuiSection();
+        GHeader header = new GHeader(title, UI.FONT().H2);
+        textBlock.add(header, 0, 0);
+
+        GText descText = new GText(UI.FONT().S, desc).normalify();
+        textBlock.addDown(2, descText);
+
+        leftBlock.addRightC(10, textBlock);
+        row.add(leftBlock, 0, 0);
+
+        // Right Control Button
+        actionBtn.body().moveX2(width);
+        actionBtn.body().centerY(leftBlock.body());
+        row.add(actionBtn);
+
+        return row;
+    }
+
+    /**
+     * Native Toolbar Panel container styled with UI.PANEL().butt.
+     */
+    private static final class ToolbarSection extends GuiSection {
+        @Override
+        public void render(SPRITE_RENDERER r, float ds) {
+            UI.PANEL().butt.render(r, body(), 0);
+            super.render(r, ds);
+        }
+    }
+
+    /**
+     * Authentic 2px horizontal separator line using native UI border color.
+     */
+    private static final class HorizontalSeparator extends SPRITE.Imp {
+        public HorizontalSeparator(int width) {
+            super(width, 2);
+        }
+
+        @Override
+        public void render(SPRITE_RENDERER r, int X1, int X2, int Y1, int Y2) {
+            GCOLOR.UI().border(r, X1, X2, Y1, Y2);
+        }
     }
 }

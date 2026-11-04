@@ -41,6 +41,21 @@ public final class I18n {
         EN_STRINGS.put("ui.overlay.title", "Auto-Planner");
         EN_STRINGS.put("ui.overlay.room", "{0} ({1} tiles)");
         EN_STRINGS.put("ui.overlay.no_room", "No active room draft");
+
+        EN_STRINGS.put("ui.panel.title", "Syx Auto-Planner Settings");
+        EN_STRINGS.put("ui.panel.subtitle", "Intelligent room builder assistant for Songs of Syx");
+        EN_STRINGS.put("ui.panel.style", "Packing Strategy");
+        EN_STRINGS.put("ui.panel.style.desc", "Spacing density between workstation clusters");
+        EN_STRINGS.put("ui.panel.style.compact", "Compact (Dense)");
+        EN_STRINGS.put("ui.panel.style.balanced", "Balanced (Aisles)");
+        EN_STRINGS.put("ui.panel.target_eff", "Target Efficiency");
+        EN_STRINGS.put("ui.panel.target_eff.desc", "Required auxiliary modules per workstation");
+        EN_STRINGS.put("ui.panel.storage", "Internal Storage");
+        EN_STRINGS.put("ui.panel.storage.desc", "Floor area reserved for internal storage boxes");
+        EN_STRINGS.put("ui.panel.storage.none", "Disabled (0%)");
+        EN_STRINGS.put("ui.panel.storage.val", "{0}% Storage");
+        EN_STRINGS.put("ui.panel.language", "Interface Language");
+        EN_STRINGS.put("ui.panel.language.desc", "Display language for buttons, dialogs and tooltips");
         
         EN_STRINGS.put("btn.strut", "Auto-Strut");
         EN_STRINGS.put("btn.furnish", "Auto-Furnish");
@@ -49,9 +64,10 @@ public final class I18n {
         EN_STRINGS.put("btn.settings", "Config");
         EN_STRINGS.put("btn.style.compact", "Style: Compact");
         EN_STRINGS.put("btn.style.balanced", "Style: Balanced");
-        EN_STRINGS.put("btn.target_eff", "Target Eff: {0}%");
-        EN_STRINGS.put("btn.storage_ratio", "Storage: {0}%");
+        EN_STRINGS.put("btn.target_eff", "{0}% Target");
+        EN_STRINGS.put("btn.storage_ratio", "{0}% Storage");
         EN_STRINGS.put("btn.language", "Language: EN");
+        EN_STRINGS.put("btn.reset", "Defaults");
         EN_STRINGS.put("btn.close", "Close");
 
         EN_STRINGS.put("tooltip.strut", "Punches minimal support pillars to eliminate 100% yellow ceiling tiles");
@@ -75,6 +91,21 @@ public final class I18n {
         DE_STRINGS.put("ui.overlay.title", "Auto-Planer");
         DE_STRINGS.put("ui.overlay.room", "{0} ({1} Felder)");
         DE_STRINGS.put("ui.overlay.no_room", "Kein Raum im Entwurf");
+
+        DE_STRINGS.put("ui.panel.title", "Syx Auto-Planer Optionen");
+        DE_STRINGS.put("ui.panel.subtitle", "Intelligenter Bau-Assistent für Songs of Syx");
+        DE_STRINGS.put("ui.panel.style", "Platzierungs-Stil");
+        DE_STRINGS.put("ui.panel.style.desc", "Dichte und Gänge zwischen Arbeitsplatz-Gruppen");
+        DE_STRINGS.put("ui.panel.style.compact", "Kompakt (Dicht)");
+        DE_STRINGS.put("ui.panel.style.balanced", "Ausgewogen (Gänge)");
+        DE_STRINGS.put("ui.panel.target_eff", "Ziel-Effizienz");
+        DE_STRINGS.put("ui.panel.target_eff.desc", "Benötigte Raumeffizienz für Hilfsmodule (100% empfohlen)");
+        DE_STRINGS.put("ui.panel.storage", "Internes Lager");
+        DE_STRINGS.put("ui.panel.storage.desc", "Fläche für interne Lagerkisten und Material-Puffer");
+        DE_STRINGS.put("ui.panel.storage.none", "Deaktiviert (0%)");
+        DE_STRINGS.put("ui.panel.storage.val", "{0}% Lager");
+        DE_STRINGS.put("ui.panel.language", "Benutzeroberfläche");
+        DE_STRINGS.put("ui.panel.language.desc", "Sprache für Schaltflächen, Menüs und Hilfetexte");
         
         DE_STRINGS.put("btn.strut", "Auto-Stützen");
         DE_STRINGS.put("btn.furnish", "Auto-Möbel");
@@ -83,9 +114,10 @@ public final class I18n {
         DE_STRINGS.put("btn.settings", "Optionen");
         DE_STRINGS.put("btn.style.compact", "Stil: Kompakt");
         DE_STRINGS.put("btn.style.balanced", "Stil: Ausgewogen");
-        DE_STRINGS.put("btn.target_eff", "Ziel-Eff: {0}%");
-        DE_STRINGS.put("btn.storage_ratio", "Lager: {0}%");
+        DE_STRINGS.put("btn.target_eff", "{0}% Ziel");
+        DE_STRINGS.put("btn.storage_ratio", "{0}% Lager");
         DE_STRINGS.put("btn.language", "Sprache: DE");
+        DE_STRINGS.put("btn.reset", "Standard");
         DE_STRINGS.put("btn.close", "Schließen");
 
         DE_STRINGS.put("tooltip.strut", "Setzt minimale Pfeiler, um 100% gelbe/teure Deckenbereiche zu entfernen");

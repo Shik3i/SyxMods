@@ -48,6 +48,11 @@ public final class AutoPlannerInstance implements SCRIPT_INSTANCE {
     }
 
     @Override
+    public void hover(snake2d.util.datatypes.COORDINATE mCoo, boolean mouseHasMoved) {
+        overlayUI.hover(mCoo, mouseHasMoved);
+    }
+
+    @Override
     public void keyPush(KEYS key) {
         // Can be extended with custom key bindings if desired
     }
