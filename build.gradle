@@ -1,0 +1,45 @@
+// ============================================================================
+// SyxMods - Consolidated Multi-Project Mod Suite for Songs of Syx (v0.71.44)
+// Subprojects:
+//   1. :SyxAutoBuild (com.autoplanner.*) -> Deploys to %APPDATA%/songsofsyx/mods/SyxAutoPlanner
+//   2. :CreativeSyx  (com.architect.*)   -> Deploys to %APPDATA%/songsofsyx/mods/SyxArchitect
+// ============================================================================
+
+allprojects {
+    group = 'com.syxmods'
+    version = '1.0.0'
+}
+
+subprojects {
+    apply plugin: 'java'
+
+    java {
+        sourceCompatibility = JavaVersion.VERSION_16
+        targetCompatibility = JavaVersion.VERSION_16
+    }
+
+    tasks.withType(JavaCompile).configureEach {
+        options.encoding = 'UTF-8'
+        options.release = 16
+    }
+
+    repositories {
+        mavenCentral()
+    }
+}
+
+// Master deployment task: compiles, verifies, packages as V71, and deploys both mods
+tasks.register('deployAll') {
+    group = 'songs of syx'
+    description = 'Builds, verifies, and deploys both Syx Auto-Planner and Syx Architect to %APPDATA%/songsofsyx/mods/ with case-exact _Info.txt'
+    dependsOn ':SyxAutoBuild:deployMod', ':CreativeSyx:deployMod'
+
+    doLast {
+        def appData = System.getenv("APPDATA") ?: "${System.getProperty('user.home')}/AppData/Roaming"
+        println "================================================================================"
+        println "ALL MODS DEPLOYED SUCCESSFULLY TO SONGS OF SYX (V71):"
+        println "  1. ${appData}/songsofsyx/mods/SyxAutoPlanner"
+        println "  2. ${appData}/songsofsyx/mods/SyxArchitect"
+        println "================================================================================"
+    }
+}
