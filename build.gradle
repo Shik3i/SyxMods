@@ -62,7 +62,6 @@ tasks.register("deployMod", Copy) {
     into(targetModDir)
     from("mod-files") {
         include "_Info.txt"
-        include "_info.txt"
     }
 
     // Songs of Syx V71 version layout
@@ -74,20 +73,24 @@ tasks.register("deployMod", Copy) {
         from("mod-files/assets")
     }
 
-    // Guarantee that _Info.txt and _info.txt are written to both root and V71 folders
+    // Guarantee that _Info.txt is written with exact case to both root and V71 folders
     doLast {
         def infoContent = file("${projectDir}/mod-files/_Info.txt").getText("UTF-8")
 
-        def targetFiles = [
-            file("${targetModDir}/_Info.txt"),
-            file("${targetModDir}/_info.txt"),
-            file("${targetModDir}/V71/_Info.txt"),
-            file("${targetModDir}/V71/_info.txt")
-        ]
-
-        targetFiles.each { f ->
-            f.parentFile.mkdirs()
-            f.setText(infoContent, "UTF-8")
+        // Windows NTFS file system quirk:
+        // Songs of Syx Util.check() performs a case-sensitive startsWith() on directory files.
+        // To ensure NTFS stores the exact "_Info.txt" casing, delete any existing file before writing.
+        [targetModDir, file("${targetModDir}/V71")].each { dir ->
+            dir.mkdirs()
+            def oldFile = new File(dir, "_info.txt")
+            if (oldFile.exists()) {
+                oldFile.delete()
+            }
+            def targetFile = new File(dir, "_Info.txt")
+            if (targetFile.exists()) {
+                targetFile.delete()
+            }
+            targetFile.setText(infoContent, "UTF-8")
         }
 
         println "Deployment complete! _Info.txt verified in:"
