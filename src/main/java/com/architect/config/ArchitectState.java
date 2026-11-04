@@ -70,6 +70,34 @@ public final class ArchitectState {
     }
 
     /**
+     * Applies the God Mode preset (instant everything, maximum abundance and invulnerability).
+     */
+    public void applyGodMode() {
+        constructionTier = CheatTiers.ConstructionTier.INSTANT_BUILD;
+        maintenanceTier = CheatTiers.MaintenanceTier.NO_DECAY;
+        knowledgeTier = CheatTiers.KnowledgeTier.OMNISCIENCE;
+        logisticsTier = CheatTiers.LogisticsTier.ALL_ASSIGNED_CRATES;
+        infiniteDenari = true;
+        spoilageDisabled = true;
+        loyaltyBoost = true;
+        raidImmunity = true;
+    }
+
+    /**
+     * Applies the Living City preset (free building and janitor materials, active workers, immersion).
+     */
+    public void applyLivingCity() {
+        constructionTier = CheatTiers.ConstructionTier.FREE_MATERIALS_KEEP_WORK;
+        maintenanceTier = CheatTiers.MaintenanceTier.JANITOR_WORK_FREE_MATS;
+        knowledgeTier = CheatTiers.KnowledgeTier.NO_FORGETTING;
+        logisticsTier = CheatTiers.LogisticsTier.RAW_MATERIALS_ONLY;
+        infiniteDenari = true;
+        spoilageDisabled = false;
+        loyaltyBoost = true;
+        raidImmunity = true;
+    }
+
+    /**
      * Serializes state to the Songs of Syx binary savegame stream.
      */
     public void save(FilePutter file) {

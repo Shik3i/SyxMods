@@ -22,6 +22,7 @@ import snake2d.util.color.COLOR;
 import snake2d.util.datatypes.Rec;
 import snake2d.util.file.FileGetter;
 import snake2d.util.file.FilePutter;
+import util.gui.misc.GButt;
 import view.keyboard.KEYS;
 
 /**
@@ -178,16 +179,15 @@ public final class ArchitectInstance implements SCRIPT_INSTANCE {
         if (bannerTimer > 0) {
             bannerTimer -= ds;
             int bannerW = 320;
-            int bannerH = 24;
+            int bannerH = 26;
             int bannerX = (C.DIM().width() - bannerW) / 2;
             int bannerY = 12;
             bannerBounds.set(bannerX, bannerX + bannerW, bannerY, bannerY + bannerH);
 
-            COLOR.BLACK.render(r, bannerBounds, 0);
-            COLOR.WHITE35.renderFrame(r, bannerBounds, 1, 0);
+            GButt.ButtPanel.renderBG(r, false, false, false, bannerBounds);
             if (UI.FONT() != null && UI.FONT().S != null) {
                 int tw = UI.FONT().S.width(BANNER_TEXT);
-                UI.FONT().S.render(r, BANNER_TEXT, bannerX + (bannerW - tw) / 2, bannerY + 5);
+                UI.FONT().S.render(r, BANNER_TEXT, bannerX + (bannerW - tw) / 2, bannerY + 6);
             }
         }
     }

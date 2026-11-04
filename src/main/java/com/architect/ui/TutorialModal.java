@@ -13,13 +13,15 @@ import snake2d.util.datatypes.DIR;
 import snake2d.util.gui.GuiSection;
 import snake2d.util.misc.ACTION;
 import util.gui.misc.GButt;
+import util.gui.misc.GHeader;
 import util.gui.misc.GText;
+import util.gui.panel.GFrame;
 import util.gui.panel.GPanel;
 import view.main.VIEW;
 
 /**
  * In-game bilingual tutorial and feature guide modal.
- * Spacious 840px wide layout with clean typography.
+ * Spacious 840px wide native Songs of Syx layout with clean 2-column typography.
  */
 public final class TutorialModal {
 
@@ -65,11 +67,12 @@ public final class TutorialModal {
 
         int width = 840;
         int height = 580;
-        int contentW = width - 40;
+        int contentW = 800;
 
         GuiSection root = new GuiSection();
         GPanel panel = new GPanel(width, height);
-        panel.setTitle("Syx Architect - " + I18n.get("btn.tutorial"));
+        panel.setBig();
+        panel.setTitle(I18n.get("ui.title") + " - " + I18n.get("btn.tutorial"));
 
         ACTION closeAction = new ACTION() {
             @Override
@@ -83,46 +86,71 @@ public final class TutorialModal {
 
         GuiSection content = new GuiSection();
 
-        // Header
-        GText title = new GText(UI.FONT().H1, I18n.get("ui.title"));
-        content.addDown(0, title);
+        // Section Title
+        GHeader header = new GHeader(I18n.get("mod.name") + " - " + I18n.get("mod.desc")).subify();
+        content.addDown(0, header);
+        content.addDown(6, GFrame.separator(contentW));
 
-        GText sub = new GText(UI.FONT().M, "Creative, Schoenbau & Sandbox Suite");
-        sub.lablify();
-        content.addDown(4, sub);
+        // 2-Column Guide Content (392px each)
+        int colW = (contentW - 16) / 2;
+        GuiSection grid = new GuiSection();
 
-        // Body items
-        String[] keys = new String[]{
-            "cheat.knowledge",
-            "cheat.maintenance",
+        // Left Column
+        GuiSection leftCol = new GuiSection();
+        String[] leftKeys = {
             "cheat.construction",
+            "cheat.maintenance",
+            "cheat.knowledge",
+            "cheat.spoilage"
+        };
+        for (int i = 0; i < leftKeys.length; i++) {
+            String key = leftKeys[i];
+            GText head = new GText(UI.FONT().M, I18n.get(key));
+            head.lablify();
+            leftCol.addDown(i == 0 ? 0 : 8, head);
+
+            GText desc = new GText(UI.FONT().S, I18n.get(key + ".desc"));
+            desc.normalify();
+            desc.setMaxWidth(colW - 8);
+            leftCol.addDown(2, desc);
+        }
+        grid.add(leftCol);
+
+        // Right Column
+        GuiSection rightCol = new GuiSection();
+        String[] rightKeys = {
             "cheat.logistics",
             "cheat.infinite_denari",
-            "cheat.spoilage",
             "cheat.loyalty",
-            "cheat.raid_protection",
-            "cheat.battle_autowin"
+            "cheat.raid_protection"
         };
-
-        for (String key : keys) {
-            GText head = new GText(UI.FONT().M, "* " + I18n.get(key));
+        for (int i = 0; i < rightKeys.length; i++) {
+            String key = rightKeys[i];
+            GText head = new GText(UI.FONT().M, I18n.get(key));
             head.lablify();
-            content.addDown(6, head);
+            rightCol.addDown(i == 0 ? 0 : 8, head);
 
-            GText desc = new GText(UI.FONT().S, "  " + I18n.get(key + ".desc"));
-            desc.setMaxWidth(contentW - 20);
-            content.addDown(2, desc);
+            GText desc = new GText(UI.FONT().S, I18n.get(key + ".desc"));
+            desc.normalify();
+            desc.setMaxWidth(colW - 8);
+            rightCol.addDown(2, desc);
         }
+        grid.addRight(16, rightCol);
+
+        content.addDown(8, grid);
+        content.addDown(12, GFrame.separator(contentW));
 
         // Close button at bottom
         GButt.ButtPanel btnClose = new GButt.ButtPanel(I18n.get("btn.close"));
-        btnClose.setDim(contentW, 32);
+        btnClose.setDim(contentW, 30);
         btnClose.align(DIR.C);
+        btnClose.hoverTitleSet(I18n.get("btn.close"));
+        btnClose.hoverInfoSet("Schliesst diese Modul-Uebersicht.");
         btnClose.clickActionSet(closeAction);
-        content.addDown(12, btnClose);
+        content.addDown(6, btnClose);
 
         root.add(panel);
-        content.body().moveX1Y1(panel.inner().x1() + 16, panel.inner().y1() + 8);
+        content.body().moveX1Y1(panel.inner().x1() + 20, panel.inner().y1() + 28);
         root.add(content);
 
         if (C.DIM() != null) {

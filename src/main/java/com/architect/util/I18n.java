@@ -45,7 +45,8 @@ public final class I18n {
         EN_STRINGS.put("mod.name", "Syx Architect");
         EN_STRINGS.put("mod.desc", "Creative, Schoenbau & Sandbox Suite for Songs of Syx.");
         EN_STRINGS.put("ui.title", "Syx Architect - Creative Suite");
-        EN_STRINGS.put("ui.presets", "Quick Presets:");
+        EN_STRINGS.put("ui.presets", "Quick Presets");
+        EN_STRINGS.put("ui.actions", "Instant Actions");
         EN_STRINGS.put("preset.god", "God Mode (Instant)");
         EN_STRINGS.put("preset.god.desc", "Instant construction, zero decay, omniscience, full crates, and infinite treasury.");
         EN_STRINGS.put("preset.living", "Living City (Free Mats)");
@@ -53,8 +54,8 @@ public final class I18n {
         EN_STRINGS.put("preset.vanilla", "Reset to Vanilla");
         EN_STRINGS.put("preset.vanilla.desc", "Resets all cheat tiers and boosts back to default game rules.");
 
-        EN_STRINGS.put("ui.tab.city", "[City & Economy]");
-        EN_STRINGS.put("ui.tab.world", "[World & Population]");
+        EN_STRINGS.put("ui.tab.city", "City & Economy");
+        EN_STRINGS.put("ui.tab.world", "World & Population");
         EN_STRINGS.put("ui.tab.boosts", "Science");
         EN_STRINGS.put("ui.tab.logistics", "Logistics");
         EN_STRINGS.put("ui.tab.construction", "Build & Maintain");
@@ -97,13 +98,13 @@ public final class I18n {
         EN_STRINGS.put("tier.logistics.raw_only", "Raw Materials (~80%)");
         EN_STRINGS.put("tier.logistics.all_crates", "All Crates (~80%)");
 
-        EN_STRINGS.put("btn.instant_build_now", "[>>] Instant Build Now");
-        EN_STRINGS.put("btn.fill_crates_100", "[++] Fill Crates to 100%");
-        EN_STRINGS.put("btn.add_denari_1m", "[$$] +1M Denari");
-        EN_STRINGS.put("btn.win_combat_now", "[XX] Win Combat Now");
+        EN_STRINGS.put("btn.instant_build_now", "Instant Build Now");
+        EN_STRINGS.put("btn.fill_crates_100", "Fill Crates to 100%");
+        EN_STRINGS.put("btn.add_denari_1m", "+1M Denari");
+        EN_STRINGS.put("btn.win_combat_now", "Win Combat Now");
         EN_STRINGS.put("btn.apply", "Apply");
-        EN_STRINGS.put("btn.close", "Close Window (ESC / F10)");
-        EN_STRINGS.put("btn.tutorial", "[? Guide]");
+        EN_STRINGS.put("btn.close", "Close (ESC / F10)");
+        EN_STRINGS.put("btn.tutorial", "Manual");
         EN_STRINGS.put("btn.language", "Language: EN");
         EN_STRINGS.put("status.active", "ACTIVE");
         EN_STRINGS.put("status.inactive", "OFF");
@@ -117,18 +118,19 @@ public final class I18n {
         EN_STRINGS.put("world.btn.spawn10", "+10 Citizens");
         EN_STRINGS.put("world.btn.spawn50", "+50 Citizens");
         EN_STRINGS.put("world.btn.spawn100", "+100 Citizens");
-        EN_STRINGS.put("world.btn.spawn_all_25", "[+] +25 All Races");
+        EN_STRINGS.put("world.btn.spawn_all_25", "+25 All Races");
         EN_STRINGS.put("world.env.title", "Atmosphere & Nature");
         EN_STRINGS.put("world.toggle.aging", "Disable Aging");
         EN_STRINGS.put("world.toggle.weather", "Clear Weather");
         EN_STRINGS.put("world.toggle.fertility", "100% Soil Moisture");
-        EN_STRINGS.put("world.btn.fertility_now", "[>>] Set Moisture to 100%");
+        EN_STRINGS.put("world.btn.fertility_now", "Set Moisture to 100%");
 
         // Built-in German dictionary (Clean ASCII)
         DE_STRINGS.put("mod.name", "Syx Architect");
         DE_STRINGS.put("mod.desc", "Creative-, Schoenbau- & Sandbox-Suite fuer Songs of Syx.");
         DE_STRINGS.put("ui.title", "Syx Architect - Creative Suite");
-        DE_STRINGS.put("ui.presets", "Schnellstart-Presets:");
+        DE_STRINGS.put("ui.presets", "Schnellstart-Profile");
+        DE_STRINGS.put("ui.actions", "Sofort-Aktionen");
         DE_STRINGS.put("preset.god", "God Mode (Sofortbau)");
         DE_STRINGS.put("preset.god.desc", "Sofortbau, kein Verschleiss, Allwissenheit, volle Lager und unendliche Schatzkammer.");
         DE_STRINGS.put("preset.living", "Lebendige Stadt (Gratis)");
@@ -136,8 +138,8 @@ public final class I18n {
         DE_STRINGS.put("preset.vanilla", "Alles auf Vanilla");
         DE_STRINGS.put("preset.vanilla.desc", "Setzt alle Cheats und Boosts vollstaendig auf Vanilla-Werte zurueck.");
 
-        DE_STRINGS.put("ui.tab.city", "[Stadt & Wirtschaft]");
-        DE_STRINGS.put("ui.tab.world", "[Welt & Bevoelkerung]");
+        DE_STRINGS.put("ui.tab.city", "Stadt & Wirtschaft");
+        DE_STRINGS.put("ui.tab.world", "Welt & Bevoelkerung");
         DE_STRINGS.put("ui.tab.boosts", "Wissenschaft");
         DE_STRINGS.put("ui.tab.logistics", "Logistik");
         DE_STRINGS.put("ui.tab.construction", "Bauen & Wartung");
@@ -157,7 +159,7 @@ public final class I18n {
         DE_STRINGS.put("cheat.logistics", "Lager-Refill");
         DE_STRINGS.put("cheat.logistics.desc", "Haelt Lagerkisten und Rohstoffe automatisch auf ca. 80% Fuellstand.");
         DE_STRINGS.put("cheat.infinite_denari", "Schatzkammer");
-        DE_STRINGS.put("cheat.infinite_denari.desc", "Haelt die stadtische Schatzkammer automatisch auf mindestens 1.000.000 Denari.");
+        DE_STRINGS.put("cheat.infinite_denari.desc", "Haelt die staedtische Schatzkammer automatisch auf mindestens 1.000.000 Denari.");
         DE_STRINGS.put("cheat.raid_protection", "Raid-Schutz");
         DE_STRINGS.put("cheat.raid_protection.desc", "Bricht feindliche Raids und Barbaren-Invasionen automatisch ab.");
         DE_STRINGS.put("cheat.battle_autowin", "Schlachten");
@@ -180,13 +182,13 @@ public final class I18n {
         DE_STRINGS.put("tier.logistics.raw_only", "Rohstoffe (~80%)");
         DE_STRINGS.put("tier.logistics.all_crates", "Alle Kisten (~80%)");
 
-        DE_STRINGS.put("btn.instant_build_now", "[>>] Sofortbau jetzt");
-        DE_STRINGS.put("btn.fill_crates_100", "[++] Kisten auf 100%");
-        DE_STRINGS.put("btn.add_denari_1m", "[$$] +1 Mio. Denari");
-        DE_STRINGS.put("btn.win_combat_now", "[XX] Sofort-Sieg");
+        DE_STRINGS.put("btn.instant_build_now", "Sofortbau jetzt");
+        DE_STRINGS.put("btn.fill_crates_100", "Kisten auf 100%");
+        DE_STRINGS.put("btn.add_denari_1m", "+1 Mio. Denari");
+        DE_STRINGS.put("btn.win_combat_now", "Sofort-Sieg");
         DE_STRINGS.put("btn.apply", "Anwenden");
-        DE_STRINGS.put("btn.close", "Fenster Schliessen (ESC / F10)");
-        DE_STRINGS.put("btn.tutorial", "[? Guide]");
+        DE_STRINGS.put("btn.close", "Schliessen (ESC / F10)");
+        DE_STRINGS.put("btn.tutorial", "Handbuch");
         DE_STRINGS.put("btn.language", "Sprache: DE");
         DE_STRINGS.put("status.active", "AKTIV");
         DE_STRINGS.put("status.inactive", "AUS");
@@ -200,12 +202,12 @@ public final class I18n {
         DE_STRINGS.put("world.btn.spawn10", "+10 Buerger");
         DE_STRINGS.put("world.btn.spawn50", "+50 Buerger");
         DE_STRINGS.put("world.btn.spawn100", "+100 Buerger");
-        DE_STRINGS.put("world.btn.spawn_all_25", "[+] +25 Alle Rassen");
+        DE_STRINGS.put("world.btn.spawn_all_25", "+25 Alle Rassen");
         DE_STRINGS.put("world.env.title", "Atmosphaere & Natur");
         DE_STRINGS.put("world.toggle.aging", "Alterung stoppen");
         DE_STRINGS.put("world.toggle.weather", "Schoenes Wetter");
         DE_STRINGS.put("world.toggle.fertility", "100% Bodenfeuchte");
-        DE_STRINGS.put("world.btn.fertility_now", "[>>] Feuchte auf 100%");
+        DE_STRINGS.put("world.btn.fertility_now", "Feuchte auf 100%");
 
         // Load ClassLoader resources if packaged in JAR
         initFromJar();
