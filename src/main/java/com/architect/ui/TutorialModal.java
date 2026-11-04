@@ -141,7 +141,8 @@ public final class TutorialModal {
         content.addDown(12, GFrame.separator(contentW));
 
         // Close button at bottom
-        GButt.ButtPanel btnClose = new GButt.ButtPanel(I18n.get("btn.close"));
+        GText btnCloseText = new GText(UI.FONT().M, I18n.get("btn.close"));
+        GButt.ButtPanel btnClose = new GButt.ButtPanel((snake2d.util.sprite.SPRITE) btnCloseText);
         btnClose.setDim(contentW, 30);
         btnClose.align(DIR.C);
         btnClose.hoverTitleSet(I18n.get("btn.close"));

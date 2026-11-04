@@ -9,6 +9,7 @@ import com.architect.modules.LogisticsModule;
 import com.architect.modules.SecurityModule;
 import com.architect.modules.WorldModule;
 import com.architect.ui.ArchitectUI;
+import com.architect.util.I18n;
 
 import init.constant.C;
 import init.race.Race;
@@ -18,21 +19,28 @@ import snake2d.CORE;
 import snake2d.KEYCODES;
 import snake2d.MButt;
 import snake2d.Renderer;
-import snake2d.util.color.COLOR;
+import snake2d.util.datatypes.COORDINATE;
+import snake2d.util.datatypes.DIR;
 import snake2d.util.datatypes.Rec;
 import snake2d.util.file.FileGetter;
 import snake2d.util.file.FilePutter;
+import snake2d.util.misc.ACTION;
+import util.gui.misc.GBox;
 import util.gui.misc.GButt;
+import util.gui.misc.GText;
 import view.keyboard.KEYS;
 
 /**
  * Runtime execution instance of Syx Architect during active gameplay.
  * STRICT ZERO-ALLOCATION GUARANTEE in 60Hz update and render loops.
- * Features a rock-solid, edge-triggered F10 debounced toggle and clean unobtrusive presentation.
+ * Features:
+ * - Permanent, sleek native stone HUD button at top-right
+ * - Rock-solid edge-triggered F10 hotkey with debouncing
+ * - Native hover tooltip and full interaction support
  */
 public final class ArchitectInstance implements SCRIPT_INSTANCE {
 
-    private static final String BANNER_TEXT = "Syx Architect v1.0.0 active  [F10]";
+    private static final String BANNER_TEXT = "Syx Architect aktiv  [Button oben rechts / F10]";
 
     private final ArchitectState state = new ArchitectState();
 
@@ -50,6 +58,9 @@ public final class ArchitectInstance implements SCRIPT_INSTANCE {
     // Centered subtle welcome banner bounds (only visible for 4s on load)
     private final Rec bannerBounds = new Rec();
     private double bannerTimer = 4.0;
+
+    // Persistent sleek native stone HUD button
+    private GButt.ButtPanel hudButton;
 
     // Reusable UI callback to prevent lambda allocation on each open
     private final ArchitectUI.UICallback uiCallback = new ArchitectUI.UICallback() {
@@ -100,6 +111,26 @@ public final class ArchitectInstance implements SCRIPT_INSTANCE {
         constructionModule.init();
         securityModule.init();
         worldModule.init();
+    }
+
+    private void ensureHudButton() {
+        if (hudButton == null && UI.FONT() != null && UI.FONT().S != null) {
+            GText t = new GText(UI.FONT().S, "ARCHITECT");
+            t.lablify();
+            hudButton = new GButt.ButtPanel((snake2d.util.sprite.SPRITE) t);
+            hudButton.setDim(88, 22);
+            hudButton.align(DIR.C);
+            hudButton.hoverTitleSet("Syx Architect  [F10]");
+            hudButton.hoverInfoSet(I18n.getLanguage() == I18n.Language.DE
+                ? "Klick oeffnet das Creative-, Schoenbau- & Sandbox-Kontrollzentrum (Hotkeys: F10 / ESC)."
+                : "Click opens the creative and sandbox control center (Hotkeys: F10 / ESC).");
+            hudButton.clickActionSet(new ACTION() {
+                @Override
+                public void exe() {
+                    toggleUI();
+                }
+            });
+        }
     }
 
     /**
@@ -175,10 +206,10 @@ public final class ArchitectInstance implements SCRIPT_INSTANCE {
     public void render(Renderer r, float ds) {
         if (C.DIM() == null) return;
 
-        // Render discrete, non-intrusive notification banner at the top center on game load
+        // 1. Render discrete, non-intrusive notification banner at top center on game load
         if (bannerTimer > 0) {
             bannerTimer -= ds;
-            int bannerW = 320;
+            int bannerW = 340;
             int bannerH = 26;
             int bannerX = (C.DIM().width() - bannerW) / 2;
             int bannerY = 12;
@@ -190,11 +221,42 @@ public final class ArchitectInstance implements SCRIPT_INSTANCE {
                 UI.FONT().S.render(r, BANNER_TEXT, bannerX + (bannerW - tw) / 2, bannerY + 6);
             }
         }
+
+        // 2. Render sleek, permanent native stone HUD button at top-right
+        ensureHudButton();
+        if (hudButton != null) {
+            int btnW = 88;
+            int btnH = 22;
+            int btnX = C.DIM().width() - btnW - 10;
+            int btnY = 54;
+            hudButton.body().moveX1Y1(btnX, btnY);
+            hudButton.selectedSet(ArchitectUI.isOpen());
+            hudButton.render(r, ds);
+        }
+    }
+
+    @Override
+    public void hover(COORDINATE coordinate, boolean hasCursor) {
+        ensureHudButton();
+        if (hudButton != null && coordinate != null) {
+            hudButton.hover(coordinate);
+        }
+    }
+
+    @Override
+    public void hoverTimer(double time, GBox hoverBox) {
+        ensureHudButton();
+        if (hudButton != null && hudButton.hoveredIs() && hoverBox != null) {
+            hudButton.hoverInfoGet(hoverBox);
+        }
     }
 
     @Override
     public void mouseClick(MButt button) {
-        // No floating HUD box to obstruct clicks
+        ensureHudButton();
+        if (button == MButt.LEFT && hudButton != null && hudButton.hoveredIs()) {
+            hudButton.click();
+        }
     }
 
     @Override
