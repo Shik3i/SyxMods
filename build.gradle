@@ -39,6 +39,7 @@ jar {
     // Include mod assets in JAR resources if needed
     from("mod-files") {
         include "assets/**"
+        include "_Info.txt"
         include "_info.txt"
     }
 }
@@ -47,7 +48,7 @@ jar {
 tasks.register("deployMod", Copy) {
     dependsOn tasks.jar
     group = "songs of syx"
-    description = "Deploys the compiled mod JAR, _info.txt, and assets directly to %APPDATA%/songsofsyx/mods/SyxAutoPlanner/"
+    description = "Deploys the compiled mod JAR, _Info.txt, and assets directly to %APPDATA%/songsofsyx/mods/SyxAutoPlanner/"
 
     def appData = System.getenv("APPDATA") ?: "${System.getProperty('user.home')}/AppData/Roaming"
     def targetModDir = file("${appData}/songsofsyx/mods/SyxAutoPlanner")
@@ -60,6 +61,7 @@ tasks.register("deployMod", Copy) {
     // Root metadata
     into(targetModDir)
     from("mod-files") {
+        include "_Info.txt"
         include "_info.txt"
     }
 
@@ -72,13 +74,24 @@ tasks.register("deployMod", Copy) {
         from("mod-files/assets")
     }
 
-    // Also copy _Info.txt (capitalized) to satisfy any case-sensitive checks
+    // Guarantee that _Info.txt and _info.txt are written to both root and V71 folders
     doLast {
-        def infoFile = file("${targetModDir}/_info.txt")
-        def infoCapital = file("${targetModDir}/_Info.txt")
-        if (infoFile.exists() && !infoCapital.exists()) {
-            infoCapital.text = infoFile.text
+        def infoContent = file("${projectDir}/mod-files/_Info.txt").getText("UTF-8")
+
+        def targetFiles = [
+            file("${targetModDir}/_Info.txt"),
+            file("${targetModDir}/_info.txt"),
+            file("${targetModDir}/V71/_Info.txt"),
+            file("${targetModDir}/V71/_info.txt")
+        ]
+
+        targetFiles.each { f ->
+            f.parentFile.mkdirs()
+            f.setText(infoContent, "UTF-8")
         }
-        println "Deployment complete! Mod ready in: ${targetModDir}"
+
+        println "Deployment complete! _Info.txt verified in:"
+        println "  -> ${targetModDir}/_Info.txt"
+        println "  -> ${targetModDir}/V71/_Info.txt"
     }
 }
