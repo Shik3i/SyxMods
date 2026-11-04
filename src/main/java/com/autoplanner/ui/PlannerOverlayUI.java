@@ -506,9 +506,9 @@ public final class PlannerOverlayUI {
      * Opens or refreshes the ornate Songs of Syx Configuration Center modal dialog.
      */
     public void openConfigModal() {
-        GuiSection root = new GuiSection();
+        DraggableModalSection root = new DraggableModalSection();
         GuiSection content = new GuiSection();
-        int contentWidth = 500;
+        int contentWidth = 660;
 
         // Header Subtitle
         GText subTitle = new GText(UI.FONT().S, I18n.get("ui.panel.subtitle")).normalify();
@@ -528,7 +528,8 @@ public final class PlannerOverlayUI {
                 openConfigModal();
             }
         };
-        btnStyle.body().setWidth(160);
+        btnStyle.body().setWidth(200);
+        btnStyle.body().setHeight(30);
         content.addDown(8, createOptionRow(SPRITES.icons().m.place_fill, 
                 I18n.get("ui.panel.style"), 
                 I18n.get("ui.panel.style.desc"), 
@@ -547,7 +548,8 @@ public final class PlannerOverlayUI {
                 openConfigModal();
             }
         };
-        btnEff.body().setWidth(160);
+        btnEff.body().setWidth(200);
+        btnEff.body().setHeight(30);
         content.addDown(8, createOptionRow(SPRITES.icons().m.ok, 
                 I18n.get("ui.panel.target_eff"), 
                 I18n.get("ui.panel.target_eff.desc"), 
@@ -567,7 +569,8 @@ public final class PlannerOverlayUI {
                 openConfigModal();
             }
         };
-        btnStorage.body().setWidth(160);
+        btnStorage.body().setWidth(200);
+        btnStorage.body().setHeight(30);
         content.addDown(8, createOptionRow(SPRITES.icons().m.storage_push, 
                 I18n.get("ui.panel.storage"), 
                 I18n.get("ui.panel.storage.desc"), 
@@ -586,7 +589,8 @@ public final class PlannerOverlayUI {
                 openConfigModal();
             }
         };
-        btnLang.body().setWidth(160);
+        btnLang.body().setWidth(200);
+        btnLang.body().setHeight(30);
         content.addDown(8, createOptionRow(SPRITES.icons().m.openscroll, 
                 I18n.get("ui.panel.language"), 
                 I18n.get("ui.panel.language.desc"), 
@@ -624,7 +628,7 @@ public final class PlannerOverlayUI {
         // Ornate Grand Game Panel
         GPanel panel = new GPanel().setBig();
         panel.inner().set(content.body());
-        panel.setTitle(I18n.get("ui.panel.title"), UI.FONT().H1);
+        panel.setTitle(I18n.get("ui.panel.title"));
 
         ACTION closeAction = new ACTION() {
             @Override
@@ -667,9 +671,64 @@ public final class PlannerOverlayUI {
         // Right Control Button
         actionBtn.body().moveX2(width);
         actionBtn.body().centerY(leftBlock.body());
+        actionBtn.hoverTitleSet(title);
+        actionBtn.hoverInfoSet(desc);
         row.add(actionBtn);
 
         return row;
+    }
+
+    /**
+     * Fully draggable modal container allowing the user to reposition dialogs freely with the mouse.
+     */
+    private static class DraggableModalSection extends GuiSection {
+        private boolean isDragging = false;
+        private int dragAnchorX = 0;
+        private int dragAnchorY = 0;
+
+        public void moveDelta(int dx, int dy) {
+            if (dx == 0 && dy == 0) return;
+            body().incrX(dx).incrY(dy);
+            for (RENDEROBJ r : elements()) {
+                r.body().incrX(dx).incrY(dy);
+            }
+        }
+
+        @Override
+        public void render(SPRITE_RENDERER r, float ds) {
+            COORDINATE m = CORE.getInput().getMouse().getCoo();
+            if (isDragging) {
+                if (m != null && MButt.LEFT.isDown()) {
+                    int targetX = CLAMP.i(m.x() - dragAnchorX, 10, C.WIDTH() - body().width() - 10);
+                    int targetY = CLAMP.i(m.y() - dragAnchorY, 10, C.HEIGHT() - body().height() - 10);
+                    int dx = targetX - body().x1();
+                    int dy = targetY - body().y1();
+                    moveDelta(dx, dy);
+                } else {
+                    isDragging = false;
+                }
+            }
+            super.render(r, ds);
+        }
+
+        @Override
+        public boolean click() {
+            COORDINATE m = CORE.getInput().getMouse().getCoo();
+            boolean clickedChild = super.click();
+            if (clickedChild) {
+                return true;
+            }
+            if (m != null) {
+                int headerY2 = body().y1() + 48;
+                if (m.y() >= body().y1() && m.y() <= headerY2 && m.x() >= body().x1() && m.x() <= body().x2()) {
+                    isDragging = true;
+                    dragAnchorX = m.x() - body().x1();
+                    dragAnchorY = m.y() - body().y1();
+                    return true;
+                }
+            }
+            return false;
+        }
     }
 
     /**
