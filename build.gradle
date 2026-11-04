@@ -27,7 +27,28 @@ dependencies {
     testImplementation files(songsJarPath)
 }
 
+jar {
+    archiveBaseName.set("SyxArchitect")
+    archiveVersion.set("")
+    archiveClassifier.set("")
+    
+    // 1. Include text assets directly at JAR root for zero-path ClassLoader access
+    from("mod-files/assets/text") {
+        include "*.properties"
+        include "*.txt"
+    }
+
+    // 2. Include full assets path matching mod structure
+    from("mod-files") {
+        include "assets/**"
+        include "_info.txt"
+        include "_Info.txt"
+        include "icon.png"
+    }
+}
+
 tasks.register('sanityCheck', JavaExec) {
+    dependsOn tasks.jar
     group = "verification"
     description = "Executes automated localization completeness and state serialization sanity tests"
     classpath = sourceSets.test.runtimeClasspath + files(songsJarPath)
@@ -40,20 +61,6 @@ tasks.named('test') {
 
 tasks.named('check') {
     dependsOn 'sanityCheck'
-}
-
-jar {
-    archiveBaseName.set("SyxArchitect")
-    archiveVersion.set("")
-    archiveClassifier.set("")
-    
-    // Include mod assets in JAR resources if needed
-    from("mod-files") {
-        include "assets/**"
-        include "_info.txt"
-        include "_Info.txt"
-        include "icon.png"
-    }
 }
 
 // Task to deploy directly to the game's mod directory
@@ -70,7 +77,7 @@ tasks.register("deployMod", Copy) {
         targetModDir.mkdirs()
     }
 
-    // Root metadata
+    // Root metadata in mod root
     into(targetModDir)
     from("mod-files") {
         include "_info.txt"
@@ -87,13 +94,18 @@ tasks.register("deployMod", Copy) {
         from("mod-files/assets")
     }
 
-    // Also copy _Info.txt (capitalized) to satisfy any case-sensitive checks
+    // Also mirror metadata in V71 folder for all launcher/loader path variations
     doLast {
-        def infoFile = file("${targetModDir}/_info.txt")
-        def infoCapital = file("${targetModDir}/_Info.txt")
-        if (infoFile.exists() && !infoCapital.exists()) {
-            infoCapital.text = infoFile.text
+        def v71Dir = file("${targetModDir}/V71")
+        v71Dir.mkdirs()
+        copy {
+            from("mod-files") {
+                include "_info.txt"
+                include "_Info.txt"
+                include "icon.png"
+            }
+            into(v71Dir)
         }
-        println "Deployment complete! Mod ready in: ${targetModDir}"
+        println "Deployment complete! Mod ready in: ${targetModDir} and ${v71Dir}"
     }
 }

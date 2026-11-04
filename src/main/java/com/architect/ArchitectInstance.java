@@ -68,6 +68,11 @@ public final class ArchitectInstance implements SCRIPT_INSTANCE {
         }
 
         @Override
+        public void onAddDenariRequested() {
+            logisticsModule.addDenari(1_000_000.0);
+        }
+
+        @Override
         public void onWinCombatRequested() {
             securityModule.instantWinCombat();
         }

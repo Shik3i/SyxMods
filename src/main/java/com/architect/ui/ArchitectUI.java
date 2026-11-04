@@ -22,7 +22,7 @@ import view.main.VIEW;
 /**
  * Main GUI control center for Syx Architect.
  * Provides live controls for sandbox modules, semantic Schönbau presets, 1-click actions,
- * world & population management, and seamless in-game bilingual localization.
+ * treasury control, world & population management, and seamless in-game bilingual localization.
  *
  * LAYOUT:
  * Clamped and budgeted for 100% visibility on all resolutions from 720p to 4K.
@@ -39,6 +39,7 @@ public final class ArchitectUI {
         void onStateUpdated();
         void onInstantBuildRequested();
         void onFillCratesRequested();
+        void onAddDenariRequested();
         void onWinCombatRequested();
         void onSpawnImmigrantsRequested(Race race, int count);
         void onSpawnAllPlayableRequested(int countPerRace);
@@ -69,8 +70,8 @@ public final class ArchitectUI {
     public static void open(ArchitectState state, UICallback callback) {
         isOpen = true;
         int screenH = (C.DIM() != null) ? C.DIM().height() : 720;
-        int width = 630;
-        int height = Math.min(670, Math.max(500, screenH - 30));
+        int width = 640;
+        int height = Math.min(680, Math.max(500, screenH - 25));
 
         GuiSection root = new GuiSection();
         GPanel panel = new GPanel(width, height);
@@ -88,7 +89,7 @@ public final class ArchitectUI {
         panel.setCloseAction(closeAction);
 
         GuiSection content = new GuiSection();
-        content.pad(12);
+        content.pad(10);
 
         // --- Top Bar: Tab Switcher + Language Toggle + Tutorial [?] ---
         GuiSection topBar = new GuiSection();
@@ -162,7 +163,7 @@ public final class ArchitectUI {
         // --- 1. Quick Presets Section ---
         GText presetTitle = new GText(UI.FONT().M, I18n.get("ui.presets"));
         presetTitle.lablify();
-        content.addDown(10, presetTitle);
+        content.addDown(8, presetTitle);
 
         GuiSection presetRow = new GuiSection();
 
@@ -175,6 +176,7 @@ public final class ArchitectUI {
                 state.maintenanceTier = MaintenanceTier.NO_DECAY;
                 state.knowledgeTier = KnowledgeTier.OMNISCIENCE;
                 state.logisticsTier = LogisticsTier.ALL_ASSIGNED_CRATES;
+                state.infiniteDenari = true;
                 state.spoilageDisabled = true;
                 state.loyaltyBoost = true;
                 state.raidImmunity = true;
@@ -193,6 +195,7 @@ public final class ArchitectUI {
                 state.maintenanceTier = MaintenanceTier.JANITOR_WORK_FREE_MATS;
                 state.knowledgeTier = KnowledgeTier.NO_FORGETTING;
                 state.logisticsTier = LogisticsTier.RAW_MATERIALS_ONLY;
+                state.infiniteDenari = true;
                 state.spoilageDisabled = false;
                 state.loyaltyBoost = true;
                 state.raidImmunity = true;
@@ -228,7 +231,7 @@ public final class ArchitectUI {
                 open(state, callback);
             }
         });
-        content.addDown(8, btnConstr);
+        content.addDown(6, btnConstr);
 
         // Maintenance Tier
         String maintLabel = I18n.get("cheat.maintenance") + ": " + state.maintenanceTier.getLabel();
@@ -268,6 +271,19 @@ public final class ArchitectUI {
             }
         });
         content.addDown(4, btnLog);
+
+        // Treasury / Infinite Denari Toggle
+        String denariLabel = I18n.get("cheat.infinite_denari") + ": " + (state.infiniteDenari ? I18n.get("status.active") : I18n.get("status.inactive"));
+        GButt.ButtPanel btnDenari = new GButt.ButtPanel(denariLabel);
+        btnDenari.clickActionSet(new ACTION() {
+            @Override
+            public void exe() {
+                state.infiniteDenari = !state.infiniteDenari;
+                callback.onStateUpdated();
+                open(state, callback);
+            }
+        });
+        content.addDown(4, btnDenari);
 
         // Loyalty & Happiness Toggle
         String loyaltyLabel = I18n.get("cheat.loyalty") + ": " + (state.loyaltyBoost ? I18n.get("status.active") : I18n.get("status.inactive"));
@@ -329,9 +345,19 @@ public final class ArchitectUI {
                 callback.onFillCratesRequested();
             }
         });
-        actionSection.addRight(8, btnFillCrates);
+        actionSection.addRight(6, btnFillCrates);
 
-        content.addDown(8, actionSection);
+        // 1-Click Add 1,000,000 Denari
+        GButt.ButtPanel btnAddDenari = new GButt.ButtPanel(I18n.get("btn.add_denari_1m"));
+        btnAddDenari.clickActionSet(new ACTION() {
+            @Override
+            public void exe() {
+                callback.onAddDenariRequested();
+            }
+        });
+        actionSection.addRight(6, btnAddDenari);
+
+        content.addDown(6, actionSection);
 
         // 1-Click Combat Auto-Win Button
         GButt.ButtPanel btnWinCombat = new GButt.ButtPanel(I18n.get("btn.win_combat_now"));
@@ -346,14 +372,14 @@ public final class ArchitectUI {
         // Footer: Close Button
         GButt.ButtPanel btnClose = new GButt.ButtPanel(I18n.get("btn.close"));
         btnClose.clickActionSet(closeAction);
-        content.addDown(8, btnClose);
+        content.addDown(6, btnClose);
     }
 
     private static void buildWorldTab(GuiSection content, ArchitectState state, UICallback callback, ACTION closeAction) {
         // --- 1. Population Manager Section ---
         GText popTitle = new GText(UI.FONT().M, I18n.get("world.population.title"));
         popTitle.lablify();
-        content.addDown(10, popTitle);
+        content.addDown(8, popTitle);
 
         LIST<Race> races = null;
         try {
@@ -425,7 +451,7 @@ public final class ArchitectUI {
         // --- 2. Environment & Longevity Toggles ---
         GText envTitle = new GText(UI.FONT().M, I18n.get("world.env.title"));
         envTitle.lablify();
-        content.addDown(12, envTitle);
+        content.addDown(10, envTitle);
 
         // Anti-Aging Toggle
         String agingLabel = I18n.get("world.toggle.aging") + ": " + (state.disableAging ? I18n.get("status.active") : I18n.get("status.inactive"));
@@ -474,11 +500,11 @@ public final class ArchitectUI {
                 callback.onMaxFertilityRequested();
             }
         });
-        content.addDown(8, btnFerNow);
+        content.addDown(6, btnFerNow);
 
         // Footer: Close Button
         GButt.ButtPanel btnClose = new GButt.ButtPanel(I18n.get("btn.close"));
         btnClose.clickActionSet(closeAction);
-        content.addDown(10, btnClose);
+        content.addDown(8, btnClose);
     }
 }

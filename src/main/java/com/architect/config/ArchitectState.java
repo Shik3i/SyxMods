@@ -18,7 +18,7 @@ import snake2d.util.file.FilePutter;
 public final class ArchitectState {
 
     public static final int MAGIC_HEADER = 0x59584152; // 'SXAR'
-    public static final int CURRENT_VERSION = 3;
+    public static final int CURRENT_VERSION = 4;
 
     // Semantic Schönbau and sandbox settings
     public MaintenanceTier maintenanceTier = MaintenanceTier.VANILLA;
@@ -34,6 +34,9 @@ public final class ArchitectState {
     public boolean loyaltyBoost = false;
     public boolean raidImmunity = false;
     public boolean battleAutoWin = false;
+
+    // Treasury (Sprint 4.5)
+    public boolean infiniteDenari = false;
 
     // World & Population toggles (Sprint 3)
     public boolean freezeNiceWeather = false;
@@ -58,6 +61,7 @@ public final class ArchitectState {
         loyaltyBoost = false;
         raidImmunity = false;
         battleAutoWin = false;
+        infiniteDenari = false;
         freezeNiceWeather = false;
         disableAging = false;
         maxFertility = false;
@@ -88,6 +92,9 @@ public final class ArchitectState {
         file.bool(freezeNiceWeather);
         file.bool(disableAging);
         file.bool(maxFertility);
+
+        // Version 4 fields
+        file.bool(infiniteDenari);
 
         file.chars(language != null ? language : "en");
     }
@@ -126,6 +133,12 @@ public final class ArchitectState {
                 maxFertility = false;
             }
 
+            if (version >= 4) {
+                infiniteDenari = file.bool();
+            } else {
+                infiniteDenari = false;
+            }
+
             language = file.chars();
             I18n.setLanguage(I18n.Language.fromCode(language));
         } else if (version == 1) {
@@ -144,6 +157,7 @@ public final class ArchitectState {
             freezeNiceWeather = false;
             disableAging = false;
             maxFertility = false;
+            infiniteDenari = false;
             language = file.chars();
             I18n.setLanguage(I18n.Language.fromCode(language));
         }

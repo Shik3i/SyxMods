@@ -1,12 +1,18 @@
 package com.architect.util;
 
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Properties;
 
 /**
  * High-performance, allocation-minimal bilingual localization system for Syx Architect.
  * Supports on-the-fly toggling between English and German.
+ * Loads directly from packaged JAR ClassLoader resources with immutable built-in fallbacks.
  */
 public final class I18n {
 
@@ -64,6 +70,8 @@ public final class I18n {
         EN_STRINGS.put("cheat.construction.desc", "Free building materials with active workers or instant build.");
         EN_STRINGS.put("cheat.logistics", "Warehouse Auto-Refill");
         EN_STRINGS.put("cheat.logistics.desc", "Keeps stockpiles and raw materials supplied automatically.");
+        EN_STRINGS.put("cheat.infinite_denari", "Infinite Treasury (Min. 1M Denari)");
+        EN_STRINGS.put("cheat.infinite_denari.desc", "Keeps city treasury automatically stocked with at least 1,000,000 Denari.");
         EN_STRINGS.put("cheat.raid_protection", "Raid Immunity");
         EN_STRINGS.put("cheat.raid_protection.desc", "Automatically cancels hostile raids and barbarian invasions.");
         EN_STRINGS.put("cheat.battle_autowin", "Combat Victory");
@@ -88,6 +96,7 @@ public final class I18n {
 
         EN_STRINGS.put("btn.instant_build_now", "⚡ Instant Build Now");
         EN_STRINGS.put("btn.fill_crates_100", "📦 Fill All Crates to 100%");
+        EN_STRINGS.put("btn.add_denari_1m", "💰 +1,000,000 Denari");
         EN_STRINGS.put("btn.win_combat_now", "⚔️ Click Here to Win Combat");
         EN_STRINGS.put("btn.apply", "Apply");
         EN_STRINGS.put("btn.close", "Close");
@@ -141,6 +150,8 @@ public final class I18n {
         DE_STRINGS.put("cheat.construction.desc", "Gratis-Baumaterialien mit echten Bauarbeitern oder Sofortbau.");
         DE_STRINGS.put("cheat.logistics", "Lagerhaus Auto-Befüllung");
         DE_STRINGS.put("cheat.logistics.desc", "Hält Lagerkisten und Rohstoffe automatisch versorgt.");
+        DE_STRINGS.put("cheat.infinite_denari", "Unendliche Schatzkammer (Min. 1 Mio. Denari)");
+        DE_STRINGS.put("cheat.infinite_denari.desc", "Hält die städtische Schatzkammer automatisch auf mindestens 1.000.000 Denari.");
         DE_STRINGS.put("cheat.raid_protection", "Raid-Immunität");
         DE_STRINGS.put("cheat.raid_protection.desc", "Bricht feindliche Raids und Barbaren-Invasionen automatisch ab.");
         DE_STRINGS.put("cheat.battle_autowin", "Schlachten-Sieg");
@@ -165,6 +176,7 @@ public final class I18n {
 
         DE_STRINGS.put("btn.instant_build_now", "⚡ Sofortbau jetzt ausführen");
         DE_STRINGS.put("btn.fill_crates_100", "📦 Alle Lagerkisten auf 100% füllen");
+        DE_STRINGS.put("btn.add_denari_1m", "💰 +1.000.000 Denari");
         DE_STRINGS.put("btn.win_combat_now", "⚔️ Sofort-Sieg im Kampf (Win Combat)");
         DE_STRINGS.put("btn.apply", "Anwenden");
         DE_STRINGS.put("btn.close", "Schließen");
@@ -188,9 +200,39 @@ public final class I18n {
         DE_STRINGS.put("world.toggle.weather", "☀️ Schönes Bauwetter & Tageslicht fixieren");
         DE_STRINGS.put("world.toggle.fertility", "🌱 Maximale Bodenfeuchte & Fruchtbarkeit (100%)");
         DE_STRINGS.put("world.btn.fertility_now", "🌱 Bodenfeuchte sofort auf 100% setzen");
+
+        // Load ClassLoader resources if packaged in JAR
+        initFromJar();
     }
 
     private I18n() {}
+
+    public static void initFromJar() {
+        loadResourceSafely("strings_en.properties", Language.EN);
+        loadResourceSafely("strings_de.properties", Language.DE);
+    }
+
+    private static void loadResourceSafely(String name, Language lang) {
+        String[] candidatePaths = {
+            "/" + name,
+            "/assets/text/" + name,
+            name,
+            "assets/text/" + name
+        };
+        for (String path : candidatePaths) {
+            try {
+                InputStream in = I18n.class.getResourceAsStream(path);
+                if (in == null && I18n.class.getClassLoader() != null) {
+                    in = I18n.class.getClassLoader().getResourceAsStream(path);
+                }
+                if (in != null) {
+                    loadProperties(in, lang);
+                    return;
+                }
+            } catch (Throwable ignored) {
+            }
+        }
+    }
 
     public static Language getLanguage() {
         return current;
@@ -213,10 +255,10 @@ public final class I18n {
     /**
      * Loads localization properties from an input stream using strict UTF-8 character encoding.
      */
-    public static void loadProperties(java.io.InputStream in, Language lang) {
+    public static void loadProperties(InputStream in, Language lang) {
         if (in == null || lang == null) return;
-        try (java.io.Reader reader = new java.io.InputStreamReader(in, java.nio.charset.StandardCharsets.UTF_8)) {
-            java.util.Properties props = new java.util.Properties();
+        try (Reader reader = new InputStreamReader(in, StandardCharsets.UTF_8)) {
+            Properties props = new Properties();
             props.load(reader);
             Map<String, String> target = (lang == Language.DE) ? DE_STRINGS : EN_STRINGS;
             for (String key : props.stringPropertyNames()) {

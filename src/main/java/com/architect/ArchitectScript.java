@@ -30,15 +30,21 @@ public final class ArchitectScript implements SCRIPT {
 
     @Override
     public void initBeforeGameInited() {
-        // Register in-game debug panel hook for easy access
-        IDebugPanel.add("Syx Architect", new ACTION() {
-            @Override
-            public void exe() {
-                if (currentInstance != null) {
-                    currentInstance.openUI();
-                }
+        // Register in-game debug panel hook for easy access (guarded against pre-font/headless state)
+        try {
+            if (init.sprite.UI.UI.FONT() != null) {
+                IDebugPanel.add("Syx Architect", new ACTION() {
+                    @Override
+                    public void exe() {
+                        if (currentInstance != null) {
+                            currentInstance.openUI();
+                        }
+                    }
+                });
             }
-        });
+        } catch (Throwable ignored) {
+            // Safe guard against headless or early initialization
+        }
     }
 
     @Override

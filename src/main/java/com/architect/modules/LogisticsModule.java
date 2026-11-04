@@ -3,6 +3,8 @@ package com.architect.modules;
 import com.architect.config.ArchitectState;
 import com.architect.config.CheatTiers.LogisticsTier;
 
+import game.GAME;
+import game.faction.FCredits;
 import init.resources.RESOURCE;
 import settlement.main.SETT;
 import settlement.room.infra.stockpile.ROOM_STOCKPILE;
@@ -11,9 +13,9 @@ import settlement.room.main.job.StorageCrate;
 import snake2d.util.datatypes.RECTANGLE;
 
 /**
- * Logistics and storage management subsystem.
+ * Logistics, storage, and treasury management subsystem.
  * Handles automatic warehouse refilling for raw materials or all assigned crates,
- * plus 1-click 100% inventory top-ups.
+ * treasury maintenance (Infinite Denari >= 1,000,000), and 1-click inventory/coin top-ups.
  *
  * PERFORMANCE:
  * Guaranteed 100% zero-allocation: avoids RECTANGLE iterator allocations by using
@@ -31,6 +33,16 @@ public final class LogisticsModule implements ArchitectModule {
 
     @Override
     public void update(double ds, ArchitectState state) {
+        // 1. Treasury / Denari Management
+        if (state.infiniteDenari && GAME.player() != null && GAME.player().credits() != null) {
+            try {
+                if (GAME.player().credits().credits() < 1_000_000.0) {
+                    GAME.player().credits().set(1_000_000.0);
+                }
+            } catch (Throwable ignored) {
+            }
+        }
+
         if (state.logisticsTier == LogisticsTier.VANILLA) {
             return;
         }
@@ -97,6 +109,19 @@ public final class LogisticsModule implements ArchitectModule {
         refillCrates(false, 1.0);
     }
 
+    /**
+     * 1-Click Action: Adds 1,000,000 Denari directly to the city treasury.
+     */
+    public void addDenari(double amount) {
+        if (GAME.player() != null && GAME.player().credits() != null && amount > 0) {
+            try {
+                GAME.player().credits().inc(amount, FCredits.CTYPE.MISC);
+            } catch (Throwable t) {
+                GAME.player().credits().set(GAME.player().credits().credits() + amount);
+            }
+        }
+    }
+
     private static boolean isRawMaterial(RESOURCE res) {
         if (res == null || res.key == null) return false;
         String k = res.key;
@@ -109,6 +134,14 @@ public final class LogisticsModule implements ArchitectModule {
 
     @Override
     public void onStateChanged(ArchitectState state) {
+        if (state.infiniteDenari && GAME.player() != null && GAME.player().credits() != null) {
+            try {
+                if (GAME.player().credits().credits() < 1_000_000.0) {
+                    GAME.player().credits().set(1_000_000.0);
+                }
+            } catch (Throwable ignored) {
+            }
+        }
         if (state.logisticsTier != LogisticsTier.VANILLA) {
             refillCrates(state.logisticsTier == LogisticsTier.RAW_MATERIALS_ONLY, 0.8);
         }
