@@ -14,6 +14,7 @@ import com.architect.util.I18n;
 
 import init.constant.C;
 import init.race.Race;
+import init.sprite.SPRITES;
 import init.sprite.UI.UI;
 import script.SCRIPT.SCRIPT_INSTANCE;
 import snake2d.CORE;
@@ -125,12 +126,13 @@ public final class ArchitectInstance implements SCRIPT_INSTANCE {
 
     private void ensureHudButton() {
         if (hudButton == null && UI.FONT() != null && UI.FONT().S != null) {
-            GText t = new GText(UI.FONT().S, "ARCHITECT");
+            GText t = new GText(UI.FONT().S, "CREATIVE");
             t.lablify();
             hudButton = new GButt.ButtPanel((snake2d.util.sprite.SPRITE) t);
-            hudButton.setDim(76, 24);
+            hudButton.icon(SPRITES.icons().m.capitol);
+            hudButton.pad(6, 2);
             hudButton.align(DIR.C);
-            hudButton.hoverTitleSet("Syx Architect  [F10]");
+            hudButton.hoverTitleSet("Creative Mode  [F10]");
             hudButton.hoverInfoSet(I18n.getLanguage() == I18n.Language.DE
                 ? "Klick oeffnet das Creative-, Schoenbau- & Sandbox-Kontrollzentrum (Hotkeys: F10 / ESC)."
                 : "Click opens the creative and sandbox control center (Hotkeys: F10 / ESC).");
@@ -174,7 +176,9 @@ public final class ArchitectInstance implements SCRIPT_INSTANCE {
         ensureHudButton();
         if (hudButton != null) {
             GuiSection section = new GuiSection();
-            section.add(hudButton);
+            section.add(UIPanelTop.sep());
+            section.addRightC(4, hudButton);
+            section.pad(2, 0);
             top.addRightRight(section);
             lastAttachedTop = top;
             attachedToTopPanel = true;
