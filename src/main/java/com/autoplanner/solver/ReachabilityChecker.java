@@ -18,6 +18,16 @@ public final class ReachabilityChecker {
     private final int[] visitedStamp = new int[BUFFER_DIM * BUFFER_DIM];
     private int currentStamp = 1;
 
+    // Pre-allocated access buffers to guarantee Zero-GC
+    private static final int MAX_ACCESS_POINTS = 2048;
+    private final int[] tempAccessX = new int[MAX_ACCESS_POINTS];
+    private final int[] tempAccessY = new int[MAX_ACCESS_POINTS];
+    private final int[] newAccessX = new int[64];
+    private final int[] newAccessY = new int[64];
+
+    // Temporary rollback buffer for item placement checks
+    private final int[] rollbackPrevTypes = new int[64];
+
     private int nextStamp() {
         currentStamp++;
         if (currentStamp <= 0) { // integer overflow protection
@@ -29,6 +39,8 @@ public final class ReachabilityChecker {
 
     /**
      * Runs BFS from all room doors and determines if all required workstation access points are reached.
+     * Accurately supports both walkable access tiles and blocking access tiles (where worker stands
+     * on an adjacent walkable tile, matching Songs of Syx UtilPlacability mechanics).
      */
     public boolean canReachAllAccessPoints(RoomGridSnapshot snapshot, int[] accessX, int[] accessY, int accessCount) {
         if (snapshot == null || snapshot.doorCount == 0) {
@@ -106,7 +118,7 @@ public final class ReachabilityChecker {
             }
         }
 
-        // Verify all required access points have been visited
+        // Verify all required access points have been reached
         for (int i = 0; i < accessCount; i++) {
             int ax = accessX[i];
             int ay = accessY[i];
@@ -118,8 +130,31 @@ public final class ReachabilityChecker {
             }
 
             int idx = aly * width + alx;
-            if (visitedStamp[idx] != stamp) {
-                return false; // Access point not reachable from doors!
+            // Case A: The access tile itself is walkable and reached by BFS
+            if (visitedStamp[idx] == stamp && snapshot.isWalkable(ax, ay)) {
+                continue;
+            }
+
+            // Case B: The access tile itself is a blocker tile (e.g. solid machine/workbench).
+            // Per Songs of Syx UtilPlacability, the worker interacts from an orthogonal adjacent walkable tile.
+            boolean neighborReached = false;
+            for (DIR d : DIR.ORTHO) {
+                int nx = ax + d.x();
+                int ny = ay + d.y();
+                int nlx = nx - originX;
+                int nly = ny - originY;
+
+                if (nlx >= 0 && nlx < width && nly >= 0 && nly < height) {
+                    int nidx = nly * width + nlx;
+                    if (visitedStamp[nidx] == stamp && snapshot.isWalkable(nx, ny)) {
+                        neighborReached = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!neighborReached) {
+                return false; // Neither the access point nor any adjacent walkable spot is reachable!
             }
         }
 
@@ -129,6 +164,7 @@ public final class ReachabilityChecker {
     /**
      * Validates whether placing an item at (tx, ty) keeps all existing access points and
      * the new item's access point(s) fully reachable from the doors.
+     * Zero-GC implementation backed by pre-allocated instance buffers.
      */
     public boolean canPlaceWithoutBlocking(
             RoomGridSnapshot snapshot, 
@@ -143,10 +179,9 @@ public final class ReachabilityChecker {
             return false;
         }
 
-        // 1. Temporarily apply item to snapshot
+        // 1. Temporarily apply item to snapshot while saving previous tile state
         int newAccessCount = 0;
-        int[] newAccessX = new int[4];
-        int[] newAccessY = new int[4];
+        int tileIndex = 0;
 
         for (int iy = 0; iy < item.height(); iy++) {
             for (int ix = 0; ix < item.width(); ix++) {
@@ -154,41 +189,60 @@ public final class ReachabilityChecker {
                 if (t != null) {
                     int cx = tx + ix;
                     int cy = ty + iy;
+
+                    if (tileIndex < rollbackPrevTypes.length) {
+                        rollbackPrevTypes[tileIndex] = snapshot.get(cx, cy);
+                        tileIndex++;
+                    }
+
+                    boolean isBlocker = (t.availability.player < 0 || t.availability.from > 0);
+
                     if (t.mustBeReachable) {
-                        snapshot.set(cx, cy, RoomGridSnapshot.TILE_WORKSTATION_ACCESS);
-                        if (newAccessCount < 4) {
+                        if (newAccessCount < newAccessX.length) {
                             newAccessX[newAccessCount] = cx;
                             newAccessY[newAccessCount] = cy;
                             newAccessCount++;
                         }
-                    } else if (t.availability.player <= settlement.path.AVAILABILITY.ROOM.player) {
-                        snapshot.set(cx, cy, RoomGridSnapshot.TILE_FURNITURE_WALKABLE);
-                    } else {
+                    }
+
+                    if (isBlocker) {
                         snapshot.set(cx, cy, RoomGridSnapshot.TILE_FURNITURE_BLOCK);
+                    } else if (t.mustBeReachable) {
+                        snapshot.set(cx, cy, RoomGridSnapshot.TILE_WORKSTATION_ACCESS);
+                    } else {
+                        snapshot.set(cx, cy, RoomGridSnapshot.TILE_FURNITURE_WALKABLE);
                     }
                 }
             }
         }
 
-        // 2. Build combined check list of access points
+        // 2. Build combined check list of access points in pre-allocated buffers (Zero GC!)
         int totalAccess = existingCount + newAccessCount;
-        int[] combinedX = new int[totalAccess];
-        int[] combinedY = new int[totalAccess];
-
-        System.arraycopy(existingAccessX, 0, combinedX, 0, existingCount);
-        System.arraycopy(existingAccessY, 0, combinedY, 0, existingCount);
-        for (int i = 0; i < newAccessCount; i++) {
-            combinedX[existingCount + i] = newAccessX[i];
-            combinedY[existingCount + i] = newAccessY[i];
+        if (totalAccess > MAX_ACCESS_POINTS) {
+            totalAccess = MAX_ACCESS_POINTS;
         }
 
-        boolean reachable = canReachAllAccessPoints(snapshot, combinedX, combinedY, totalAccess);
+        System.arraycopy(existingAccessX, 0, tempAccessX, 0, Math.min(existingCount, MAX_ACCESS_POINTS));
+        System.arraycopy(existingAccessY, 0, tempAccessY, 0, Math.min(existingCount, MAX_ACCESS_POINTS));
+        int availableSpace = MAX_ACCESS_POINTS - existingCount;
+        if (availableSpace > 0 && newAccessCount > 0) {
+            int toCopy = Math.min(newAccessCount, availableSpace);
+            System.arraycopy(newAccessX, 0, tempAccessX, existingCount, toCopy);
+            System.arraycopy(newAccessY, 0, tempAccessY, existingCount, toCopy);
+        }
 
-        // 3. Rollback item in snapshot
+        boolean reachable = canReachAllAccessPoints(snapshot, tempAccessX, tempAccessY, totalAccess);
+
+        // 3. Rollback item in snapshot using recorded previous types
+        tileIndex = 0;
         for (int iy = 0; iy < item.height(); iy++) {
             for (int ix = 0; ix < item.width(); ix++) {
                 if (item.get(ix, iy) != null) {
-                    snapshot.set(tx + ix, ty + iy, RoomGridSnapshot.TILE_ROOM_FLOOR);
+                    int prev = tileIndex < rollbackPrevTypes.length 
+                            ? rollbackPrevTypes[tileIndex] 
+                            : RoomGridSnapshot.TILE_ROOM_FLOOR;
+                    snapshot.set(tx + ix, ty + iy, prev);
+                    tileIndex++;
                 }
             }
         }

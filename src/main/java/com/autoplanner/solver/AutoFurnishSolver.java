@@ -97,11 +97,12 @@ public final class AutoFurnishSolver {
         placedCount = 0;
         java.util.Arrays.fill(runningStats, 0.0);
 
-        // 2. Classify blueprint groups
+        // 2. Classify blueprint groups (Robust across workshops, dormitories, stockpiles, baths)
         FurnisherItemGroup workstationGroup = null;
         FurnisherItemGroup auxiliaryGroup = null;
         FurnisherItemGroup storageGroup = null;
 
+        // Step 2A: Identify Primary / Workstation group
         for (int gi = 0; gi < furnisher.pgroups().size(); gi++) {
             FurnisherItemGroup g = furnisher.pgroups().get(gi);
             if (g == null) continue;
@@ -122,21 +123,30 @@ public final class AutoFurnishSolver {
             }
 
             if (hasAccess) {
-                if (workstationGroup == null) {
-                    workstationGroup = g;
-                }
-            } else {
-                String nameStr = g.name != null ? g.name.toString().toLowerCase() : "";
-                if (nameStr.contains("crate") || nameStr.contains("storage") || nameStr.contains("lager")) {
-                    storageGroup = g;
-                } else if (auxiliaryGroup == null) {
-                    auxiliaryGroup = g;
-                }
+                workstationGroup = g;
+                break;
             }
         }
 
+        // If no group had mustBeReachable (e.g. Dormitory beds, Bath tubs, Stockpiles),
+        // fallback to group 0 as primary capacity
         if (workstationGroup == null && furnisher.pgroups().size() > 0) {
             workstationGroup = furnisher.pgroups().get(0);
+        }
+
+        // Step 2B: Classify remaining secondary groups (strictly excluding workstationGroup!)
+        for (int gi = 0; gi < furnisher.pgroups().size(); gi++) {
+            FurnisherItemGroup g = furnisher.pgroups().get(gi);
+            if (g == null || g == workstationGroup) continue;
+
+            String nameStr = g.name != null ? g.name.toString().toLowerCase() : "";
+            if (nameStr.contains("crate") || nameStr.contains("storage") || nameStr.contains("lager")) {
+                if (storageGroup == null) {
+                    storageGroup = g;
+                }
+            } else if (auxiliaryGroup == null) {
+                auxiliaryGroup = g;
+            }
         }
 
         if (workstationGroup == null) {
@@ -154,7 +164,9 @@ public final class AutoFurnishSolver {
         int wsSizes = getAvailableSizes(workstationGroup);
 
         for (int sizeIdx = wsSizes - 1; sizeIdx >= 0; sizeIdx--) {
+            if (System.currentTimeMillis() - start > 250) break; // 250ms time-budget guard
             for (int ty = y1; ty < y2; ty++) {
+                if (System.currentTimeMillis() - start > 250) break;
                 for (int tx = x1; tx < x2; tx++) {
                     if (snapshot.get(tx, ty) != RoomGridSnapshot.TILE_ROOM_FLOOR) {
                         continue;
@@ -181,7 +193,7 @@ public final class AutoFurnishSolver {
         // PASS 2: Auxiliary / Efficiency Placement
         // -------------------------------------------------------------
         if (auxiliaryGroup != null) {
-            fulfillEfficiencyTarget(furnisher, auxiliaryGroup, config.getTargetEfficiency(), x1, y1, x2, y2);
+            fulfillEfficiencyTarget(furnisher, auxiliaryGroup, config.getTargetEfficiency(), x1, y1, x2, y2, start);
         }
 
         // -------------------------------------------------------------
@@ -189,12 +201,13 @@ public final class AutoFurnishSolver {
         // -------------------------------------------------------------
         double targetEff = config.getTargetEfficiency();
         while (auxiliaryGroup != null && computeCurrentEfficiency(furnisher) < (targetEff - 0.005) && countWorkstations() > 1) {
+            if (System.currentTimeMillis() - start > 250) break; // 250ms time-budget guard
             // Remove the most recently placed workstation to free space
             boolean removed = backtrackLastWorkstation(furnisher);
             if (!removed) break;
 
             // Fulfill efficiency into newly opened floor area
-            fulfillEfficiencyTarget(furnisher, auxiliaryGroup, targetEff, x1, y1, x2, y2);
+            fulfillEfficiencyTarget(furnisher, auxiliaryGroup, targetEff, x1, y1, x2, y2, start);
         }
 
         // -------------------------------------------------------------
@@ -207,6 +220,7 @@ public final class AutoFurnishSolver {
 
             if (crateItem != null) {
                 for (int ty = y1; ty < y2 && storagePlaced < maxStorage; ty++) {
+                    if (System.currentTimeMillis() - start > 250) break;
                     for (int tx = x1; tx < x2 && storagePlaced < maxStorage; tx++) {
                         if (canFitItem(snapshot, tx, ty, crateItem)) {
                             if (reachability.canPlaceWithoutBlocking(snapshot, tx, ty, crateItem, accessX, accessY, accessCount)) {
@@ -266,13 +280,15 @@ public final class AutoFurnishSolver {
             Furnisher furnisher, 
             FurnisherItemGroup auxGroup, 
             double targetEff, 
-            int x1, int y1, int x2, int y2) {
+            int x1, int y1, int x2, int y2,
+            long startTimeMs) {
 
         FurnisherItem auxItem = getItemSafe(auxGroup, 0, 0);
         if (auxItem == null) return;
 
         // Pass 2A: Wall-adjacent, pillar-adjacent and corner spots
         for (int ty = y1; ty < y2; ty++) {
+            if (System.currentTimeMillis() - startTimeMs > 250) return;
             for (int tx = x1; tx < x2; tx++) {
                 if (computeCurrentEfficiency(furnisher) >= targetEff) {
                     return;
@@ -287,6 +303,7 @@ public final class AutoFurnishSolver {
 
         // Pass 2B: Any remaining interior spots if still below target
         for (int ty = y1; ty < y2; ty++) {
+            if (System.currentTimeMillis() - startTimeMs > 250) return;
             for (int tx = x1; tx < x2; tx++) {
                 if (computeCurrentEfficiency(furnisher) >= targetEff) {
                     return;
@@ -423,12 +440,13 @@ public final class AutoFurnishSolver {
                 if (t != null) {
                     int cx = tx + ix;
                     int cy = ty + iy;
-                    if (t.mustBeReachable) {
-                        snapshot.set(cx, cy, RoomGridSnapshot.TILE_WORKSTATION_ACCESS);
-                    } else if (t.availability.player <= settlement.path.AVAILABILITY.ROOM.player) {
-                        snapshot.set(cx, cy, RoomGridSnapshot.TILE_FURNITURE_WALKABLE);
-                    } else {
+                    boolean isBlocker = (t.availability.player < 0 || t.availability.from > 0);
+                    if (isBlocker) {
                         snapshot.set(cx, cy, RoomGridSnapshot.TILE_FURNITURE_BLOCK);
+                    } else if (t.mustBeReachable) {
+                        snapshot.set(cx, cy, RoomGridSnapshot.TILE_WORKSTATION_ACCESS);
+                    } else {
+                        snapshot.set(cx, cy, RoomGridSnapshot.TILE_FURNITURE_WALKABLE);
                     }
                 }
             }

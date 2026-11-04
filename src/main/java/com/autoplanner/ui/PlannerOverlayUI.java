@@ -230,45 +230,69 @@ public final class PlannerOverlayUI {
     }
 
     public void triggerAutoStrut(RoomPlacer placer) {
-        AutoStrutSolver.Result res = strutSolver.solve(placer);
-        if (res.pillarsPlaced > 0) {
-            setStatus(I18n.get("msg.strut_success", res.pillarsPlaced));
-        } else {
-            setStatus(I18n.get("msg.strut_none_needed"));
+        try {
+            AutoStrutSolver.Result res = strutSolver.solve(placer);
+            if (res.pillarsPlaced > 0) {
+                setStatus(I18n.get("msg.strut_success", res.pillarsPlaced));
+            } else {
+                setStatus(I18n.get("msg.strut_none_needed"));
+            }
+        } catch (Throwable t) {
+            snake2d.LOG.err("AutoPlanner: AutoStrut exception: " + t.getMessage());
+            t.printStackTrace();
+            setStatus("[Error] Strut solver encountered an error");
         }
     }
 
     public void triggerAutoFurnish(RoomPlacer placer) {
-        AutoFurnishSolver.Result res = furnishSolver.solve(placer, config);
-        if (res.success) {
-            if (res.virtualDoorUsed) {
-                setStatus(I18n.get("msg.furnish_virtual_door", res.workstations, res.efficiencyModules, res.efficiencyPercent, res.virtualDoorX, res.virtualDoorY));
+        try {
+            AutoFurnishSolver.Result res = furnishSolver.solve(placer, config);
+            if (res.success) {
+                if (res.virtualDoorUsed) {
+                    setStatus(I18n.get("msg.furnish_virtual_door", res.workstations, res.efficiencyModules, res.efficiencyPercent, res.virtualDoorX, res.virtualDoorY));
+                } else {
+                    setStatus(I18n.get("msg.furnish_success", res.workstations, res.efficiencyModules, res.efficiencyPercent));
+                }
             } else {
-                setStatus(I18n.get("msg.furnish_success", res.workstations, res.efficiencyModules, res.efficiencyPercent));
+                setStatus(I18n.get(res.errorMessage));
             }
-        } else {
-            setStatus(I18n.get(res.errorMessage));
+        } catch (Throwable t) {
+            snake2d.LOG.err("AutoPlanner: AutoFurnish exception: " + t.getMessage());
+            t.printStackTrace();
+            setStatus("[Error] Furnish solver encountered an error");
         }
     }
 
     public void triggerQuickBuild(RoomPlacer placer) {
-        AutoStrutSolver.Result sRes = strutSolver.solve(placer);
-        AutoFurnishSolver.Result fRes = furnishSolver.solve(placer, config);
+        try {
+            AutoStrutSolver.Result sRes = strutSolver.solve(placer);
+            AutoFurnishSolver.Result fRes = furnishSolver.solve(placer, config);
 
-        if (fRes.success) {
-            if (fRes.virtualDoorUsed) {
-                setStatus(I18n.get("msg.furnish_virtual_door", fRes.workstations, fRes.efficiencyModules, fRes.efficiencyPercent, fRes.virtualDoorX, fRes.virtualDoorY));
+            if (fRes.success) {
+                if (fRes.virtualDoorUsed) {
+                    setStatus(I18n.get("msg.furnish_virtual_door", fRes.workstations, fRes.efficiencyModules, fRes.efficiencyPercent, fRes.virtualDoorX, fRes.virtualDoorY));
+                } else {
+                    setStatus(I18n.get("msg.furnish_success", fRes.workstations, fRes.efficiencyModules, fRes.efficiencyPercent));
+                }
             } else {
-                setStatus(I18n.get("msg.furnish_success", fRes.workstations, fRes.efficiencyModules, fRes.efficiencyPercent));
+                setStatus(I18n.get(fRes.errorMessage));
             }
-        } else {
-            setStatus(I18n.get(fRes.errorMessage));
+        } catch (Throwable t) {
+            snake2d.LOG.err("AutoPlanner: QuickBuild exception: " + t.getMessage());
+            t.printStackTrace();
+            setStatus("[Error] QuickBuild encountered an error");
         }
     }
 
     public void triggerClearFurniture(RoomPlacer placer) {
-        furnishSolver.clearExistingFurniture(placer);
-        setStatus(I18n.get("msg.clear_success"));
+        try {
+            furnishSolver.clearExistingFurniture(placer);
+            setStatus(I18n.get("msg.clear_success"));
+        } catch (Throwable t) {
+            snake2d.LOG.err("AutoPlanner: ClearFurniture exception: " + t.getMessage());
+            t.printStackTrace();
+            setStatus("[Error] ClearFurniture encountered an error");
+        }
     }
 
     private void setStatus(String msg) {

@@ -161,9 +161,10 @@ public final class RoomGridSnapshot implements AREA {
                 if (item != null) {
                     FurnisherItemTile tile = SETT.ROOMS().fData.tile.get(tx, ty);
                     int idx = ly * width + lx;
-                    if (tile != null && tile.mustBeReachable) {
+                    boolean isBlocker = (tile == null) || tile.availability.player < 0 || tile.availability.from > 0;
+                    if (tile != null && tile.mustBeReachable && !isBlocker) {
                         grid[idx] = TILE_WORKSTATION_ACCESS;
-                    } else if (tile != null && tile.availability.player <= settlement.path.AVAILABILITY.ROOM.player) {
+                    } else if (!isBlocker) {
                         grid[idx] = TILE_FURNITURE_WALKABLE;
                     } else {
                         grid[idx] = TILE_FURNITURE_BLOCK;

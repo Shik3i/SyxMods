@@ -71,6 +71,10 @@ public final class AutoStrutSolver {
         // 2. Iteratively select best strut positions until 0 yellow tiles remain
         int maxIterations = Math.min(MAX_STRUTS, Math.max(1, snapshot.getRoomTileCount() / 10 + 5));
         for (int iter = 0; iter < maxIterations && yellowCount > 0; iter++) {
+            if (System.currentTimeMillis() - start > 250) {
+                break; // 250ms time-budget guard
+            }
+
             int bestX = -1;
             int bestY = -1;
             int bestScore = -1;
@@ -87,6 +91,11 @@ public final class AutoStrutSolver {
                         continue;
                     }
 
+                    // Spatial Pruning: Candidate MUST be within raytracer reach (<= 3 tiles) of at least one yellow tile
+                    if (!hasYellowNearby(cx, cy, 3)) {
+                        continue;
+                    }
+
                     // Candidate must not block doors or divide the room
                     if (!reachability.canPlaceStrutWithoutBlocking(snapshot, cx, cy)) {
                         continue;
@@ -94,6 +103,12 @@ public final class AutoStrutSolver {
 
                     // Score candidate by how many yellow tiles it cures
                     int score = evaluateCandidate(cx, cy);
+
+                    // Suppress ugly 1x1 holes right along outer walls by penalizing wall-adjacent candidates
+                    if (isNearWall(cx, cy, 1)) {
+                        score = Math.max(0, score - 3);
+                    }
+
                     if (score > bestScore) {
                         bestScore = score;
                         bestX = cx;
@@ -210,5 +225,28 @@ public final class AutoStrutSolver {
         // Rollback
         snapshot.set(cx, cy, RoomGridSnapshot.TILE_ROOM_FLOOR);
         return curedCount;
+    }
+
+    private boolean hasYellowNearby(int cx, int cy, int maxDist) {
+        for (int i = 0; i < yellowCount; i++) {
+            int dx = Math.abs(yellowX[i] - cx);
+            int dy = Math.abs(yellowY[i] - cy);
+            if (dx <= maxDist && dy <= maxDist) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isNearWall(int cx, int cy, int dist) {
+        for (int dy = -dist; dy <= dist; dy++) {
+            for (int dx = -dist; dx <= dist; dx++) {
+                if (dx == 0 && dy == 0) continue;
+                if (snapshot.get(cx + dx, cy + dy) == RoomGridSnapshot.TILE_WALL) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 }
