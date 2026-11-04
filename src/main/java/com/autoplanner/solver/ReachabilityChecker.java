@@ -254,7 +254,7 @@ public final class ReachabilityChecker {
      * Checks if placing a 1x1 strut (pillar) at (tx, ty) maintains room connectivity.
      */
     public boolean canPlaceStrutWithoutBlocking(RoomGridSnapshot snapshot, int tx, int ty) {
-        if (snapshot == null || snapshot.doorCount == 0) {
+        if (snapshot == null) {
             return false;
         }
 
@@ -263,11 +263,18 @@ public final class ReachabilityChecker {
             return false;
         }
 
-        // Must not be adjacent to a door entrance (door threshold must remain completely clear)
-        for (int i = 0; i < snapshot.doorCount; i++) {
-            int dx = snapshot.doorX[i];
-            int dy = snapshot.doorY[i];
-            int dist = Math.abs(tx - dx) + Math.abs(ty - dy);
+        // If doors exist, must not block door threshold
+        if (snapshot.doorCount > 0) {
+            for (int i = 0; i < snapshot.doorCount; i++) {
+                int dx = snapshot.doorX[i];
+                int dy = snapshot.doorY[i];
+                int dist = Math.abs(tx - dx) + Math.abs(ty - dy);
+                if (dist <= 1) {
+                    return false;
+                }
+            }
+        } else if (snapshot.hasVirtualDoor) {
+            int dist = Math.abs(tx - snapshot.virtualDoorX) + Math.abs(ty - snapshot.virtualDoorY);
             if (dist <= 1) {
                 return false;
             }
@@ -288,17 +295,45 @@ public final class ReachabilityChecker {
 
         int reachableFloors = 0;
 
-        for (int i = 0; i < snapshot.doorCount; i++) {
-            int dx = snapshot.doorX[i];
-            int dy = snapshot.doorY[i];
-            int lx = dx - originX;
-            int ly = dy - originY;
-            if (lx >= 0 && lx < width && ly >= 0 && ly < height) {
-                visitedStamp[ly * width + lx] = stamp;
+        if (snapshot.doorCount > 0) {
+            for (int i = 0; i < snapshot.doorCount; i++) {
+                int dx = snapshot.doorX[i];
+                int dy = snapshot.doorY[i];
+                int lx = dx - originX;
+                int ly = dy - originY;
+                if (lx >= 0 && lx < width && ly >= 0 && ly < height) {
+                    visitedStamp[ly * width + lx] = stamp;
+                }
+                qx[tail] = dx;
+                qy[tail] = dy;
+                tail = (tail + 1) % MAX_QUEUE_SIZE;
             }
-            qx[tail] = dx;
-            qy[tail] = dy;
-            tail = (tail + 1) % MAX_QUEUE_SIZE;
+        } else {
+            // Seed with any arbitrary floor tile that is not (tx, ty)
+            int seedX = -1;
+            int seedY = -1;
+            for (int ly = 0; ly < height; ly++) {
+                for (int lx = 0; lx < width; lx++) {
+                    int fx = originX + lx;
+                    int fy = originY + ly;
+                    if ((fx != tx || fy != ty) && snapshot.get(fx, fy) == RoomGridSnapshot.TILE_ROOM_FLOOR) {
+                        seedX = fx;
+                        seedY = fy;
+                        break;
+                    }
+                }
+                if (seedX != -1) break;
+            }
+
+            if (seedX != -1) {
+                int lx = seedX - originX;
+                int ly = seedY - originY;
+                visitedStamp[ly * width + lx] = stamp;
+                qx[tail] = seedX;
+                qy[tail] = seedY;
+                tail = (tail + 1) % MAX_QUEUE_SIZE;
+                reachableFloors = 1;
+            }
         }
 
         while (head != tail) {

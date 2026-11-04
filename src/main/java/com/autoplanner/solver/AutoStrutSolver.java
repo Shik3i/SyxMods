@@ -52,8 +52,8 @@ public final class AutoStrutSolver {
             return new Result(0, 0, 0, 0);
         }
 
-        // Only indoor rooms with area require structural ceiling support
-        if (!placer.blueprint().constructor().mustBeIndoors() || !placer.blueprint().constructor().usesArea()) {
+        // Must be an area-based constructor
+        if (!placer.blueprint().constructor().usesArea()) {
             return new Result(0, 0, 0, 0);
         }
 
@@ -61,7 +61,7 @@ public final class AutoStrutSolver {
         strutCount = 0;
 
         // 1. Initial scan of unsupported (yellow) tiles
-        scanYellowTiles();
+        scanYellowTiles(placer);
         int initialYellow = yellowCount;
 
         if (yellowCount == 0) {
@@ -71,8 +71,8 @@ public final class AutoStrutSolver {
         // 2. Iteratively select best strut positions until 0 yellow tiles remain
         int maxIterations = Math.min(MAX_STRUTS, Math.max(1, snapshot.getRoomTileCount() / 10 + 5));
         for (int iter = 0; iter < maxIterations && yellowCount > 0; iter++) {
-            if (System.currentTimeMillis() - start > 250) {
-                break; // 250ms time-budget guard
+            if (System.currentTimeMillis() - start > 400) {
+                break; // 400ms time-budget guard
             }
 
             int bestX = -1;
@@ -91,22 +91,22 @@ public final class AutoStrutSolver {
                         continue;
                     }
 
-                    // Spatial Pruning: Candidate MUST be within raytracer reach (<= 3 tiles) of at least one yellow tile
-                    if (!hasYellowNearby(cx, cy, 3)) {
+                    // Spatial Pruning: Candidate MUST be within raytracer reach (<= 4 tiles) of at least one yellow tile
+                    if (!hasYellowNearby(cx, cy, 4)) {
                         continue;
                     }
 
-                    // Candidate must not block doors or divide the room
+                    // Candidate must maintain floor connectivity
                     if (!reachability.canPlaceStrutWithoutBlocking(snapshot, cx, cy)) {
                         continue;
                     }
 
-                    // Score candidate by how many yellow tiles it cures
+                    // Score candidate by total support improvement
                     int score = evaluateCandidate(cx, cy);
 
-                    // Suppress ugly 1x1 holes right along outer walls by penalizing wall-adjacent candidates
+                    // De-prioritize candidates directly hugging outer walls (prefer central pillars)
                     if (isNearWall(cx, cy, 1)) {
-                        score = Math.max(0, score - 3);
+                        score = Math.max(0, score - 25);
                     }
 
                     if (score > bestScore) {
@@ -129,7 +129,7 @@ public final class AutoStrutSolver {
             strutCount++;
 
             // Rescan remaining yellow tiles
-            scanYellowTiles();
+            scanYellowTiles(placer);
         }
 
         // 3. Commit placed struts to the actual game room draft
@@ -148,7 +148,7 @@ public final class AutoStrutSolver {
         return new Result(strutCount, initialYellow, yellowCount, elapsed);
     }
 
-    private void scanYellowTiles() {
+    private void scanYellowTiles(RoomPlacer placer) {
         yellowCount = 0;
         int x1 = snapshot.getOriginX();
         int y1 = snapshot.getOriginY();
@@ -158,8 +158,21 @@ public final class AutoStrutSolver {
         for (int ty = y1; ty < y2; ty++) {
             for (int tx = x1; tx < x2; tx++) {
                 if (snapshot.get(tx, ty) == RoomGridSnapshot.TILE_ROOM_FLOOR) {
-                    double sup = computeSupport(tx, ty);
-                    if (sup < 1.0) {
+                    boolean isYellow = false;
+                    try {
+                        if (settlement.room.main.construction.ConstructionData.dExpensive.is(tx, ty, 1)) {
+                            isYellow = true;
+                        }
+                    } catch (Throwable ignored) {}
+
+                    if (!isYellow) {
+                        double sup = computeSupport(tx, ty);
+                        if (sup < 1.0) {
+                            isYellow = true;
+                        }
+                    }
+
+                    if (isYellow) {
                         if (yellowCount < MAX_TRACKED_YELLOW) {
                             yellowX[yellowCount] = tx;
                             yellowY[yellowCount] = ty;
@@ -204,27 +217,28 @@ public final class AutoStrutSolver {
         // Temporarily apply strut
         snapshot.set(cx, cy, RoomGridSnapshot.TILE_STRUT);
 
-        int curedCount = 0;
+        int score = 50; // Pillar itself is no longer an unsupported floor
         for (int i = 0; i < yellowCount; i++) {
             int yx = yellowX[i];
             int yy = yellowY[i];
             if (yx == cx && yy == cy) {
-                curedCount++; // Strut itself is no longer an unsupported floor
                 continue;
             }
-            // Only recheck tiles within radius 4 of the candidate
+            // Only recheck tiles within ray reach (<= 4) of candidate
             int dist = Math.max(Math.abs(yx - cx), Math.abs(yy - cy));
             if (dist <= 4) {
                 double sup = computeSupport(yx, yy);
                 if (sup >= 1.0) {
-                    curedCount++;
+                    score += 100; // Completely cured to supported!
+                } else if (sup > 0.0) {
+                    score += (int) (sup * 20.0); // Contributed partial support!
                 }
             }
         }
 
         // Rollback
         snapshot.set(cx, cy, RoomGridSnapshot.TILE_ROOM_FLOOR);
-        return curedCount;
+        return score;
     }
 
     private boolean hasYellowNearby(int cx, int cy, int maxDist) {

@@ -159,21 +159,22 @@ public final class AutoFurnishSolver {
         int y2 = y1 + snapshot.getHeight();
 
         // -------------------------------------------------------------
-        // PASS 1: Workstations-First Packing (larger sizes down to small)
+        // PASS 1: Workstations / Crates Packing (largest footprint down to small)
         // -------------------------------------------------------------
-        int wsSizes = getAvailableSizes(workstationGroup);
+        int[] sortedSizes = getSortedSizeIndices(workstationGroup);
 
-        for (int sizeIdx = wsSizes - 1; sizeIdx >= 0; sizeIdx--) {
-            if (System.currentTimeMillis() - start > 250) break; // 250ms time-budget guard
+        for (int sizeIdx : sortedSizes) {
+            if (System.currentTimeMillis() - start > 350) break; // 350ms time-budget guard
             for (int ty = y1; ty < y2; ty++) {
-                if (System.currentTimeMillis() - start > 250) break;
+                if (System.currentTimeMillis() - start > 350) break;
                 for (int tx = x1; tx < x2; tx++) {
                     if (snapshot.get(tx, ty) != RoomGridSnapshot.TILE_ROOM_FLOOR) {
                         continue;
                     }
 
-                    // Try all 4 rotations
-                    for (int r = 0; r < 4; r++) {
+                    // Try all rotations
+                    int maxRots = workstationGroup.rotations();
+                    for (int r = 0; r < maxRots; r++) {
                         FurnisherItem wsItem = getItemSafe(workstationGroup, sizeIdx, r);
                         if (wsItem == null) continue;
 
@@ -201,7 +202,7 @@ public final class AutoFurnishSolver {
         // -------------------------------------------------------------
         double targetEff = config.getTargetEfficiency();
         while (auxiliaryGroup != null && computeCurrentEfficiency(furnisher) < (targetEff - 0.005) && countWorkstations() > 1) {
-            if (System.currentTimeMillis() - start > 250) break; // 250ms time-budget guard
+            if (System.currentTimeMillis() - start > 350) break; // 350ms time-budget guard
             // Remove the most recently placed workstation to free space
             boolean removed = backtrackLastWorkstation(furnisher);
             if (!removed) break;
@@ -216,16 +217,21 @@ public final class AutoFurnishSolver {
         if (storageGroup != null && config.getStorageRatio() > 0.0) {
             int maxStorage = Math.max(1, (int) (snapshot.getRoomTileCount() * config.getStorageRatio()));
             int storagePlaced = 0;
-            FurnisherItem crateItem = getItemSafe(storageGroup, 0, 0);
+            int[] storageSizes = getSortedSizeIndices(storageGroup);
 
-            if (crateItem != null) {
+            for (int sizeIdx : storageSizes) {
+                if (storagePlaced >= maxStorage || System.currentTimeMillis() - start > 350) break;
                 for (int ty = y1; ty < y2 && storagePlaced < maxStorage; ty++) {
-                    if (System.currentTimeMillis() - start > 250) break;
                     for (int tx = x1; tx < x2 && storagePlaced < maxStorage; tx++) {
-                        if (canFitItem(snapshot, tx, ty, crateItem)) {
-                            if (reachability.canPlaceWithoutBlocking(snapshot, tx, ty, crateItem, accessX, accessY, accessCount)) {
-                                placeItemInSnapshot(tx, ty, crateItem, false, furnisher);
-                                storagePlaced++;
+                        for (int r = 0; r < storageGroup.rotations(); r++) {
+                            FurnisherItem crateItem = getItemSafe(storageGroup, sizeIdx, r);
+                            if (crateItem == null) continue;
+                            if (canFitItem(snapshot, tx, ty, crateItem)) {
+                                if (reachability.canPlaceWithoutBlocking(snapshot, tx, ty, crateItem, accessX, accessY, accessCount)) {
+                                    placeItemInSnapshot(tx, ty, crateItem, false, furnisher);
+                                    storagePlaced += (crateItem.width() * crateItem.height());
+                                    break;
+                                }
                             }
                         }
                     }
@@ -492,16 +498,38 @@ public final class AutoFurnishSolver {
     }
 
     private int getAvailableSizes(FurnisherItemGroup group) {
-        int sizes = 1;
-        while (sizes < 8) {
-            try {
-                if (group.item(sizes, 0) == null) break;
-                sizes++;
-            } catch (Throwable t) {
-                break;
+        if (group == null) return 0;
+        return group.size();
+    }
+
+    private int[] getSortedSizeIndices(FurnisherItemGroup group) {
+        if (group == null || group.size() <= 0) {
+            return new int[0];
+        }
+        int count = group.size();
+        int[] indices = new int[count];
+        for (int i = 0; i < count; i++) {
+            indices[i] = i;
+        }
+
+        // Sort descending by area (width * height), tie-break by max dimension (longer blocks prefered)
+        for (int i = 0; i < count - 1; i++) {
+            for (int j = i + 1; j < count; j++) {
+                FurnisherItem itemI = getItemSafe(group, indices[i], 0);
+                FurnisherItem itemJ = getItemSafe(group, indices[j], 0);
+                int areaI = itemI != null ? itemI.width() * itemI.height() : 0;
+                int areaJ = itemJ != null ? itemJ.width() * itemJ.height() : 0;
+                int maxDimI = itemI != null ? Math.max(itemI.width(), itemI.height()) : 0;
+                int maxDimJ = itemJ != null ? Math.max(itemJ.width(), itemJ.height()) : 0;
+
+                if (areaJ > areaI || (areaJ == areaI && maxDimJ > maxDimI)) {
+                    int tmp = indices[i];
+                    indices[i] = indices[j];
+                    indices[j] = tmp;
+                }
             }
         }
-        return sizes;
+        return indices;
     }
 
     public void clearExistingFurniture(RoomPlacer placer) {

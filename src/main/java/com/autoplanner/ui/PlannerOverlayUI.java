@@ -22,6 +22,7 @@ import snake2d.util.datatypes.Rec;
 import snake2d.util.gui.GuiSection;
 import snake2d.util.gui.renderable.RENDEROBJ;
 import snake2d.util.misc.ACTION;
+import snake2d.util.misc.CLAMP;
 import snake2d.util.sprite.SPRITE;
 import util.colors.GCOLOR;
 import util.gui.misc.GBox;
@@ -32,9 +33,9 @@ import util.gui.panel.GPanel;
 import view.main.VIEW;
 
 /**
- * 100% Native-Integrated Room Editor Toolbar & Configuration Suite for Syx Auto-Planner.
+ * 100% Native-Integrated Draggable Room Editor Box & Configuration Suite for Syx Auto-Planner.
  * Uses authentic Songs of Syx UI panels, buttons, sound effects, fonts and official icons.
- * Strictly guarantees ZERO object allocations during 60Hz render and update loops.
+ * Features a compact 2-row card layout, free drag-and-drop repositioning, and zero GC overhead.
  */
 public final class PlannerOverlayUI {
 
@@ -49,7 +50,14 @@ public final class PlannerOverlayUI {
     // Toast Notification Bounds
     private final Rec toastBounds = new Rec();
 
-    // Native Toolbar Section (holds authentic GButt.ButtPanel buttons)
+    // Draggable Box Coordinates
+    private int boxX = -1;
+    private int boxY = -1;
+    private boolean isDragging = false;
+    private int dragAnchorX = 0;
+    private int dragAnchorY = 0;
+
+    // Native Toolbar Section (compact 2-row card with authentic GButt.ButtPanel buttons)
     private final ToolbarSection toolbarSection = new ToolbarSection();
     private Language cachedLanguage = null;
 
@@ -61,13 +69,31 @@ public final class PlannerOverlayUI {
     }
 
     /**
-     * Rebuilds the native toolbar with localized labels and official icons.
+     * Initializes default start position at lower-mid-left, completely clear of top bars and room frame.
+     */
+    private void initDefaultPosition() {
+        int defaultX = Math.max(40, (int) (C.WIDTH() * 0.12));
+        int defaultY = Math.max(120, (int) (C.HEIGHT() * 0.42));
+        boxX = defaultX;
+        boxY = defaultY;
+    }
+
+    /**
+     * Rebuilds the native toolbar as a compact 2-row card with localized labels and official icons.
      * Called only on initialization and when the interface language changes.
      */
     private void buildToolbar() {
         cachedLanguage = I18n.getLanguage();
         toolbarSection.clear();
 
+        // --- Drag Header Bar ---
+        GuiSection headerBar = new GuiSection();
+        RENDEROBJ.Sprite dragIcon = new RENDEROBJ.Sprite(SPRITES.icons().m.openscroll);
+        headerBar.add(dragIcon, 0, 0);
+        GText titleText = new GText(UI.FONT().S, "Syx Auto-Planner").lablify();
+        headerBar.addRightC(6, titleText);
+
+        // --- Row 1 Buttons (Primary Builders) ---
         // Button 1: Auto-Strut (Pillars)
         GButt.ButtPanel btnStrut = new GButt.ButtPanel(I18n.get("btn.strut")) {
             @Override
@@ -107,6 +133,12 @@ public final class PlannerOverlayUI {
         btnQuick.hoverTitleSet(I18n.get("btn.quickfill"));
         btnQuick.hoverInfoSet(I18n.get("tooltip.quickfill"));
 
+        GuiSection row1 = new GuiSection();
+        row1.add(btnStrut, 0, 0);
+        row1.addRightC(4, btnFurnish);
+        row1.addRightC(4, btnQuick);
+
+        // --- Row 2 Buttons (Secondary / Config) ---
         // Button 4: Clear Furniture
         GButt.ButtPanel btnClear = new GButt.ButtPanel(I18n.get("btn.clear")) {
             @Override
@@ -134,13 +166,20 @@ public final class PlannerOverlayUI {
         btnConfig.hoverTitleSet(I18n.get("btn.settings"));
         btnConfig.hoverInfoSet(I18n.get("tooltip.settings"));
 
-        // Assemble toolbar elements horizontally with consistent spacing
-        toolbarSection.add(btnStrut, 0, 0);
-        toolbarSection.addRightC(4, btnFurnish);
-        toolbarSection.addRightC(4, btnQuick);
-        toolbarSection.addRightC(4, btnClear);
-        toolbarSection.addRightC(4, btnConfig);
-        toolbarSection.pad(6, 4);
+        GuiSection row2 = new GuiSection();
+        row2.add(btnClear, 0, 0);
+        row2.addRightC(8, btnConfig);
+
+        // Assemble 2-row card with title
+        toolbarSection.add(headerBar, 0, 0);
+        toolbarSection.addDown(4, row1);
+
+        // Center row2 underneath row1
+        int row2Offset = Math.max(0, (row1.body().width() - row2.body().width()) / 2);
+        row2.body().moveX1(row1.body().x1() + row2Offset);
+        toolbarSection.addDown(4, row2);
+
+        toolbarSection.pad(8, 6);
     }
 
     public void update(double ds) {
@@ -183,6 +222,7 @@ public final class PlannerOverlayUI {
 
     public void render(Renderer r, float ds) {
         if (!isPlacerActive()) {
+            isDragging = false;
             return;
         }
 
@@ -190,28 +230,38 @@ public final class PlannerOverlayUI {
             buildToolbar();
         }
 
-        // Dock directly above the native Songs of Syx RoomPlacer frame (C.SG * 80)
-        int nativeFrameY1 = (int) (C.SG * 80);
-        int panelH = toolbarSection.body().height();
-        int panelY = Math.max(34, nativeFrameY1 - panelH - 4);
+        if (boxX < 0 || boxY < 0) {
+            initDefaultPosition();
+        }
 
-        toolbarSection.body().moveCX(C.WIDTH() / 2);
-        toolbarSection.body().moveY1(panelY);
+        COORDINATE m = CORE.getInput().getMouse().getCoo();
+
+        // Handle active drag
+        if (isDragging) {
+            if (m != null && MButt.LEFT.isDown()) {
+                boxX = CLAMP.i(m.x() - dragAnchorX, 10, C.WIDTH() - toolbarSection.body().width() - 10);
+                boxY = CLAMP.i(m.y() - dragAnchorY, 34, C.HEIGHT() - toolbarSection.body().height() - 10);
+            } else {
+                isDragging = false;
+            }
+        }
+
+        toolbarSection.body().moveX1(boxX);
+        toolbarSection.body().moveY1(boxY);
 
         // Keep hover state responsive
-        COORDINATE m = CORE.getInput().getMouse().getCoo();
-        if (m != null) {
+        if (m != null && !isDragging) {
             toolbarSection.hover(m);
         }
 
-        // Render the authentic beveled button panel
+        // Render the authentic beveled 2-row button panel
         toolbarSection.render(r, ds);
 
-        // Render polished floating status toast if active
-        renderStatusToast(r, panelY);
+        // Render polished floating status toast anchored directly above the box
+        renderStatusToast(r, boxX, boxY);
     }
 
-    private void renderStatusToast(Renderer r, int panelY) {
+    private void renderStatusToast(Renderer r, int x, int y) {
         if (statusTimer <= 0.0 || statusMessage.isEmpty()) {
             return;
         }
@@ -219,8 +269,8 @@ public final class PlannerOverlayUI {
         int textW = UI.FONT().S.width(statusMessage);
         int toastW = textW + 42;
         int toastH = 26;
-        int toastX = (C.WIDTH() - toastW) / 2;
-        int toastY = panelY - toastH - 6;
+        int toastX = x + (toolbarSection.body().width() - toastW) / 2;
+        int toastY = y - toastH - 6;
 
         toastBounds.set(toastX, toastX + toastW, toastY, toastY + toastH);
 
@@ -238,7 +288,7 @@ public final class PlannerOverlayUI {
     }
 
     public void hover(COORDINATE mCoo, boolean mouseHasMoved) {
-        if (isPlacerActive() && mCoo != null) {
+        if (isPlacerActive() && mCoo != null && !isDragging) {
             toolbarSection.hover(mCoo);
         }
     }
@@ -253,11 +303,20 @@ public final class PlannerOverlayUI {
             return false;
         }
 
-        toolbarSection.hover(m);
-
         if (toolbarSection.body().holdsPoint(m.x(), m.y())) {
-            toolbarSection.click();
-            // Fully consume click so settlement tile placement / selection is suppressed
+            toolbarSection.hover(m);
+
+            // First check if an individual button consumed the click
+            boolean consumed = toolbarSection.click();
+            if (consumed) {
+                CORE.getInput().clearAllInput();
+                return true;
+            }
+
+            // Otherwise, start dragging the box!
+            isDragging = true;
+            dragAnchorX = m.x() - boxX;
+            dragAnchorY = m.y() - boxY;
             CORE.getInput().clearAllInput();
             return true;
         }
@@ -266,7 +325,7 @@ public final class PlannerOverlayUI {
     }
 
     public void hoverTimer(double mouseTimer, GBox text) {
-        if (!isPlacerActive() || text == null) {
+        if (!isPlacerActive() || text == null || isDragging) {
             return;
         }
         if (toolbarSection.hoveredIs()) {
@@ -279,8 +338,10 @@ public final class PlannerOverlayUI {
             AutoStrutSolver.Result res = strutSolver.solve(placer);
             if (res.pillarsPlaced > 0) {
                 setStatus(I18n.get("msg.strut_success", res.pillarsPlaced), false);
-            } else {
+            } else if (res.initialYellow == 0) {
                 setStatus(I18n.get("msg.strut_none_needed"), false);
+            } else {
+                setStatus(I18n.get("msg.strut_failed", res.initialYellow), true);
             }
         } catch (Throwable t) {
             snake2d.LOG.err("AutoPlanner: AutoStrut exception: " + t.getMessage());
