@@ -1,0 +1,11 @@
+"workshopitem"
+{
+    "appid"               "1162750"
+    "publishedfileid"     "0"
+    "contentfolder"       "C:\\Users\\s3ish\\AppData\\Roaming\\songsofsyx\\mods\\SyxAutoPlanner"
+    "previewfile"         "C:\\Users\\s3ish\\AppData\\Roaming\\songsofsyx\\mods\\SyxAutoPlanner\\icon.png"
+    "visibility"          "2"
+    "title"               "Syx Auto-Planner"
+    "description"         "Intelligent room planning, ceiling strut solver and furniture packing suite for Songs of Syx. Full description and documentation included in docs/STEAM_WORKSHOP_AUTOPLANNER.txt."
+    "changenote"          "Initial Release v1.0.0"
+}

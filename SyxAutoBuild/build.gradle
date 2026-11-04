@@ -41,7 +41,9 @@ jar {
     from("mod-files") {
         include "assets/**"
         include "_Info.txt"
-        include "_info.txt"
+        include "icon.png"
+        include "_Info.txt"
+        include "icon.png"
     }
 }
 
@@ -80,6 +82,7 @@ tasks.register("deployMod", Copy) {
     into(targetModDir)
     from("mod-files") {
         include "_Info.txt"
+        include "icon.png"
     }
 
     // Songs of Syx V71 version layout
