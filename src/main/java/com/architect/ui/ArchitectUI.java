@@ -23,6 +23,9 @@ import view.main.VIEW;
  * Main GUI control center for Syx Architect.
  * Provides live controls for sandbox modules, semantic Schönbau presets, 1-click actions,
  * world & population management, and seamless in-game bilingual localization.
+ *
+ * LAYOUT:
+ * Clamped and budgeted for 100% visibility on all resolutions from 720p to 4K.
  */
 public final class ArchitectUI {
 
@@ -65,8 +68,9 @@ public final class ArchitectUI {
 
     public static void open(ArchitectState state, UICallback callback) {
         isOpen = true;
-        int width = 640;
-        int height = 690;
+        int screenH = (C.DIM() != null) ? C.DIM().height() : 720;
+        int width = 630;
+        int height = Math.min(670, Math.max(500, screenH - 30));
 
         GuiSection root = new GuiSection();
         GPanel panel = new GPanel(width, height);
@@ -84,7 +88,7 @@ public final class ArchitectUI {
         panel.setCloseAction(closeAction);
 
         GuiSection content = new GuiSection();
-        content.pad(14);
+        content.pad(12);
 
         // --- Top Bar: Tab Switcher + Language Toggle + Tutorial [?] ---
         GuiSection topBar = new GuiSection();
@@ -111,7 +115,7 @@ public final class ArchitectUI {
         });
         topBar.addRight(8, tabWorld);
 
-        // Language toggle
+        // Language toggle [EN] or [DE]
         GButt.ButtPanel btnLang = new GButt.ButtPanel("[" + I18n.getLanguage().code.toUpperCase() + "]");
         btnLang.clickActionSet(new ACTION() {
             @Override
@@ -122,7 +126,7 @@ public final class ArchitectUI {
                 open(state, callback);
             }
         });
-        topBar.addRight(120, btnLang);
+        topBar.addRight(110, btnLang);
 
         // Tutorial modal [?]
         GButt.ButtPanel btnTut = new GButt.ButtPanel("[?]");
@@ -158,7 +162,7 @@ public final class ArchitectUI {
         // --- 1. Quick Presets Section ---
         GText presetTitle = new GText(UI.FONT().M, I18n.get("ui.presets"));
         presetTitle.lablify();
-        content.addDown(12, presetTitle);
+        content.addDown(10, presetTitle);
 
         GuiSection presetRow = new GuiSection();
 
@@ -196,7 +200,7 @@ public final class ArchitectUI {
                 open(state, callback);
             }
         });
-        presetRow.addDown(6, btnLiving);
+        presetRow.addDown(4, btnLiving);
 
         // Preset 3: Vanilla Reset
         GButt.ButtPanel btnReset = new GButt.ButtPanel("🔄 " + I18n.get("preset.vanilla"));
@@ -208,9 +212,9 @@ public final class ArchitectUI {
                 open(state, callback);
             }
         });
-        presetRow.addDown(6, btnReset);
+        presetRow.addDown(4, btnReset);
 
-        content.addDown(6, presetRow);
+        content.addDown(4, presetRow);
 
         // --- 2. Semantic Modules & Cheat Toggles ---
         // Construction Tier (covers rooms, roads, walls, roofs, fortifications)
@@ -224,7 +228,7 @@ public final class ArchitectUI {
                 open(state, callback);
             }
         });
-        content.addDown(12, btnConstr);
+        content.addDown(8, btnConstr);
 
         // Maintenance Tier
         String maintLabel = I18n.get("cheat.maintenance") + ": " + state.maintenanceTier.getLabel();
@@ -237,7 +241,7 @@ public final class ArchitectUI {
                 open(state, callback);
             }
         });
-        content.addDown(6, btnMaint);
+        content.addDown(4, btnMaint);
 
         // Knowledge Tier
         String knowLabel = I18n.get("cheat.knowledge") + ": " + state.knowledgeTier.getLabel();
@@ -250,7 +254,7 @@ public final class ArchitectUI {
                 open(state, callback);
             }
         });
-        content.addDown(6, btnKnow);
+        content.addDown(4, btnKnow);
 
         // Logistics Tier
         String logLabel = I18n.get("cheat.logistics") + ": " + state.logisticsTier.getLabel();
@@ -263,7 +267,7 @@ public final class ArchitectUI {
                 open(state, callback);
             }
         });
-        content.addDown(6, btnLog);
+        content.addDown(4, btnLog);
 
         // Loyalty & Happiness Toggle
         String loyaltyLabel = I18n.get("cheat.loyalty") + ": " + (state.loyaltyBoost ? I18n.get("status.active") : I18n.get("status.inactive"));
@@ -276,7 +280,7 @@ public final class ArchitectUI {
                 open(state, callback);
             }
         });
-        content.addDown(6, btnLoyalty);
+        content.addDown(4, btnLoyalty);
 
         // Spoilage Toggle
         String spoilLabel = I18n.get("cheat.spoilage") + ": " + (state.spoilageDisabled ? I18n.get("status.active") : I18n.get("status.inactive"));
@@ -289,7 +293,7 @@ public final class ArchitectUI {
                 open(state, callback);
             }
         });
-        content.addDown(6, btnSpoil);
+        content.addDown(4, btnSpoil);
 
         // Raid Immunity Toggle
         String raidLabel = I18n.get("cheat.raid_protection") + ": " + (state.raidImmunity ? I18n.get("status.active") : I18n.get("status.inactive"));
@@ -302,7 +306,7 @@ public final class ArchitectUI {
                 open(state, callback);
             }
         });
-        content.addDown(6, btnRaid);
+        content.addDown(4, btnRaid);
 
         // --- 3. Instant Action Buttons ---
         GuiSection actionSection = new GuiSection();
@@ -327,7 +331,7 @@ public final class ArchitectUI {
         });
         actionSection.addRight(8, btnFillCrates);
 
-        content.addDown(10, actionSection);
+        content.addDown(8, actionSection);
 
         // 1-Click Combat Auto-Win Button
         GButt.ButtPanel btnWinCombat = new GButt.ButtPanel(I18n.get("btn.win_combat_now"));
@@ -337,19 +341,19 @@ public final class ArchitectUI {
                 callback.onWinCombatRequested();
             }
         });
-        content.addDown(6, btnWinCombat);
+        content.addDown(4, btnWinCombat);
 
         // Footer: Close Button
         GButt.ButtPanel btnClose = new GButt.ButtPanel(I18n.get("btn.close"));
         btnClose.clickActionSet(closeAction);
-        content.addDown(10, btnClose);
+        content.addDown(8, btnClose);
     }
 
     private static void buildWorldTab(GuiSection content, ArchitectState state, UICallback callback, ACTION closeAction) {
         // --- 1. Population Manager Section ---
         GText popTitle = new GText(UI.FONT().M, I18n.get("world.population.title"));
         popTitle.lablify();
-        content.addDown(12, popTitle);
+        content.addDown(10, popTitle);
 
         LIST<Race> races = null;
         try {
@@ -405,7 +409,7 @@ public final class ArchitectUI {
             });
             raceRow.addRight(6, btnSpawn100);
 
-            content.addDown(8, raceRow);
+            content.addDown(6, raceRow);
 
             // Button: Cosmopolitan Wave (spawns 25 citizens of EVERY playable race)
             GButt.ButtPanel btnSpawnAll = new GButt.ButtPanel(I18n.get("world.btn.spawn_all_25"));
@@ -415,13 +419,13 @@ public final class ArchitectUI {
                     callback.onSpawnAllPlayableRequested(25);
                 }
             });
-            content.addDown(6, btnSpawnAll);
+            content.addDown(4, btnSpawnAll);
         }
 
         // --- 2. Environment & Longevity Toggles ---
         GText envTitle = new GText(UI.FONT().M, I18n.get("world.env.title"));
         envTitle.lablify();
-        content.addDown(16, envTitle);
+        content.addDown(12, envTitle);
 
         // Anti-Aging Toggle
         String agingLabel = I18n.get("world.toggle.aging") + ": " + (state.disableAging ? I18n.get("status.active") : I18n.get("status.inactive"));
@@ -434,7 +438,7 @@ public final class ArchitectUI {
                 open(state, callback);
             }
         });
-        content.addDown(8, btnAging);
+        content.addDown(6, btnAging);
 
         // Nice Weather & Daylight Toggle
         String weatherLabel = I18n.get("world.toggle.weather") + ": " + (state.freezeNiceWeather ? I18n.get("status.active") : I18n.get("status.inactive"));
@@ -447,7 +451,7 @@ public final class ArchitectUI {
                 open(state, callback);
             }
         });
-        content.addDown(6, btnWeather);
+        content.addDown(4, btnWeather);
 
         // Max Soil Moisture & Fertility Toggle
         String ferLabel = I18n.get("world.toggle.fertility") + ": " + (state.maxFertility ? I18n.get("status.active") : I18n.get("status.inactive"));
@@ -460,7 +464,7 @@ public final class ArchitectUI {
                 open(state, callback);
             }
         });
-        content.addDown(6, btnFer);
+        content.addDown(4, btnFer);
 
         // 1-Click Soil Moisture Immediate Action
         GButt.ButtPanel btnFerNow = new GButt.ButtPanel(I18n.get("world.btn.fertility_now"));
@@ -470,11 +474,11 @@ public final class ArchitectUI {
                 callback.onMaxFertilityRequested();
             }
         });
-        content.addDown(10, btnFerNow);
+        content.addDown(8, btnFerNow);
 
         // Footer: Close Button
         GButt.ButtPanel btnClose = new GButt.ButtPanel(I18n.get("btn.close"));
         btnClose.clickActionSet(closeAction);
-        content.addDown(14, btnClose);
+        content.addDown(10, btnClose);
     }
 }

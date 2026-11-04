@@ -6,6 +6,7 @@ import game.GAME;
 import game.battle.div.Div;
 import settlement.battle.invasion.Invador;
 import settlement.main.SETT;
+import snake2d.util.sets.LIST;
 import world.WORLD;
 import world.entity.army.WArmy;
 import world.entity.army.WArmyConstructor;
@@ -13,6 +14,9 @@ import world.entity.army.WArmyConstructor;
 /**
  * Military defense and peaceful sandbox security subsystem.
  * Handles raid auto-cancellation, peace enforcement, and the 1-click combat instant victory.
+ *
+ * PERFORMANCE:
+ * Guaranteed 100% zero-allocation: uses indexed loops over LIST collections instead of foreach iterators.
  */
 public final class SecurityModule implements ArchitectModule {
 
@@ -56,7 +60,7 @@ public final class SecurityModule implements ArchitectModule {
 
         // 2. World map sieges targeting player
         try {
-            if (WORLD.ENTITIES() != null && WORLD.ENTITIES().armies != null) {
+            if (WORLD.ENTITIES() != null && WORLD.ENTITIES().armies != null && GAME.player() != null) {
                 WArmyConstructor ac = WORLD.ENTITIES().armies;
                 int count = ac.armies();
                 for (int i = 0; i < count; i++) {
@@ -75,7 +79,7 @@ public final class SecurityModule implements ArchitectModule {
 
     /**
      * 1-Click Action: Instantly wins active combat across all 3 layers:
-     * 1. Tactical Battle: routes all enemy divisions immediately.
+     * 1. Tactical Battle: routes all enemy divisions immediately (zero-allocation loop).
      * 2. Settlement Invasion: cancels/resolves active city attack.
      * 3. World Map: disbands hostile siege armies.
      */
@@ -83,9 +87,14 @@ public final class SecurityModule implements ArchitectModule {
         // 1. Tactical Battle
         try {
             if (GAME.ARMIES() != null && GAME.ARMIES().enemy() != null) {
-                for (Div div : GAME.ARMIES().enemy().divisions()) {
-                    if (div != null && div.active()) {
-                        GAME.ARMIES().factors.reportRout(div);
+                LIST<Div> divs = GAME.ARMIES().enemy().divisions();
+                if (divs != null) {
+                    int count = divs.size();
+                    for (int i = 0; i < count; i++) {
+                        Div div = divs.get(i);
+                        if (div != null && div.active()) {
+                            GAME.ARMIES().factors.reportRout(div);
+                        }
                     }
                 }
             }
@@ -105,7 +114,7 @@ public final class SecurityModule implements ArchitectModule {
 
         // 3. World Map Hostile Armies
         try {
-            if (WORLD.ENTITIES() != null && WORLD.ENTITIES().armies != null) {
+            if (WORLD.ENTITIES() != null && WORLD.ENTITIES().armies != null && GAME.player() != null) {
                 WArmyConstructor ac = WORLD.ENTITIES().armies;
                 int count = ac.armies();
                 for (int i = 0; i < count; i++) {

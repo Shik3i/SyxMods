@@ -28,9 +28,12 @@ import view.main.VIEW;
 
 /**
  * Runtime execution instance of Syx Architect during active gameplay.
- * STRICT ZERO-ALLOCATION GUARANTEE: update(double ds) allocates zero heap objects.
+ * STRICT ZERO-ALLOCATION GUARANTEE: update(double ds) and render(Renderer r, float ds)
+ * allocate zero heap objects.
  */
 public final class ArchitectInstance implements SCRIPT_INSTANCE {
+
+    private static final String HUD_LABEL = "Syx Architect [F10]";
 
     private final ArchitectState state = new ArchitectState();
 
@@ -44,7 +47,7 @@ public final class ArchitectInstance implements SCRIPT_INSTANCE {
     // Zero-allocation input state
     private boolean wasF10Down = false;
 
-    // HUD button area (top-right screen position, 140x26 pixels)
+    // HUD button area (top-right screen position, 140x24 pixels)
     private final Rec hudBounds = new Rec();
 
     // Reusable UI callback to prevent lambda allocation on each open
@@ -81,7 +84,7 @@ public final class ArchitectInstance implements SCRIPT_INSTANCE {
 
         @Override
         public void onMaxFertilityRequested() {
-            worldModule.maximizeSoilMoisture();
+            worldModule.maximizeSoilMoistureNow();
         }
     };
 
@@ -160,7 +163,7 @@ public final class ArchitectInstance implements SCRIPT_INSTANCE {
             COLOR.BLACK.render(r, hudBounds, 0);
             COLOR.WHITE20.renderFrame(r, hudBounds, 1, 0);
             if (UI.FONT() != null && UI.FONT().S != null) {
-                UI.FONT().S.render(r, "Syx Architect [F10]", hudX + 8, hudY + 5);
+                UI.FONT().S.render(r, HUD_LABEL, hudX + 8, hudY + 5);
             }
         }
     }
@@ -168,7 +171,7 @@ public final class ArchitectInstance implements SCRIPT_INSTANCE {
     @Override
     public void mouseClick(MButt button) {
         if (button == MButt.LEFT) {
-            // Guard: Ignore HUD clicks if a modal interrupter is active
+            // Guard: Ignore HUD clicks if any modal interrupter is active
             if (VIEW.inters() != null && VIEW.inters().section != null && VIEW.inters().section.isActivated()) {
                 return;
             }

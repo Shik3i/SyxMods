@@ -206,6 +206,27 @@ public final class I18n {
         current = (current == Language.EN) ? Language.DE : Language.EN;
     }
 
+    public static Map<String, String> getDictionary(Language lang) {
+        return (lang == Language.DE) ? DE_STRINGS : EN_STRINGS;
+    }
+
+    /**
+     * Loads localization properties from an input stream using strict UTF-8 character encoding.
+     */
+    public static void loadProperties(java.io.InputStream in, Language lang) {
+        if (in == null || lang == null) return;
+        try (java.io.Reader reader = new java.io.InputStreamReader(in, java.nio.charset.StandardCharsets.UTF_8)) {
+            java.util.Properties props = new java.util.Properties();
+            props.load(reader);
+            Map<String, String> target = (lang == Language.DE) ? DE_STRINGS : EN_STRINGS;
+            for (String key : props.stringPropertyNames()) {
+                target.put(key, props.getProperty(key));
+            }
+        } catch (Exception e) {
+            System.err.println("[SyxArchitect] Failed to load UTF-8 properties for " + lang + ": " + e.getMessage());
+        }
+    }
+
     public static String get(String key) {
         Map<String, String> dict = (current == Language.DE) ? DE_STRINGS : EN_STRINGS;
         String val = dict.get(key);

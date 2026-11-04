@@ -8,17 +8,21 @@ import settlement.main.SETT;
 import settlement.room.infra.stockpile.ROOM_STOCKPILE;
 import settlement.room.infra.stockpile.StockpileInstance;
 import settlement.room.main.job.StorageCrate;
-import snake2d.util.datatypes.COORDINATE;
+import snake2d.util.datatypes.RECTANGLE;
 
 /**
  * Logistics and storage management subsystem.
  * Handles automatic warehouse refilling for raw materials or all assigned crates,
  * plus 1-click 100% inventory top-ups.
+ *
+ * PERFORMANCE:
+ * Guaranteed 100% zero-allocation: avoids RECTANGLE iterator allocations by using
+ * direct integer coordinate bounds (x1, x2, y1, y2).
  */
 public final class LogisticsModule implements ArchitectModule {
 
     private double updateTimer = 0.0;
-    private static final double REFILL_INTERVAL = 5.0; // Every 5 seconds
+    private static final double REFILL_INTERVAL = 3.0; // Refills every 3 seconds
 
     @Override
     public void init() {
@@ -42,6 +46,7 @@ public final class LogisticsModule implements ArchitectModule {
 
     /**
      * Refills warehouse crates based on current tier and target capacity.
+     * Zero-allocation primitive integer loop.
      */
     public void refillCrates(boolean rawOnly, double targetRatio) {
         if (!SETT.exists() || SETT.ROOMS() == null || SETT.ROOMS().STOCKPILE == null) {
@@ -57,19 +62,27 @@ public final class LogisticsModule implements ArchitectModule {
                 continue;
             }
 
-            for (COORDINATE c : instance.body()) {
-                if (instance.is(c)) {
-                    StorageCrate crate = instance.crate(c.x(), c.y());
-                    if (crate != null && crate.resource() != null) {
-                        RESOURCE res = crate.resource();
-                        if (rawOnly && !isRawMaterial(res)) {
-                            continue;
-                        }
+            RECTANGLE body = instance.body();
+            int x1 = body.x1();
+            int x2 = body.x2();
+            int y1 = body.y1();
+            int y2 = body.y2();
 
-                        int capacity = instance.crateSize(res);
-                        int target = (int) (capacity * targetRatio);
-                        if (crate.amount() < target) {
-                            crate.amountSet(target);
+            for (int y = y1; y < y2; y++) {
+                for (int x = x1; x < x2; x++) {
+                    if (instance.is(x, y)) {
+                        StorageCrate crate = instance.crate(x, y);
+                        if (crate != null && crate.resource() != null) {
+                            RESOURCE res = crate.resource();
+                            if (rawOnly && !isRawMaterial(res)) {
+                                continue;
+                            }
+
+                            int capacity = instance.crateSize(res);
+                            int target = (int) (capacity * targetRatio);
+                            if (crate.amount() < target) {
+                                crate.amountSet(target);
+                            }
                         }
                     }
                 }
@@ -84,12 +97,14 @@ public final class LogisticsModule implements ArchitectModule {
         refillCrates(false, 1.0);
     }
 
-    private boolean isRawMaterial(RESOURCE res) {
+    private static boolean isRawMaterial(RESOURCE res) {
         if (res == null || res.key == null) return false;
-        String k = res.key.toUpperCase();
-        return k.equals("WOOD") || k.equals("STONE") || k.contains("ORE") ||
-               k.equals("COAL") || k.equals("CLAY") || k.equals("GRAIN") ||
-               k.contains("FIBER") || k.contains("COTTON") || k.contains("LEATHER");
+        String k = res.key;
+        return k.equalsIgnoreCase("WOOD") || k.equalsIgnoreCase("STONE") ||
+               k.equalsIgnoreCase("COAL") || k.equalsIgnoreCase("CLAY") ||
+               k.equalsIgnoreCase("GRAIN") || k.equalsIgnoreCase("COTTON") ||
+               k.equalsIgnoreCase("LEATHER") || k.contains("ORE") || k.contains("ore") ||
+               k.contains("FIBER") || k.contains("fiber");
     }
 
     @Override

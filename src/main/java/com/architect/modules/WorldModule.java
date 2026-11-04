@@ -10,6 +10,7 @@ import init.sprite.UI.UI;
 import init.type.HTYPES;
 import settlement.main.SETT;
 import settlement.weather.SWEATHER;
+import snake2d.util.sets.LIST;
 
 /**
  * World, Environment, and Population management subsystem.
@@ -18,6 +19,9 @@ import settlement.weather.SWEATHER;
  * - Anti-Aging / Longevity lock (neutralizes deaths by old age)
  * - Clear Building Weather & Daylight lock (ideal lighting for screenshots and construction)
  * - Soil Fertility & Moisture maximization (total freedom for farms and orchards)
+ *
+ * PERFORMANCE:
+ * Background moisture synchronization is chunked into 48-row slices to prevent frame lag.
  */
 public final class WorldModule implements ArchitectModule {
 
@@ -27,7 +31,9 @@ public final class WorldModule implements ArchitectModule {
     private static final double WEATHER_INTERVAL = 0.5;
 
     private double fertilityTimer = 0.0;
-    private static final double FERTILITY_INTERVAL = 2.0;
+    private static final double FERTILITY_INTERVAL = 0.1; // Smooth rolling slice check
+    private int moistureRowCursor = 0;
+    private static final int MOISTURE_ROWS_PER_TICK = 48;
 
     @Override
     public void init() {
@@ -58,12 +64,12 @@ public final class WorldModule implements ArchitectModule {
             }
         }
 
-        // 2. Continuous soil moisture enforcement (if enabled)
+        // 2. Continuous soil moisture enforcement (chunked rolling slice)
         if (state.maxFertility) {
             fertilityTimer += ds;
             if (fertilityTimer >= FERTILITY_INTERVAL) {
                 fertilityTimer = 0.0;
-                maximizeSoilMoisture();
+                updateSoilMoistureSlice();
             }
         }
     }
@@ -96,9 +102,34 @@ public final class WorldModule implements ArchitectModule {
     }
 
     /**
-     * Maximizes soil moisture map-wide so farms, orchards, and pastures achieve 100% fertility everywhere.
+     * Budgeted row slice scan for continuous soil moisture synchronization.
      */
-    public void maximizeSoilMoisture() {
+    private void updateSoilMoistureSlice() {
+        if (!SETT.exists() || SETT.GROUND() == null || SETT.GROUND().MOISTURE_CURRENT == null) {
+            return;
+        }
+        try {
+            int width = SETT.TWIDTH;
+            int height = SETT.THEIGHT;
+            int startY = moistureRowCursor;
+            int endY = Math.min(height, startY + MOISTURE_ROWS_PER_TICK);
+
+            for (int y = startY; y < endY; y++) {
+                for (int x = 0; x < width; x++) {
+                    if (SETT.GROUND().MOISTURE_CURRENT.get(x, y) < 1.0) {
+                        SETT.GROUND().MOISTURE_CURRENT.set(x, y, 1.0);
+                    }
+                }
+            }
+            moistureRowCursor = (endY >= height) ? 0 : endY;
+        } catch (Exception ignored) {
+        }
+    }
+
+    /**
+     * Maximizes soil moisture map-wide immediately (for 1-click action or toggle-on).
+     */
+    public void maximizeSoilMoistureNow() {
         if (!SETT.exists() || SETT.GROUND() == null || SETT.GROUND().MOISTURE_CURRENT == null) {
             return;
         }
@@ -130,16 +161,21 @@ public final class WorldModule implements ArchitectModule {
     }
 
     /**
-     * Spawns equal immigration waves for all playable races.
+     * Spawns equal immigration waves for all playable races (Zero-allocation indexed loop).
      */
     public void spawnAllPlayable(int countPerRace) {
         if (!SETT.exists() || SETT.ENTRY() == null || countPerRace <= 0) {
             return;
         }
         try {
-            if (RACES.playable() != null) {
-                for (Race race : RACES.playable()) {
-                    SETT.ENTRY().add(race, HTYPES.SUBJECT(), countPerRace);
+            LIST<Race> playable = RACES.playable();
+            if (playable != null) {
+                int count = playable.size();
+                for (int i = 0; i < count; i++) {
+                    Race race = playable.get(i);
+                    if (race != null) {
+                        SETT.ENTRY().add(race, HTYPES.SUBJECT(), countPerRace);
+                    }
                 }
             }
         } catch (Exception ignored) {
@@ -159,7 +195,7 @@ public final class WorldModule implements ArchitectModule {
             applyNiceWeather();
         }
         if (state.maxFertility) {
-            maximizeSoilMoisture();
+            maximizeSoilMoistureNow();
         }
     }
 }

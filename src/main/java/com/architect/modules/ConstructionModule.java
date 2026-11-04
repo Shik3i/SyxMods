@@ -30,11 +30,19 @@ import snake2d.util.sets.Bitsmap1D;
  * - Free Materials / Keep Work (0 resource costs, oddjobbers still physically build)
  * - Janitors Work / Free Mats (maintenance simulation preserved, zero resource cost)
  * - Zero Decay (continuous pristine condition)
+ *
+ * PERFORMANCE:
+ * Uses a rolling chunk scan (budgeted row scanning) across ticks to eliminate frame-time spikes
+ * on colossal 768x768 maps.
  */
 public final class ConstructionModule implements ArchitectModule {
 
     private double tickTimer = 0.0;
-    private static final double TICK_STEP = 0.5;
+    private static final double TICK_STEP = 0.05; // 20 times per second for smooth chunk progression
+
+    // Rolling chunk cursor for lag-free 60 Hz updates across colossal maps
+    private int scanRowCursor = 0;
+    private static final int ROWS_PER_TICK = 48; // Scans 48 rows per tick (entire 768 map scanned in ~0.8s)
 
     // Cached reflection handles for package-private engine classes
     private static Method jobFinsihMethod;
@@ -48,6 +56,7 @@ public final class ConstructionModule implements ArchitectModule {
     private static Method jobBuildConstructMethod;
     private static Field jobsProgressField;
     private static Field jobsWantsResField;
+    private static boolean reflectionFailed = false;
 
     @Override
     public void init() {
@@ -69,21 +78,27 @@ public final class ConstructionModule implements ArchitectModule {
         // 1. Instant Construction
         if (state.constructionTier == ConstructionTier.INSTANT_BUILD) {
             triggerInstantBuildAll();
-        }
-        // 2. Free Materials / Keep Work (or Fast & Free)
-        else if (state.constructionTier == ConstructionTier.FREE_MATERIALS_KEEP_WORK ||
-                 state.constructionTier == ConstructionTier.FAST_AND_FREE) {
-            processFreeMaterials(state.constructionTier == ConstructionTier.FAST_AND_FREE);
-            processOutsideJobs(state.constructionTier == ConstructionTier.FAST_AND_FREE);
+            return;
         }
 
-        // 3. Maintenance Logic
+        int height = SETT.THEIGHT;
+        int width = SETT.TWIDTH;
+        int startY = scanRowCursor;
+        int endY = Math.min(height, startY + ROWS_PER_TICK);
+
+        // 2. Free Materials / Keep Work (or Fast & Free) with rolling chunk cursor
+        if (state.constructionTier == ConstructionTier.FREE_MATERIALS_KEEP_WORK ||
+            state.constructionTier == ConstructionTier.FAST_AND_FREE) {
+            boolean fastSpeed = (state.constructionTier == ConstructionTier.FAST_AND_FREE);
+            processFreeMaterialsSlice(fastSpeed, width, startY, endY);
+            processOutsideJobsSlice(fastSpeed, width, startY, endY);
+        }
+
+        // 3. Maintenance Logic with rolling chunk cursor
         if (state.maintenanceTier == MaintenanceTier.NO_DECAY && SETT.MAINTENANCE() != null) {
             MAINTENANCE maintenance = SETT.MAINTENANCE();
             if (maintenance.needs != null) {
-                int width = SETT.TWIDTH;
-                int height = SETT.THEIGHT;
-                for (int y = 0; y < height; y++) {
+                for (int y = startY; y < endY; y++) {
                     for (int x = 0; x < width; x++) {
                         if (maintenance.needs.is(x, y)) {
                             maintenance.maintain(x, y);
@@ -94,13 +109,15 @@ public final class ConstructionModule implements ArchitectModule {
         } else if (state.maintenanceTier == MaintenanceTier.JANITOR_WORK_FREE_MATS) {
             keepJanitorSuppliesFull();
         }
+
+        // Advance cursor
+        scanRowCursor = (endY >= height) ? 0 : endY;
     }
 
     /**
-     * Supplies room construction sites with needed materials without deducting from the player,
-     * allowing oddjobbers to immediately begin physical construction.
+     * Budgeted row slice scan for room construction sites.
      */
-    private void processFreeMaterials(boolean fastSpeed) {
+    private void processFreeMaterialsSlice(boolean fastSpeed, int width, int startY, int endY) {
         if (SETT.ROOMS() == null || SETT.ROOMS().construction == null) {
             return;
         }
@@ -109,10 +126,7 @@ public final class ConstructionModule implements ArchitectModule {
             return;
         }
 
-        int width = SETT.TWIDTH;
-        int height = SETT.THEIGHT;
-
-        for (int y = 0; y < height; y++) {
+        for (int y = startY; y < endY; y++) {
             for (int x = 0; x < width; x++) {
                 if (construction.isser.is(x, y)) {
                     if (fastSpeed) {
@@ -129,11 +143,10 @@ public final class ConstructionModule implements ArchitectModule {
     }
 
     /**
-     * Supplies outside jobs (roads, squares, walls, ceilings, fortifications) with needed materials
-     * directly at the job site so oddjobbers do not need to fetch resources from player stockpiles.
+     * Budgeted row slice scan for outside jobs (roads, walls, ceilings, fortifications).
      */
-    private void processOutsideJobs(boolean fastSpeed) {
-        if (SETT.JOBS() == null || SETT.JOBS().getter == null) {
+    private void processOutsideJobsSlice(boolean fastSpeed, int width, int startY, int endY) {
+        if (reflectionFailed || SETT.JOBS() == null || SETT.JOBS().getter == null) {
             return;
         }
 
@@ -147,10 +160,7 @@ public final class ConstructionModule implements ArchitectModule {
             Bitsmap1D progress = (Bitsmap1D) jobsProgressField.get(SETT.JOBS());
             Bitmap1D wantsRes = (Bitmap1D) jobsWantsResField.get(SETT.JOBS());
 
-            int width = SETT.TWIDTH;
-            int height = SETT.THEIGHT;
-
-            for (int y = 0; y < height; y++) {
+            for (int y = startY; y < endY; y++) {
                 for (int x = 0; x < width; x++) {
                     if (SETT.JOBS().getter.is(x, y)) {
                         Job job = SETT.JOBS().getter.get(x, y);
@@ -172,12 +182,13 @@ public final class ConstructionModule implements ArchitectModule {
                     }
                 }
             }
-        } catch (Exception ignored) {
-            // Protected against reflection edge cases
+        } catch (Throwable t) {
+            handleReflectionError("OutsideJobs", t);
         }
     }
 
     private void completeJobBuild(JobBuild job, int x, int y) {
+        if (reflectionFailed) return;
         try {
             if (jobBuildConstructMethod == null) {
                 jobBuildConstructMethod = JobBuild.class.getDeclaredMethod("construct", int.class, int.class);
@@ -193,11 +204,13 @@ public final class ConstructionModule implements ArchitectModule {
             if (res != null && amount > 0 && GAME.player() != null && GAME.player().res() != null) {
                 GAME.player().res().inc(res, RTYPE.CONSTRUCTION, amount);
             }
-        } catch (Exception ignored) {
+        } catch (Throwable t) {
+            handleReflectionError("JobBuild.construct", t);
         }
     }
 
     private void fulfillTileResources(Room room, int x, int y) {
+        if (reflectionFailed) return;
         try {
             if (jobFinsihMethod == null) {
                 Class<?> clazz = room.getClass();
@@ -215,8 +228,8 @@ public final class ConstructionModule implements ArchitectModule {
                     }
                 }
             }
-        } catch (Exception ignored) {
-            // Protected against reflection edge cases during deconstruction
+        } catch (Throwable t) {
+            handleReflectionError("Room.fulfillTileResources", t);
         }
     }
 
@@ -224,8 +237,8 @@ public final class ConstructionModule implements ArchitectModule {
      * Refills janitor room maintenance reserves so janitors repair buildings without consuming player supplies.
      */
     private void keepJanitorSuppliesFull() {
+        if (reflectionFailed || SETT.ROOMS() == null) return;
         try {
-            if (SETT.ROOMS() == null) return;
             ROOM_JANITOR janitorBlueprint = SETT.ROOMS().JANITOR;
             if (janitorBlueprint == null) return;
 
@@ -244,7 +257,8 @@ public final class ConstructionModule implements ArchitectModule {
                         resAmMethod = bits.getClass().getMethod("resAm", RESOURCE.class);
                         resIncMethod = bits.getClass().getMethod("resInc", ins.getClass(), RESOURCE.class, int.class);
                     }
-                    for (RESOURCE res : RESOURCES.ALL()) {
+                    for (int r = 0; r < RESOURCES.ALL().size(); r++) {
+                        RESOURCE res = RESOURCES.ALL().get(r);
                         int current = (int) resAmMethod.invoke(bits, res);
                         if (current < 20) {
                             resIncMethod.invoke(bits, ins, res, 20);
@@ -252,25 +266,35 @@ public final class ConstructionModule implements ArchitectModule {
                     }
                 }
             }
-        } catch (Exception ignored) {
+        } catch (Throwable t) {
+            handleReflectionError("Janitor.bits", t);
+        }
+    }
+
+    private void handleReflectionError(String context, Throwable t) {
+        if (!reflectionFailed) {
+            reflectionFailed = true;
+            System.err.println("[SyxArchitect] Reflection disabled in ConstructionModule (" + context + "): " + t.getMessage());
         }
     }
 
     /**
      * Instantly finishes all ongoing construction sites settlement-wide
      * (Rooms, Road paving, Wall building, Ceilings, Fortifications).
+     * Full sweep executed on 1-click button or tier activation.
      */
     public void triggerInstantBuildAll() {
         if (!SETT.exists()) {
             return;
         }
 
+        int width = SETT.TWIDTH;
+        int height = SETT.THEIGHT;
+
         // 1. Room construction sites
         if (SETT.ROOMS() != null && SETT.ROOMS().construction != null) {
             CONSTRUCTION construction = SETT.ROOMS().construction;
             if (construction.isser != null && construction.instances() > 0) {
-                int width = SETT.TWIDTH;
-                int height = SETT.THEIGHT;
                 for (int y = 0; y < height; y++) {
                     for (int x = 0; x < width; x++) {
                         if (construction.isser.is(x, y)) {
@@ -282,9 +306,7 @@ public final class ConstructionModule implements ArchitectModule {
         }
 
         // 2. Outside jobs (Roads, Floors, Walls, Ceilings, Fortifications)
-        if (SETT.JOBS() != null && SETT.JOBS().getter != null) {
-            int width = SETT.TWIDTH;
-            int height = SETT.THEIGHT;
+        if (!reflectionFailed && SETT.JOBS() != null && SETT.JOBS().getter != null) {
             for (int y = 0; y < height; y++) {
                 for (int x = 0; x < width; x++) {
                     if (SETT.JOBS().getter.is(x, y)) {
