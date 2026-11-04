@@ -22,11 +22,11 @@ public final class ReachabilityChecker {
     private static final int MAX_ACCESS_POINTS = 2048;
     private final int[] tempAccessX = new int[MAX_ACCESS_POINTS];
     private final int[] tempAccessY = new int[MAX_ACCESS_POINTS];
-    private final int[] newAccessX = new int[64];
-    private final int[] newAccessY = new int[64];
+    private final int[] newAccessX = new int[256];
+    private final int[] newAccessY = new int[256];
 
     // Temporary rollback buffer for item placement checks
-    private final int[] rollbackPrevTypes = new int[64];
+    private final int[] rollbackPrevTypes = new int[256];
 
     private int nextStamp() {
         currentStamp++;

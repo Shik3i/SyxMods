@@ -6,18 +6,19 @@
 
 [b]1. Semantic Schönbau Tiers (Decoupling Work from Material Costs):[/b]
 [list]
-[*] [b]Baustellen-Modus (Construction):[/b]
+[*] [b]Construction Modes:[/b]
   - [i]Free Materials (Keep Work):[/i] Your oddjobbers physically pave roads, build walls, and erect grand halls—the bustling street life remains 100% active, but no materials are drained from your stockpiles!
   - [i]Fast & Free (10x Speed):[/i] Supercharged building pace at zero resource cost.
   - [i]Instant Build:[/i] Completes all pending rooms, roads, walls, and fortifications across the entire map immediately.
-[*] [b]Gebäude-Wartung (Maintenance):[/b]
-  - [i]Janitors Work (Free Mats):[/i] Janitors roam the city repairing buildings, keeping the bustling atmosphere alive with zero repair resource consumption.
+[*] [b]Building Maintenance:[/b]
+  - [i]Free Janitor Repairs:[/i] Janitors roam the city repairing buildings, keeping the bustling atmosphere alive with zero repair resource consumption.
   - [i]Zero Decay:[/i] Permanently locks all building condition at 100%.
-[*] [b]Wissen & Forschung (Knowledge):[/b]
+[*] [b]Knowledge & Research:[/b]
   - [i]No Forgetting (High-Watermark):[/i] Unlocked technologies are never forgotten, even during lab worker shortages.
   - [i]Omniscience:[/i] Grants +1,000,000 innovation points instantly.
-[*] [b]Lagerhaus-Logistik (Logistics):[/b]
+[*] [b]Warehouse Logistics & Treasury:[/b]
   - Automatically maintains building materials or all assigned warehouse crates at ~80% capacity.
+  - Infinite Denari buffer maintains at least 1,000,000 Denari in the treasury.
 [/list]
 
 [b]2. World, Nature & Population Manager:[/b]
@@ -41,31 +42,7 @@
 [h2]🎮 In-Game Controls & Hotkey[/h2]
 [list]
 [*] Press [b][F10][/b] anywhere in-game to toggle the interface.
-[*] Click the discreet [b]'Syx Architect [F10]'[/b] HUD button in the top bar.
+[*] Click the [b]'CREATIVE'[/b] HUD button in the top bar.
 [*] Switch seamlessly between [b]English[/b] and [b]Deutsch[/b] with one click.
 [*] Safe savegame integration: save and load anytime without corrupting vanilla saves.
 [/list]
-
----
-
-[h1]🇩🇪 Deutsche Beschreibung[/h1]
-
-[b]Syx Architect[/b] verwandelt [i]Songs of Syx[/i] in den perfekten Modellbaukasten! Ob monumentale Paläste, kilometerweite Pflasterstraßen, lebendiges Gewusel ohne Ressourcen-Grind oder direkte Kontrolle über Wetter, Bodenfruchtbarkeit und Bevölkerung – Syx Architect gibt dir alle Freiheiten.
-
-[h2]⚡ Kernfunktionen[/h2]
-
-[list]
-[*] [b]Baustellen-Modus:[/b] Gratis-Material mit echten Bauarbeitern (Gewusel bleibt erhalten!) oder augenblicklicher Sofortbau.
-[*] [b]Gebäude-Wartung:[/b] Hausmeister reparieren kostenfrei oder dauerhaft 100% Gebäudezustand.
-[*] [b]Forschung:[/b] Nie wieder Technologien vergessen oder sofortige Allwissenheit (+1 Mio. Punkte).
-[*] [b]Bevölkerungs-Manager:[/b] Spawne per Klick Bürger jeder Spezies (+10, +50, +100) oder eine kosmopolitische Welle aller spielbaren Rassen.
-[*] [b]Alterungsschutz:[/b] Verhindert das Sterben von Bürgern an Altersschwäche.
-[*] [b]Schönes Bauwetter & Tageslicht:[/b] Helles Tageslicht dauerhaft fixieren, keine störenden Wolken oder Dunkelheit beim Bauen.
-[*] [b]100% Bodenfruchtbarkeit:[/b] Maximale Bodenfeuchte kartenweit für grenzenlose Freiheit bei Feldern und Obstgärten.
-[*] [b]Raid-Schutz & Sofortsieg:[/b] Schutz vor Überfällen und 1-Klick-Sieg auf dem Schlachtfeld.
-[*] [b]Bilinguales UI & F10 Hotkey:[/b] Öffne das Menü jederzeit mit F10 oder über die HUD-Leiste; Sprache jederzeit zwischen Deutsch und Englisch umschaltbar.
-[/list]
-
-[h2]Compatibility[/h2]
-[b]Songs of Syx Version:[/b] v0.71.44+ (V71)
-[b]Performance:[/b] 100% Zero-Allocation im 60 Hz Update-Loop. Garantiert keine Ruckler oder GC-Pausen.

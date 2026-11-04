@@ -77,7 +77,17 @@ public class SanityTest {
             System.err.println("[FAIL] Check 5: ReachabilityChecker check failed: " + t.getMessage());
             t.printStackTrace();
             failed++;
+        }        // Check 6: PlannerConfig Serialization & Language Persistence
+        try {
+            testPlannerConfigSerialization();
+            System.out.println("[PASS] Check 6: PlannerConfig V2 save/load, V1 backward-compat & language persistence verified.");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] Check 6: PlannerConfig serialization check failed: " + t.getMessage());
+            t.printStackTrace();
+            failed++;
         }
+
 
         System.out.println("================================================================================");
         System.out.println("AUTO-PLANNER TEST RESULTS: " + passed + " passed, " + failed + " failed.");
@@ -230,6 +240,56 @@ public class SanityTest {
             throw new AssertionError("Strut at door threshold (3,5) must be rejected!");
         }
     }
+    private static void testPlannerConfigSerialization() throws Exception {
+        java.nio.file.Path tempPath = java.nio.file.Files.createTempFile("syx_planner_config", ".bin");
+        try {
+            com.autoplanner.config.PlannerConfig c1 = new com.autoplanner.config.PlannerConfig();
+            c1.setStyle(com.autoplanner.config.PlannerConfig.LayoutStyle.BALANCED);
+            c1.setTargetEfficiency(1.2);
+            c1.setStorageRatio(0.15);
+            c1.setAutoStrutOnPlace(true);
+            c1.setShowOverlay(false);
+            c1.setLanguage("de");
+
+            snake2d.util.file.FilePutter putter = new snake2d.util.file.FilePutter(tempPath, 512);
+            c1.save(putter);
+            putter.save();
+
+            com.autoplanner.config.PlannerConfig c2 = new com.autoplanner.config.PlannerConfig();
+            snake2d.util.file.FileGetter getter = new snake2d.util.file.FileGetter(tempPath);
+            c2.load(getter);
+            getter.close();
+
+            if (c2.getStyle() != com.autoplanner.config.PlannerConfig.LayoutStyle.BALANCED) throw new AssertionError("Style mismatch");
+            if (Math.abs(c2.getTargetEfficiency() - 1.2) > 1e-4) throw new AssertionError("Efficiency mismatch");
+            if (Math.abs(c2.getStorageRatio() - 0.15) > 1e-4) throw new AssertionError("Storage ratio mismatch");
+            if (!c2.isAutoStrutOnPlace()) throw new AssertionError("autoStrutOnPlace mismatch");
+            if (c2.isShowOverlay()) throw new AssertionError("showOverlay mismatch");
+            if (!"de".equals(c2.getLanguage())) throw new AssertionError("Language mismatch");
+
+            // Test V1 backward compatibility
+            putter = new snake2d.util.file.FilePutter(tempPath, 512);
+            putter.i(0x53595850);
+            putter.i(1);
+            putter.i(com.autoplanner.config.PlannerConfig.LayoutStyle.COMPACT.ordinal());
+            putter.d(1.0);
+            putter.d(0.05);
+            putter.bool(false);
+            putter.bool(true);
+            putter.save();
+
+            com.autoplanner.config.PlannerConfig c3 = new com.autoplanner.config.PlannerConfig();
+            getter = new snake2d.util.file.FileGetter(tempPath);
+            c3.load(getter);
+            getter.close();
+
+            if (c3.getStyle() != com.autoplanner.config.PlannerConfig.LayoutStyle.COMPACT) throw new AssertionError("V1 style mismatch");
+            if (!"en".equals(c3.getLanguage())) throw new AssertionError("V1 default language should be en");
+        } finally {
+            java.nio.file.Files.deleteIfExists(tempPath);
+        }
+    }
+
 
     private static void setupSyntheticRoom(RoomGridSnapshot snap, int w, int h) throws Exception {
         snap.clear();
@@ -256,3 +316,4 @@ public class SanityTest {
         countField.setInt(snap, count);
     }
 }
+

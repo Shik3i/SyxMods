@@ -56,7 +56,9 @@ public final class ConstructionModule implements ArchitectModule {
     private static Method jobBuildConstructMethod;
     private static Field jobsProgressField;
     private static Field jobsWantsResField;
-    private static boolean reflectionFailed = false;
+    private static boolean roomReflectionFailed = false;
+    private static boolean outsideJobsReflectionFailed = false;
+    private static boolean janitorReflectionFailed = false;
 
     @Override
     public void init() {
@@ -146,7 +148,7 @@ public final class ConstructionModule implements ArchitectModule {
      * Budgeted row slice scan for outside jobs (roads, walls, ceilings, fortifications).
      */
     private void processOutsideJobsSlice(boolean fastSpeed, int width, int startY, int endY) {
-        if (reflectionFailed || SETT.JOBS() == null || SETT.JOBS().getter == null) {
+        if (outsideJobsReflectionFailed || SETT.JOBS() == null || SETT.JOBS().getter == null) {
             return;
         }
 
@@ -183,12 +185,15 @@ public final class ConstructionModule implements ArchitectModule {
                 }
             }
         } catch (Throwable t) {
-            handleReflectionError("OutsideJobs", t);
+            if (!outsideJobsReflectionFailed) {
+                outsideJobsReflectionFailed = true;
+                System.err.println("[SyxArchitect] Reflection disabled for OutsideJobs: " + t.getMessage());
+            }
         }
     }
 
     private void completeJobBuild(JobBuild job, int x, int y) {
-        if (reflectionFailed) return;
+        if (outsideJobsReflectionFailed) return;
         try {
             if (jobBuildConstructMethod == null) {
                 jobBuildConstructMethod = JobBuild.class.getDeclaredMethod("construct", int.class, int.class);
@@ -205,17 +210,22 @@ public final class ConstructionModule implements ArchitectModule {
                 GAME.player().res().inc(res, RTYPE.CONSTRUCTION, amount);
             }
         } catch (Throwable t) {
-            handleReflectionError("JobBuild.construct", t);
+            if (!outsideJobsReflectionFailed) {
+                outsideJobsReflectionFailed = true;
+                System.err.println("[SyxArchitect] Reflection disabled for JobBuild.construct: " + t.getMessage());
+            }
         }
     }
 
     private void fulfillTileResources(Room room, int x, int y) {
-        if (reflectionFailed) return;
+        if (outsideJobsReflectionFailed) return;
         try {
             if (jobFinsihMethod == null) {
                 Class<?> clazz = room.getClass();
                 jobFinsihMethod = clazz.getMethod("jobFinsih", int.class, int.class, RESOURCE.class, int.class);
+                jobFinsihMethod.setAccessible(true);
                 totalResourcesNeededMethod = clazz.getMethod("totalResourcesNeeded", int.class, int.class);
+                totalResourcesNeededMethod.setAccessible(true);
             }
             int needed = (int) totalResourcesNeededMethod.invoke(room, x, y);
             if (needed > 0 && room.constructor() != null) {
@@ -229,7 +239,10 @@ public final class ConstructionModule implements ArchitectModule {
                 }
             }
         } catch (Throwable t) {
-            handleReflectionError("Room.fulfillTileResources", t);
+            if (!roomReflectionFailed) {
+                roomReflectionFailed = true;
+                System.err.println("[SyxArchitect] Reflection disabled for Room.fulfillTileResources: " + t.getMessage());
+            }
         }
     }
 
@@ -237,7 +250,7 @@ public final class ConstructionModule implements ArchitectModule {
      * Refills janitor room maintenance reserves so janitors repair buildings without consuming player supplies.
      */
     private void keepJanitorSuppliesFull() {
-        if (reflectionFailed || SETT.ROOMS() == null) return;
+        if (janitorReflectionFailed || SETT.ROOMS() == null) return;
         try {
             ROOM_JANITOR janitorBlueprint = SETT.ROOMS().JANITOR;
             if (janitorBlueprint == null) return;
@@ -255,7 +268,9 @@ public final class ConstructionModule implements ArchitectModule {
                 if (bits != null) {
                     if (resAmMethod == null) {
                         resAmMethod = bits.getClass().getMethod("resAm", RESOURCE.class);
+                        resAmMethod.setAccessible(true);
                         resIncMethod = bits.getClass().getMethod("resInc", ins.getClass(), RESOURCE.class, int.class);
+                        resIncMethod.setAccessible(true);
                     }
                     for (int r = 0; r < RESOURCES.ALL().size(); r++) {
                         RESOURCE res = RESOURCES.ALL().get(r);
@@ -267,16 +282,13 @@ public final class ConstructionModule implements ArchitectModule {
                 }
             }
         } catch (Throwable t) {
-            handleReflectionError("Janitor.bits", t);
+            if (!janitorReflectionFailed) {
+                janitorReflectionFailed = true;
+                System.err.println("[SyxArchitect] Reflection disabled for Janitor.bits: " + t.getMessage());
+            }
         }
     }
 
-    private void handleReflectionError(String context, Throwable t) {
-        if (!reflectionFailed) {
-            reflectionFailed = true;
-            System.err.println("[SyxArchitect] Reflection disabled in ConstructionModule (" + context + "): " + t.getMessage());
-        }
-    }
 
     /**
      * Instantly finishes all ongoing construction sites settlement-wide
@@ -306,7 +318,7 @@ public final class ConstructionModule implements ArchitectModule {
         }
 
         // 2. Outside jobs (Roads, Floors, Walls, Ceilings, Fortifications)
-        if (!reflectionFailed && SETT.JOBS() != null && SETT.JOBS().getter != null) {
+        if (!outsideJobsReflectionFailed && SETT.JOBS() != null && SETT.JOBS().getter != null) {
             for (int y = 0; y < height; y++) {
                 for (int x = 0; x < width; x++) {
                     if (SETT.JOBS().getter.is(x, y)) {

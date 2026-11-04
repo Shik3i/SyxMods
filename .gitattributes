@@ -1,0 +1,25 @@
+# Auto-detect text files and normalize line endings to LF
+* text=auto eol=lf
+
+# Explicit text files
+*.java text eol=lf
+*.gradle text eol=lf
+*.properties text eol=lf
+*.txt text eol=lf
+*.md text eol=lf
+*.json text eol=lf
+*.xml text eol=lf
+
+# Windows command scripts
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Shell scripts
+*.sh text eol=lf
+gradlew text eol=lf
+
+# Binary files
+*.jar binary
+*.png binary
+*.ico binary
+*.bin binary

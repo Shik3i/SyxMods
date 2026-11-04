@@ -13,8 +13,13 @@ Both mods target Java 16 bytecode (`release = 16`), use the native `snake2d` / `
 
 ```text
 SyxMods/
+├── docs/                  # Engine API specifications and Steam Workshop texts
+│   ├── API_DISCOVERY.md
+│   ├── ROOM_FURNISHER_API.md
+│   ├── STEAM_WORKSHOP_ARCHITECT.txt
+│   └── STEAM_WORKSHOP_AUTOPLANNER.txt
 ├── SyxAutoBuild/          # Syx Auto-Planner mod source, tests, and V71 metadata
-├── CreativeSyx/           # Syx Architect mod source, tests, docs, and V71 metadata
+├── CreativeSyx/           # Syx Architect mod source, tests, and V71 metadata
 ├── build.gradle           # Shared Java 16 toolchain configuration and master deployAll task
 └── settings.gradle        # Multi-project definition (:SyxAutoBuild, :CreativeSyx)
 ```
@@ -41,6 +46,16 @@ Provides a native configuration modal accessible via `F10` or the `CREATIVE` but
 - **Knowledge Tiers**: Vanilla, High-Watermark Lock (prevents tech point loss when laboratories are understaffed), or Omniscience (+1,000,000 innovation points via an additive `BoosterImp`).
 - **Logistics & Economy**: Automated crate replenishment (raw materials or all assigned warehouse crates at ~80% capacity), infinite Denari treasury buffer, and food spoilage toggle.
 - **World & Population**: On-demand immigrant spawning per species, raid immunity, battlefield morale auto-win, anti-aging, daylight/weather lock, and map-wide soil moisture control.
+
+---
+
+## Documentation
+
+Comprehensive technical documentation and Steam Workshop descriptions are located in the [`docs/`](docs/) directory:
+- [API Discovery & Internal Architecture](docs/API_DISCOVERY.md): Songs of Syx v0.71.44 mod loading, package-private internals, reflection hooks, and booster compound mechanics.
+- [Room Furnisher & Structural Support API](docs/ROOM_FURNISHER_API.md): Room placement mechanics, 16-ray ceiling support physics, and furnisher group classification.
+- [Steam Workshop - Syx Architect](docs/STEAM_WORKSHOP_ARCHITECT.txt): Complete Steam Workshop presentation in Steam formatting.
+- [Steam Workshop - Syx Auto-Planner](docs/STEAM_WORKSHOP_AUTOPLANNER.txt): Complete Steam Workshop presentation in Steam formatting.
 
 ---
 
@@ -86,7 +101,7 @@ You can also build or deploy a single project:
 
 1. Start **Songs of Syx** and enable **Syx Auto-Planner** and/or **Syx Architect** in the launcher's Mods menu.
 2. Load a savegame or start a new settlement.
-3. Use the `AUTO` and `CREATIVE` buttons in the top-left HUD bar (or press `F10` for Syx Architect). Both mods support switching between English and German at runtime.
+3. Use the `AUTO` and `CREATIVE` buttons in the top-left HUD bar (or press `F10` for Syx Architect, `F9` for Syx Auto-Planner). Both mods support switching between English and German at runtime.
 
 ---
 

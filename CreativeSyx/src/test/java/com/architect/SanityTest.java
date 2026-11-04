@@ -130,7 +130,17 @@ public class SanityTest {
             System.err.println("[FAIL] Check 8: Omniscience booster error: " + t.getMessage());
             t.printStackTrace();
             failed++;
+        }        // Check 9: ConstructionModule Package-Private Reflection Verification
+        try {
+            testConstructionReflection();
+            System.out.println("[PASS] Check 9: ConstructionModule reflection handles resolved with setAccessible(true).");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] Check 9: ConstructionModule reflection error: " + t.getMessage());
+            t.printStackTrace();
+            failed++;
         }
+
 
         System.out.println("================================================================================");
         System.out.println("INTEGRATION TEST RESULTS: " + passed + " passed, " + failed + " failed.");
@@ -290,6 +300,7 @@ public class SanityTest {
             throw new AssertionError("ArchitectScript does not implement script.SCRIPT interface!");
         }
         SCRIPT script = (SCRIPT) scriptObj;
+        if (!script.forceInit()) { throw new AssertionError("ArchitectScript.forceInit() must be true!"); }
         CharSequence name = script.name();
         CharSequence desc = script.desc();
         if (name == null || name.length() == 0) {
@@ -418,6 +429,22 @@ public class SanityTest {
             throw new AssertionError("Mismatch in " + field + ": expected=" + expected + ", actual=" + actual);
         }
     }
+    private static void testConstructionReflection() throws Exception {
+        Class<?> ciClass = Class.forName("settlement.room.main.construction.ConstructionInstance");
+        java.lang.reflect.Method m1 = ciClass.getMethod("jobFinsih", int.class, int.class, init.resources.RESOURCE.class, int.class);
+        m1.setAccessible(true);
+        java.lang.reflect.Method m2 = ciClass.getMethod("totalResourcesNeeded", int.class, int.class);
+        m2.setAccessible(true);
+
+        Class<?> bitsClass = Class.forName("settlement.room.infra.janitor.BITS");
+        java.lang.reflect.Method m3 = bitsClass.getMethod("resAm", init.resources.RESOURCE.class);
+        m3.setAccessible(true);
+
+        Class<?> jiClass = Class.forName("settlement.room.infra.janitor.JanitorInstance");
+        java.lang.reflect.Method m4 = bitsClass.getMethod("resInc", jiClass, init.resources.RESOURCE.class, int.class);
+        m4.setAccessible(true);
+    }
+
 
     private static void assertEquals(String field, double expected, double actual, double delta) {
         if (Math.abs(expected - actual) > delta) {
@@ -425,3 +452,4 @@ public class SanityTest {
         }
     }
 }
+

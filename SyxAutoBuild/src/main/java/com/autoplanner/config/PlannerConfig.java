@@ -1,6 +1,8 @@
 package com.autoplanner.config;
 
 import java.io.IOException;
+
+import com.autoplanner.util.I18n;
 import snake2d.util.file.FileGetter;
 import snake2d.util.file.FilePutter;
 
@@ -11,7 +13,7 @@ import snake2d.util.file.FilePutter;
 public final class PlannerConfig {
 
     private static final int MAGIC = 0x53595850; // "SYXP"
-    private static final int VERSION = 1;
+    private static final int VERSION = 2;
 
     public enum LayoutStyle {
         COMPACT,
@@ -27,6 +29,7 @@ public final class PlannerConfig {
     private double storageRatio = 0.05;     // 5% storage allowance
     private boolean autoStrutOnPlace = false;
     private boolean showOverlay = true;
+    private String language = "en";
 
     public LayoutStyle getStyle() {
         return style;
@@ -84,6 +87,8 @@ public final class PlannerConfig {
         this.style = LayoutStyle.COMPACT;
         this.targetEfficiency = 1.0;
         this.storageRatio = 0.05;
+        this.language = "en";
+        I18n.setLanguage(I18n.Language.EN);
     }
 
     public boolean isAutoStrutOnPlace() {
@@ -106,6 +111,17 @@ public final class PlannerConfig {
         this.showOverlay = !this.showOverlay;
     }
 
+    public String getLanguage() {
+        return language;
+    }
+
+    public void setLanguage(String lang) {
+        if (lang != null) {
+            this.language = lang;
+            I18n.setLanguage(I18n.Language.fromCode(lang));
+        }
+    }
+
     public void save(FilePutter file) {
         file.i(MAGIC);
         file.i(VERSION);
@@ -114,6 +130,7 @@ public final class PlannerConfig {
         file.d(storageRatio);
         file.bool(autoStrutOnPlace);
         file.bool(showOverlay);
+        file.chars(language != null ? language : "en");
     }
 
     public void load(FileGetter file) throws IOException {
@@ -132,6 +149,11 @@ public final class PlannerConfig {
             this.storageRatio = file.d();
             this.autoStrutOnPlace = file.bool();
             this.showOverlay = file.bool();
+
+            if (ver >= 2) {
+                this.language = file.chars();
+                I18n.setLanguage(I18n.Language.fromCode(language));
+            }
         }
     }
 }

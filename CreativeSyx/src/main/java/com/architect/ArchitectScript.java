@@ -60,7 +60,7 @@ public final class ArchitectScript implements SCRIPT {
 
     @Override
     public boolean forceInit() {
-        return false;
+        return true;
     }
 
     public static ArchitectInstance getCurrentInstance() {

@@ -1,0 +1,41 @@
+[h1]Syx Auto-Planner - Intelligent Room Builder & Furnisher[/h1]
+
+[b]Syx Auto-Planner[/b] is an intelligent room planning and layout assistant for [i]Songs of Syx[/i]. It integrates directly with the native Room Editor toolbar to eliminate ceiling collapses and optimize room furnishing in a single click.
+
+[h2]⚡ Highlights & Features[/h2]
+
+[b]1. Auto-Strut (1-Click Ceiling Support Solver):[/b]
+[list]
+[*] Calculates full 16-ray structural support using the game's exact ceiling physics ([i]TileRayTracer[/i]).
+[*] Scores candidate pillar locations by marginal support gain.
+[*] Multi-pass engine synchronization verifies that [b]0 yellow tiles remain[/b] after placement.
+[*] Respects door clearance (leaves door threshold open) and preserves room floor connectivity via topological simple-point verification.
+[/list]
+
+[b]2. Auto-Furnish (Interleaved Density & Efficiency Packing):[/b]
+[list]
+[*] Automatically places workstations, dormitory beds, or storage crates using effective output and spatial density heuristics ([i]multiplierStats[/i] weighted by area).
+[*] Interleaves auxiliary efficiency modules along walls and pillars to strictly hit the configured target room efficiency (100%).
+[*] Features automatic workstation backtracking if initial placement leaves insufficient room for required auxiliary modules.
+[*] 5x5 / 7x7 stockpile optimization packs maximum crate volume with minimal wasted corridors.
+[/list]
+
+[b]3. Zero-GC Reachability Flood-Fill:[/b]
+[list]
+[*] Array-based BFS flood-fill verifies that all workstation interaction tiles are reachable from room doorways.
+[*] Includes deterministic virtual doorway fallback if you plan rooms before cutting doorways into walls.
+[*] Enforces [i]WillBlockRoom[/i] floor integrity so no isolated 1x1 floor pockets are trapped behind items.
+[/list]
+
+[b]4. Quick-Build (1-Click Combo):[/b]
+[list]
+[*] Executes Auto-Strut followed immediately by Auto-Furnish with a single click.
+[/list]
+
+[h2]🎮 In-Game Controls & Hotkey[/h2]
+[list]
+[*] Drag your room outline using the native room placement tool.
+[*] The compact Auto-Planner box docks directly under the Room Editor panel.
+[*] Press [b][F9][/b] or click [b]'AUTO'[/b] in the top HUD bar to open settings (packing strategy, target efficiency, internal storage ratio, language).
+[*] Fully bilingual in [b]English[/b] and [b]Deutsch[/b].
+[/list]

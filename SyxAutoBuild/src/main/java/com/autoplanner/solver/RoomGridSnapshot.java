@@ -40,7 +40,7 @@ public final class RoomGridSnapshot implements AREA {
     private int roomTileCount;
 
     // Door cache
-    public static final int MAX_DOORS = 64;
+    public static final int MAX_DOORS = 256;
     public final int[] doorX = new int[MAX_DOORS];
     public final int[] doorY = new int[MAX_DOORS];
     public int doorCount = 0;
