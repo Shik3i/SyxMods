@@ -10,6 +10,11 @@ java {
     targetCompatibility = JavaVersion.VERSION_16
 }
 
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 16
+}
+
 // Locate Songs of Syx JAR
 def defaultSteamPath = "C:/Program Files (x86)/Steam/steamapps/common/Songs of Syx/SongsOfSyx.jar"
 def songsJarPath = project.findProperty("songsJar") ?: defaultSteamPath
@@ -48,9 +53,10 @@ jar {
 }
 
 tasks.register('sanityCheck', JavaExec) {
-    dependsOn tasks.jar
+    dependsOn tasks.jar, tasks.testClasses
     group = "verification"
     description = "Executes automated localization completeness and state serialization sanity tests"
+    workingDir = projectDir
     classpath = sourceSets.test.runtimeClasspath + files(songsJarPath)
     mainClass = "com.architect.SanityTest"
 }
@@ -99,12 +105,7 @@ tasks.register("deployMod", Copy) {
         def v71Dir = file("${targetModDir}/V71")
         v71Dir.mkdirs()
 
-        def modInfoText = """NAME: "Syx Architect",
-DESC: "Creative, Schönbau & Sandbox Suite for Songs of Syx",
-VERSION: "1.0.0",
-AUTHOR: "Architect",
-GAMEVERSION: "71",
-"""
+        def modInfoText = file("${projectDir}/mod-files/_Info.txt").getText("UTF-8")
         // Ensure NTFS does not preserve lowercase casing: delete old files first, then write exact _Info.txt
         def rootInfo = file("${targetModDir}/_Info.txt")
         if (rootInfo.exists()) {

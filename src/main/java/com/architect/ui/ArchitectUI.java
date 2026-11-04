@@ -59,7 +59,7 @@ public final class ArchitectUI {
     }
 
     public static boolean isOpen() {
-        return isOpen;
+        return isOpen && VIEW.inters() != null && VIEW.inters().section != null && VIEW.inters().section.isActivated();
     }
 
     public static void close() {
@@ -93,6 +93,8 @@ public final class ArchitectUI {
             }
         };
 
+        final GPanel[] panelRef = new GPanel[1];
+
         GuiSection root = new GuiSection() {
             private boolean isDragging = false;
             private int dragAnchorX = 0;
@@ -120,6 +122,10 @@ public final class ArchitectUI {
                                 windowX = targetX;
                                 windowY = targetY;
                                 body().moveX1Y1(targetX, targetY);
+                                if (panelRef[0] != null) {
+                                    // Compensate vanilla GPanel$1.moveY1 bug (missing +8 closeAction offset)
+                                    panelRef[0].inner().incrY(8);
+                                }
                             }
                         }
                     } else {
@@ -214,6 +220,7 @@ public final class ArchitectUI {
         GPanel panel = new GPanel(root.body()).setBig();
         panel.setTitle(I18n.get("ui.title"));
         panel.setCloseAction(closeAction);
+        panelRef[0] = panel;
 
         root.add(panel);
         root.moveLastToBack();
@@ -232,6 +239,8 @@ public final class ArchitectUI {
         }
 
         root.body().moveX1Y1(windowX, windowY);
+        // Compensate vanilla GPanel$1.moveY1 bug (missing +8 closeAction offset)
+        panel.inner().incrY(8);
         VIEW.inters().section.activate(root);
     }
 

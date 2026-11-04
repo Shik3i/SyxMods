@@ -9,9 +9,14 @@ import com.architect.util.I18n;
 
 import init.constant.C;
 import init.sprite.UI.UI;
+import snake2d.CORE;
+import snake2d.MButt;
+import snake2d.SPRITE_RENDERER;
+import snake2d.util.datatypes.COORDINATE;
 import snake2d.util.datatypes.DIR;
 import snake2d.util.gui.GuiSection;
 import snake2d.util.misc.ACTION;
+import snake2d.util.misc.CLAMP;
 import util.gui.misc.GButt;
 import util.gui.misc.GHeader;
 import util.gui.misc.GText;
@@ -21,9 +26,12 @@ import view.main.VIEW;
 
 /**
  * In-game bilingual tutorial and feature guide modal.
- * Spacious 840px wide native Songs of Syx layout with clean 2-column typography.
+ * Uses canonical Single-GuiSection-Pattern with GPanel, title-bar dragging, and multiline text wrapping.
  */
 public final class TutorialModal {
+
+    private static int modalX = -1;
+    private static int modalY = -1;
 
     private TutorialModal() {}
 
@@ -65,31 +73,61 @@ public final class TutorialModal {
             return;
         }
 
-        int width = 840;
-        int height = 580;
         int contentW = 770;
+        final GPanel[] panelRef = new GPanel[1];
 
-        GuiSection root = new GuiSection();
-        GPanel panel = new GPanel(width, height);
-        panel.setBig();
-        panel.setTitle(I18n.get("ui.title") + " - " + I18n.get("btn.tutorial"));
+        GuiSection modal = new GuiSection() {
+            private boolean isDragging = false;
+            private int dragAnchorX = 0;
+            private int dragAnchorY = 0;
+
+            @Override
+            public void render(SPRITE_RENDERER r, float ds) {
+                COORDINATE m = CORE.getInput().getMouse().getCoo();
+                if (m != null) {
+                    if (MButt.LEFT.isDown()) {
+                        if (!isDragging) {
+                            // Title bar drag region: top 40px excluding top-right [X] close button
+                            int titleY1 = body().y1();
+                            int titleY2 = body().y1() + 40;
+                            int closeX = body().x2() - 40;
+                            if (m.y() >= titleY1 && m.y() <= titleY2 && m.x() >= body().x1() && m.x() <= closeX) {
+                                isDragging = true;
+                                dragAnchorX = m.x() - body().x1();
+                                dragAnchorY = m.y() - body().y1();
+                            }
+                        } else {
+                            int targetX = CLAMP.i(m.x() - dragAnchorX, 10, Math.max(10, C.WIDTH() - body().width() - 10));
+                            int targetY = CLAMP.i(m.y() - dragAnchorY, 10, Math.max(10, C.HEIGHT() - body().height() - 10));
+                            if (targetX != (int) body().x1() || targetY != (int) body().y1()) {
+                                modalX = targetX;
+                                modalY = targetY;
+                                body().moveX1Y1(targetX, targetY);
+                                if (panelRef[0] != null) {
+                                    // Compensate vanilla GPanel$1.moveY1 bug (missing +8 closeAction offset)
+                                    panelRef[0].inner().incrY(8);
+                                }
+                            }
+                        }
+                    } else {
+                        isDragging = false;
+                    }
+                }
+                super.render(r, ds);
+            }
+        };
 
         ACTION closeAction = new ACTION() {
             @Override
             public void exe() {
-                if (VIEW.inters() != null && VIEW.inters().section != null) {
-                    VIEW.inters().section.close();
-                }
+                ArchitectUI.close();
             }
         };
-        panel.setCloseAction(closeAction);
-
-        GuiSection content = new GuiSection();
 
         // Section Title
         GHeader header = new GHeader(I18n.get("mod.name") + " - " + I18n.get("mod.desc")).subify();
-        content.addDown(0, header);
-        content.addDown(6, GFrame.separator(contentW));
+        modal.add(header, 0, 0);
+        modal.addDown(6, GFrame.separator(contentW));
 
         // 2-Column Guide Content (377px each)
         int colW = (contentW - 16) / 2;
@@ -109,9 +147,10 @@ public final class TutorialModal {
             head.lablify();
             leftCol.addDown(i == 0 ? 0 : 8, head);
 
-            GText desc = new GText(UI.FONT().S, I18n.get(key + ".desc"));
-            desc.normalify();
+            GText desc = new GText(UI.FONT().S, I18n.get(key + ".desc")).normalify();
+            desc.setMultipleLines(true);
             desc.setMaxWidth(colW - 8);
+            desc.adjustWidth();
             leftCol.addDown(2, desc);
         }
         grid.add(leftCol);
@@ -130,15 +169,16 @@ public final class TutorialModal {
             head.lablify();
             rightCol.addDown(i == 0 ? 0 : 8, head);
 
-            GText desc = new GText(UI.FONT().S, I18n.get(key + ".desc"));
-            desc.normalify();
+            GText desc = new GText(UI.FONT().S, I18n.get(key + ".desc")).normalify();
+            desc.setMultipleLines(true);
             desc.setMaxWidth(colW - 8);
+            desc.adjustWidth();
             rightCol.addDown(2, desc);
         }
         grid.addRight(16, rightCol);
 
-        content.addDown(8, grid);
-        content.addDown(12, GFrame.separator(contentW));
+        modal.addDown(8, grid);
+        modal.addDown(12, GFrame.separator(contentW));
 
         // Close button at bottom
         GText btnCloseText = new GText(UI.FONT().M, I18n.get("btn.close"));
@@ -146,21 +186,39 @@ public final class TutorialModal {
         btnClose.setDim(contentW, 30);
         btnClose.align(DIR.C);
         btnClose.hoverTitleSet(I18n.get("btn.close"));
-        btnClose.hoverInfoSet("Schliesst diese Modul-Uebersicht.");
+        btnClose.hoverInfoSet(I18n.getLanguage() == I18n.Language.DE
+            ? "Schliesst diese Modul-Uebersicht."
+            : "Closes this module manual.");
         btnClose.clickActionSet(closeAction);
-        content.addDown(6, btnClose);
+        modal.addDown(6, btnClose);
 
-        root.add(panel);
-        // Symmetrically center content inside visible stone frame
-        int contentX = panel.body().x1() + 424 - (contentW / 2); // panel.body().x1() + 39
-        int contentY = panel.body().y1() + 24;
-        content.body().moveX1Y1(contentX, contentY);
-        root.add(content);
+        modal.pad(20, 16);
 
-        if (C.DIM() != null) {
-            root.body().centerIn(C.DIM());
+        // Canonical Single-GuiSection-Pattern with GPanel
+        GPanel panel = new GPanel(modal.body()).setBig();
+        panel.setTitle(I18n.get("ui.title") + " - " + I18n.get("btn.tutorial"));
+        panel.setCloseAction(closeAction);
+        panelRef[0] = panel;
+
+        modal.add(panel);
+        modal.moveLastToBack();
+
+        int totalW = modal.body().width();
+        int totalH = modal.body().height();
+
+        if (modalX < 0 || modalY < 0) {
+            modalX = (C.DIM() != null) ? (C.WIDTH() - totalW) / 2 : 100;
+            modalY = (C.DIM() != null) ? (C.HEIGHT() - totalH) / 2 : 100;
         }
 
-        VIEW.inters().section.activate(root);
+        if (C.DIM() != null) {
+            modalX = CLAMP.i(modalX, 10, Math.max(10, C.WIDTH() - totalW - 10));
+            modalY = CLAMP.i(modalY, 10, Math.max(10, C.HEIGHT() - totalH - 10));
+        }
+
+        modal.body().moveX1Y1(modalX, modalY);
+        // Compensate vanilla GPanel$1.moveY1 bug (missing +8 closeAction offset)
+        panel.inner().incrY(8);
+        VIEW.inters().section.activate(modal);
     }
 }
