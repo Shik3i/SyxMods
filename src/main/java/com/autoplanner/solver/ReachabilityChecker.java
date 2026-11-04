@@ -250,8 +250,13 @@ public final class ReachabilityChecker {
         return reachable;
     }
 
+    private static final int[] DX8 = { 0, 1, 1, 1, 0, -1, -1, -1 };
+    private static final int[] DY8 = { -1, -1, 0, 1, 1, 1, 0, -1 };
+
     /**
      * Checks if placing a 1x1 strut (pillar) at (tx, ty) maintains room connectivity.
+     * Uses digital topology simple-point analysis (Euler/Yokoi connectivity number).
+     * O(1) complexity, Zero-GC, and 100% immune to room size or doorway counts.
      */
     public boolean canPlaceStrutWithoutBlocking(RoomGridSnapshot snapshot, int tx, int ty) {
         if (snapshot == null) {
@@ -273,100 +278,43 @@ public final class ReachabilityChecker {
                     return false;
                 }
             }
-        } else if (snapshot.hasVirtualDoor) {
+        }
+        if (snapshot.hasVirtualDoor) {
             int dist = Math.abs(tx - snapshot.virtualDoorX) + Math.abs(ty - snapshot.virtualDoorY);
             if (dist <= 1) {
                 return false;
             }
-        }
-
-        // Temporarily punch strut
-        snapshot.set(tx, ty, RoomGridSnapshot.TILE_STRUT);
-
-        // Run flood fill and count reachable room floor tiles
-        int stamp = nextStamp();
-        int head = 0;
-        int tail = 0;
-
-        int originX = snapshot.getOriginX();
-        int originY = snapshot.getOriginY();
-        int width = snapshot.getWidth();
-        int height = snapshot.getHeight();
-
-        int reachableFloors = 0;
-
-        if (snapshot.doorCount > 0) {
-            for (int i = 0; i < snapshot.doorCount; i++) {
-                int dx = snapshot.doorX[i];
-                int dy = snapshot.doorY[i];
-                int lx = dx - originX;
-                int ly = dy - originY;
-                if (lx >= 0 && lx < width && ly >= 0 && ly < height) {
-                    visitedStamp[ly * width + lx] = stamp;
-                }
-                qx[tail] = dx;
-                qy[tail] = dy;
-                tail = (tail + 1) % MAX_QUEUE_SIZE;
-            }
-        } else {
-            // Seed with any arbitrary floor tile that is not (tx, ty)
-            int seedX = -1;
-            int seedY = -1;
-            for (int ly = 0; ly < height; ly++) {
-                for (int lx = 0; lx < width; lx++) {
-                    int fx = originX + lx;
-                    int fy = originY + ly;
-                    if ((fx != tx || fy != ty) && snapshot.get(fx, fy) == RoomGridSnapshot.TILE_ROOM_FLOOR) {
-                        seedX = fx;
-                        seedY = fy;
-                        break;
-                    }
-                }
-                if (seedX != -1) break;
-            }
-
-            if (seedX != -1) {
-                int lx = seedX - originX;
-                int ly = seedY - originY;
-                visitedStamp[ly * width + lx] = stamp;
-                qx[tail] = seedX;
-                qy[tail] = seedY;
-                tail = (tail + 1) % MAX_QUEUE_SIZE;
-                reachableFloors = 1;
+            int idist = Math.abs(tx - snapshot.virtualInteriorX) + Math.abs(ty - snapshot.virtualInteriorY);
+            if (idist == 0) {
+                return false;
             }
         }
 
-        while (head != tail) {
-            int cx = qx[head];
-            int cy = qy[head];
-            head = (head + 1) % MAX_QUEUE_SIZE;
-
-            for (DIR d : DIR.ORTHO) {
-                int nx = cx + d.x();
-                int ny = cy + d.y();
-                int nlx = nx - originX;
-                int nly = ny - originY;
-
-                if (nlx >= 0 && nlx < width && nly >= 0 && nly < height) {
-                    int idx = nly * width + nlx;
-                    if (visitedStamp[idx] != stamp && snapshot.isWalkable(nx, ny)) {
-                        visitedStamp[idx] = stamp;
-                        if (snapshot.get(nx, ny) == RoomGridSnapshot.TILE_ROOM_FLOOR) {
-                            reachableFloors++;
-                        }
-                        qx[tail] = nx;
-                        qy[tail] = ny;
-                        tail = (tail + 1) % MAX_QUEUE_SIZE;
-                    }
-                }
+        // Digital topology simple point check:
+        // Examine the 8-neighborhood around (tx, ty) in circular order.
+        int mask = 0;
+        for (int i = 0; i < 8; i++) {
+            if (snapshot.isWalkable(tx + DX8[i], ty + DY8[i])) {
+                mask |= (1 << i);
             }
         }
 
-        // Rollback
-        snapshot.set(tx, ty, RoomGridSnapshot.TILE_ROOM_FLOOR);
+        // If no walkable neighbors around, it's isolated
+        if (mask == 0) {
+            return false;
+        }
 
-        // All remaining room floor tiles (total - 1 for the strut itself) must still be reached
-        int expectedReachable = snapshot.getRoomTileCount() - 1;
-        return reachableFloors >= expectedReachable;
+        // Count circular 0 -> 1 transitions
+        int transitions = 0;
+        for (int i = 0; i < 8; i++) {
+            int curr = (mask >> i) & 1;
+            int next = (mask >> ((i + 1) % 8)) & 1;
+            if (curr == 0 && next == 1) {
+                transitions++;
+            }
+        }
+
+        // transitions <= 1 guarantees that surrounding walkable floor remains in a single connected component!
+        return transitions <= 1;
     }
 }

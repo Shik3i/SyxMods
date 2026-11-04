@@ -61,7 +61,7 @@ public final class AutoStrutSolver {
         strutCount = 0;
 
         // 1. Initial scan of unsupported (yellow) tiles
-        scanYellowTiles(placer);
+        scanYellowTiles();
         int initialYellow = yellowCount;
 
         if (yellowCount == 0) {
@@ -69,10 +69,10 @@ public final class AutoStrutSolver {
         }
 
         // 2. Iteratively select best strut positions until 0 yellow tiles remain
-        int maxIterations = Math.min(MAX_STRUTS, Math.max(1, snapshot.getRoomTileCount() / 10 + 5));
+        int maxIterations = Math.min(MAX_STRUTS, Math.max(20, snapshot.getRoomTileCount() / 8 + 10));
         for (int iter = 0; iter < maxIterations && yellowCount > 0; iter++) {
-            if (System.currentTimeMillis() - start > 400) {
-                break; // 400ms time-budget guard
+            if (System.currentTimeMillis() - start > 1200) {
+                break; // 1200ms time-budget guard
             }
 
             int bestX = -1;
@@ -91,12 +91,7 @@ public final class AutoStrutSolver {
                         continue;
                     }
 
-                    // Spatial Pruning: Candidate MUST be within raytracer reach (<= 4 tiles) of at least one yellow tile
-                    if (!hasYellowNearby(cx, cy, 4)) {
-                        continue;
-                    }
-
-                    // Candidate must maintain floor connectivity
+                    // Candidate must maintain floor connectivity (digital topology simple-point test)
                     if (!reachability.canPlaceStrutWithoutBlocking(snapshot, cx, cy)) {
                         continue;
                     }
@@ -128,8 +123,8 @@ public final class AutoStrutSolver {
             strutY[strutCount] = bestY;
             strutCount++;
 
-            // Rescan remaining yellow tiles
-            scanYellowTiles(placer);
+            // Rescan remaining yellow tiles using updated snapshot
+            scanYellowTiles();
         }
 
         // 3. Commit placed struts to the actual game room draft
@@ -148,7 +143,7 @@ public final class AutoStrutSolver {
         return new Result(strutCount, initialYellow, yellowCount, elapsed);
     }
 
-    private void scanYellowTiles(RoomPlacer placer) {
+    private void scanYellowTiles() {
         yellowCount = 0;
         int x1 = snapshot.getOriginX();
         int y1 = snapshot.getOriginY();
@@ -158,21 +153,8 @@ public final class AutoStrutSolver {
         for (int ty = y1; ty < y2; ty++) {
             for (int tx = x1; tx < x2; tx++) {
                 if (snapshot.get(tx, ty) == RoomGridSnapshot.TILE_ROOM_FLOOR) {
-                    boolean isYellow = false;
-                    try {
-                        if (settlement.room.main.construction.ConstructionData.dExpensive.is(tx, ty, 1)) {
-                            isYellow = true;
-                        }
-                    } catch (Throwable ignored) {}
-
-                    if (!isYellow) {
-                        double sup = computeSupport(tx, ty);
-                        if (sup < 1.0) {
-                            isYellow = true;
-                        }
-                    }
-
-                    if (isYellow) {
+                    double sup = computeSupport(tx, ty);
+                    if (sup < 1.0) {
                         if (yellowCount < MAX_TRACKED_YELLOW) {
                             yellowX[yellowCount] = tx;
                             yellowY[yellowCount] = ty;
