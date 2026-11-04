@@ -110,6 +110,17 @@ public class SanityTest {
             failed++;
         }
 
+        // Check 7: Launcher ModInfo Engine Loader Test
+        try {
+            testLauncherModInfoLoader();
+            System.out.println("[PASS] Check 7: Engine ModInfo loader verified (mod fully recognized by game launcher).");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] Check 7: Launcher ModInfo error: " + t.getMessage());
+            t.printStackTrace();
+            failed++;
+        }
+
         System.out.println("================================================================================");
         System.out.println("INTEGRATION TEST RESULTS: " + passed + " passed, " + failed + " failed.");
         System.out.println("================================================================================");
@@ -303,10 +314,23 @@ public class SanityTest {
     private static void testModInfoSyntax() throws Exception {
         File infoFile = new File("mod-files/_Info.txt");
         if (!infoFile.exists()) {
-            infoFile = new File("mod-files/_info.txt");
-        }
-        if (!infoFile.exists()) {
             throw new AssertionError("_Info.txt does not exist in mod-files!");
+        }
+
+        // Verify case sensitivity: directory listing must contain exact "_Info.txt" (not lowercase "_info.txt")
+        File parent = infoFile.getParentFile();
+        boolean exactCaseFound = false;
+        String[] files = parent.list();
+        if (files != null) {
+            for (String f : files) {
+                if (f.equals("_Info.txt")) {
+                    exactCaseFound = true;
+                    break;
+                }
+            }
+        }
+        if (!exactCaseFound) {
+            throw new AssertionError("File casing mismatch: _Info.txt must have capital 'I' on disk to satisfy Songs of Syx Util.check!");
         }
 
         Json json = new Json(infoFile.toPath());
@@ -326,6 +350,16 @@ public class SanityTest {
         assertEquals("VERSION", "1.0.0", version);
         assertEquals("AUTHOR", "Architect", author);
         assertEquals("GAMEVERSION", "71", gameVersion);
+    }
+
+    private static void testLauncherModInfoLoader() throws Exception {
+        try {
+            init.paths.ModInfo info = new init.paths.ModInfo("SyxArchitect");
+            assertEquals("ModInfo name", "Syx Architect", info.name);
+            assertEquals("ModInfo majorVersion", 71, info.majorVersion);
+        } catch (init.paths.ModInfo.ModInfoException e) {
+            throw new AssertionError("Launcher ModInfo constructor rejected SyxArchitect: " + e.getMessage(), e);
+        }
     }
 
     private static void assertEquals(String field, Object expected, Object actual) {

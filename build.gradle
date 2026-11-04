@@ -105,11 +105,26 @@ VERSION: "1.0.0",
 AUTHOR: "Architect",
 GAMEVERSION: "71",
 """
-        // Ensure exact Snake2D metadata is written to both mod root and V71
-        file("${targetModDir}/_Info.txt").write(modInfoText, "UTF-8")
-        file("${targetModDir}/_info.txt").write(modInfoText, "UTF-8")
-        file("${v71Dir}/_Info.txt").write(modInfoText, "UTF-8")
-        file("${v71Dir}/_info.txt").write(modInfoText, "UTF-8")
+        // Ensure NTFS does not preserve lowercase casing: delete old files first, then write exact _Info.txt
+        def rootInfo = file("${targetModDir}/_Info.txt")
+        if (rootInfo.exists()) {
+            java.nio.file.Files.delete(rootInfo.toPath())
+        }
+        def rootInfoLower = file("${targetModDir}/_info.txt")
+        if (rootInfoLower.exists()) {
+            java.nio.file.Files.delete(rootInfoLower.toPath())
+        }
+        rootInfo.write(modInfoText, "UTF-8")
+
+        def v71Info = file("${v71Dir}/_Info.txt")
+        if (v71Info.exists()) {
+            java.nio.file.Files.delete(v71Info.toPath())
+        }
+        def v71InfoLower = file("${v71Dir}/_info.txt")
+        if (v71InfoLower.exists()) {
+            java.nio.file.Files.delete(v71InfoLower.toPath())
+        }
+        v71Info.write(modInfoText, "UTF-8")
 
         copy {
             from("mod-files") {
