@@ -1,5 +1,6 @@
 package com.autoplanner.ui;
 
+import java.lang.reflect.Field;
 import com.autoplanner.config.PlannerConfig;
 import com.autoplanner.config.PlannerConfig.LayoutStyle;
 import com.autoplanner.solver.AutoFurnishSolver;
@@ -31,6 +32,7 @@ import util.gui.misc.GHeader;
 import util.gui.misc.GText;
 import util.gui.panel.GPanel;
 import view.main.VIEW;
+import view.tool.ToolConfig;
 
 /**
  * 100% Native-Integrated Draggable Room Editor Box & Configuration Suite for Syx Auto-Planner.
@@ -50,12 +52,20 @@ public final class PlannerOverlayUI {
     // Toast Notification Bounds
     private final Rec toastBounds = new Rec();
 
-    // Draggable Box Coordinates
+    // Toolbar Docking & Drag Coordinates
     private int boxX = -1;
     private int boxY = -1;
+    private boolean isCustomPosition = false;
+    private double relX = 0.5;
+    private double relY = 0.5;
     private boolean isDragging = false;
     private int dragAnchorX = 0;
     private int dragAnchorY = 0;
+
+    // Reflection cache for reading native SFrame bounds
+    private Field cachedFrameField = null;
+    private Field cachedSectionField = null;
+    private boolean reflectionInitialized = false;
 
     // Native Toolbar Section (compact 2-row card with authentic GButt.ButtPanel buttons)
     private final ToolbarSection toolbarSection = new ToolbarSection();
@@ -69,13 +79,66 @@ public final class PlannerOverlayUI {
     }
 
     /**
-     * Initializes default start position at lower-mid-left, completely clear of top bars and room frame.
+     * Determines the exact bottom coordinate (y2) of the native room constructor panel,
+     * scaled automatically with C.SG across any resolution or aspect ratio.
      */
-    private void initDefaultPosition() {
-        int defaultX = Math.max(40, (int) (C.WIDTH() * 0.12));
-        int defaultY = Math.max(120, (int) (C.HEIGHT() * 0.42));
-        boxX = defaultX;
-        boxY = defaultY;
+    private int getNativePanelBottomY() {
+        if (!reflectionInitialized) {
+            try {
+                if (VIEW.s() != null && VIEW.s().tools != null) {
+                    ToolConfig tc = VIEW.s().tools.configCurrent();
+                    if (tc != null) {
+                        cachedFrameField = tc.getClass().getDeclaredField("frame");
+                        cachedFrameField.setAccessible(true);
+                        Object frame = cachedFrameField.get(tc);
+                        if (frame != null) {
+                            cachedSectionField = frame.getClass().getDeclaredField("section");
+                            cachedSectionField.setAccessible(true);
+                        }
+                    }
+                }
+            } catch (Throwable ignored) {
+            }
+            reflectionInitialized = true;
+        }
+
+        if (cachedFrameField != null && cachedSectionField != null && VIEW.s() != null && VIEW.s().tools != null) {
+            try {
+                ToolConfig tc = VIEW.s().tools.configCurrent();
+                if (tc != null) {
+                    Object frame = cachedFrameField.get(tc);
+                    if (frame != null) {
+                        Object sec = cachedSectionField.get(frame);
+                        if (sec instanceof GuiSection) {
+                            int y2 = ((GuiSection) sec).body().y2();
+                            if (y2 > 0) {
+                                return y2;
+                            }
+                        }
+                    }
+                }
+            } catch (Throwable ignored) {
+            }
+        }
+
+        // Robust fallback based on native SFrame height and C.SG scaling
+        return (int) (C.SG * 80 + C.SG * 230);
+    }
+
+    /**
+     * Updates toolbar position:
+     * - Default: Docked dynamically centered right beneath the native Room Editor panel.
+     * - Custom: Preserves user's dragged position, scaled proportionally with C.WIDTH / C.HEIGHT.
+     */
+    public void updatePosition() {
+        if (!isCustomPosition) {
+            int nativeBottomY = getNativePanelBottomY();
+            boxX = (C.WIDTH() - toolbarSection.body().width()) / 2;
+            boxY = nativeBottomY + (int) (14 * C.SG);
+        } else {
+            boxX = CLAMP.i((int) (relX * C.WIDTH()), 10, C.WIDTH() - toolbarSection.body().width() - 10);
+            boxY = CLAMP.i((int) (relY * C.HEIGHT()), 34, C.HEIGHT() - toolbarSection.body().height() - 10);
+        }
     }
 
     /**
@@ -86,12 +149,24 @@ public final class PlannerOverlayUI {
         cachedLanguage = I18n.getLanguage();
         toolbarSection.clear();
 
-        // --- Drag Header Bar ---
+        // --- Drag & Dock Header Bar ---
         GuiSection headerBar = new GuiSection();
         RENDEROBJ.Sprite dragIcon = new RENDEROBJ.Sprite(SPRITES.icons().m.openscroll);
         headerBar.add(dragIcon, 0, 0);
         GText titleText = new GText(UI.FONT().S, "Syx Auto-Planner").lablify();
         headerBar.addRightC(6, titleText);
+
+        // Snap / Re-Dock Button (Instantly snaps back centered beneath Room Editor)
+        GButt.ButtPanel btnSnap = new GButt.ButtPanel(SPRITES.icons().m.crossair) {
+            @Override
+            protected void clickA() {
+                isCustomPosition = false;
+                updatePosition();
+            }
+        };
+        btnSnap.hoverTitleSet(I18n.get("btn.snap"));
+        btnSnap.hoverInfoSet(I18n.get("tooltip.snap"));
+        headerBar.addRightC(12, btnSnap);
 
         // --- Row 1 Buttons (Primary Builders) ---
         // Button 1: Auto-Strut (Pillars)
@@ -194,8 +269,7 @@ public final class PlannerOverlayUI {
     /**
      * Strictest possible active-check:
      * Returns true ONLY if player is actively in settlement mode, has the RoomPlacer tool selected,
-     * an area-based room blueprint is being drafted, at least 1 tile has been drawn,
-     * and NO modal popup / menu is blocking the screen.
+     * an area-based room blueprint is being drafted, and NO modal popup / menu is blocking the screen.
      */
     public boolean isPlacerActive() {
         if (!config.isShowOverlay()) {
@@ -214,10 +288,11 @@ public final class PlannerOverlayUI {
         if (placer == null || placer.blueprint() == null || placer.blueprint().constructor() == null) {
             return false;
         }
-        if (!placer.blueprint().constructor().usesArea()) {
-            return false;
-        }
-        return placer.size() > 0;
+        return placer.blueprint().constructor().usesArea();
+    }
+
+    public boolean isConfigOpen() {
+        return VIEW.inters() != null && VIEW.inters().section != null && VIEW.inters().section.isActivated();
     }
 
     public void render(Renderer r, float ds) {
@@ -230,10 +305,6 @@ public final class PlannerOverlayUI {
             buildToolbar();
         }
 
-        if (boxX < 0 || boxY < 0) {
-            initDefaultPosition();
-        }
-
         COORDINATE m = CORE.getInput().getMouse().getCoo();
 
         // Handle active drag
@@ -241,9 +312,14 @@ public final class PlannerOverlayUI {
             if (m != null && MButt.LEFT.isDown()) {
                 boxX = CLAMP.i(m.x() - dragAnchorX, 10, C.WIDTH() - toolbarSection.body().width() - 10);
                 boxY = CLAMP.i(m.y() - dragAnchorY, 34, C.HEIGHT() - toolbarSection.body().height() - 10);
+                isCustomPosition = true;
+                relX = (double) boxX / Math.max(1, C.WIDTH());
+                relY = (double) boxY / Math.max(1, C.HEIGHT());
             } else {
                 isDragging = false;
             }
+        } else {
+            updatePosition();
         }
 
         toolbarSection.body().moveX1(boxX);
@@ -334,6 +410,10 @@ public final class PlannerOverlayUI {
     }
 
     public void triggerAutoStrut(RoomPlacer placer) {
+        if (placer == null || placer.size() == 0) {
+            setStatus(I18n.get("msg.draw_room_first"), true);
+            return;
+        }
         try {
             AutoStrutSolver.Result res = strutSolver.solve(placer);
             if (res.pillarsPlaced > 0) {
@@ -351,6 +431,10 @@ public final class PlannerOverlayUI {
     }
 
     public void triggerAutoFurnish(RoomPlacer placer) {
+        if (placer == null || placer.size() == 0) {
+            setStatus(I18n.get("msg.draw_room_first"), true);
+            return;
+        }
         try {
             AutoFurnishSolver.Result res = furnishSolver.solve(placer, config);
             if (res.success) {
@@ -370,6 +454,10 @@ public final class PlannerOverlayUI {
     }
 
     public void triggerQuickBuild(RoomPlacer placer) {
+        if (placer == null || placer.size() == 0) {
+            setStatus(I18n.get("msg.draw_room_first"), true);
+            return;
+        }
         try {
             AutoStrutSolver.Result sRes = strutSolver.solve(placer);
             AutoFurnishSolver.Result fRes = furnishSolver.solve(placer, config);

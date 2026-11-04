@@ -69,12 +69,14 @@ public final class I18n {
         EN_STRINGS.put("btn.language", "Language: EN");
         EN_STRINGS.put("btn.reset", "Defaults");
         EN_STRINGS.put("btn.close", "Close");
+        EN_STRINGS.put("btn.snap", "Dock");
 
         EN_STRINGS.put("tooltip.strut", "Punches minimal support pillars to eliminate 100% yellow ceiling tiles");
         EN_STRINGS.put("tooltip.furnish", "Fills room with maximum workstations at 100% target efficiency");
         EN_STRINGS.put("tooltip.quickfill", "Executes Auto-Strut and Auto-Furnish in one click");
         EN_STRINGS.put("tooltip.clear", "Removes all placed furniture in this room draft");
         EN_STRINGS.put("tooltip.settings", "Opens Auto-Planner configuration (styles, target efficiency)");
+        EN_STRINGS.put("tooltip.snap", "Snaps toolbar centered directly under the Room Editor panel");
 
         EN_STRINGS.put("msg.strut_success", "Auto-Strut: Placed {0} pillar(s). 0 yellow tiles remaining!");
         EN_STRINGS.put("msg.strut_none_needed", "Auto-Strut: Ceiling is already 100% supported!");
@@ -84,6 +86,11 @@ public final class I18n {
         EN_STRINGS.put("msg.furnish_fail_doors", "Auto-Furnish: Please place at least one door first!");
         EN_STRINGS.put("msg.furnish_no_workstations", "Auto-Furnish: No workstation items found for this blueprint.");
         EN_STRINGS.put("msg.clear_success", "Cleared all furniture from current room draft.");
+        EN_STRINGS.put("msg.draw_room_first", "Please draw the room area on the floor first!");
+
+        EN_STRINGS.put("hud.planner", "PLANNER");
+        EN_STRINGS.put("hud.tooltip_title", "Syx Auto-Planner  [F9]");
+        EN_STRINGS.put("hud.tooltip_desc", "Click opens Auto-Planner configuration and options (Hotkeys: F9 / ESC).");
 
         // --- German Translations ---
         DE_STRINGS.put("mod.name", "Syx Auto-Planner");
@@ -120,12 +127,14 @@ public final class I18n {
         DE_STRINGS.put("btn.language", "Sprache: DE");
         DE_STRINGS.put("btn.reset", "Standard");
         DE_STRINGS.put("btn.close", "Schließen");
+        DE_STRINGS.put("btn.snap", "Anheften");
 
         DE_STRINGS.put("tooltip.strut", "Setzt minimale Pfeiler, um 100% gelbe/teure Deckenbereiche zu entfernen");
         DE_STRINGS.put("tooltip.furnish", "Füllt den Raum mit maximalen Workstations bei 100% Ziel-Effizienz");
         DE_STRINGS.put("tooltip.quickfill", "Führt Auto-Stützen und Auto-Möblierung mit einem Klick aus");
         DE_STRINGS.put("tooltip.clear", "Entfernt alle platzierten Möbel aus diesem Entwurf");
         DE_STRINGS.put("tooltip.settings", "Öffnet die Auto-Planner Einstellungen (Stil, Ziel-Effizienz)");
+        DE_STRINGS.put("tooltip.snap", "Dockt die Toolbar wieder zentriert direkt unter dem Raum-Editor an");
 
         DE_STRINGS.put("msg.strut_success", "Auto-Stützen: {0} Pfeiler gesetzt. 0 gelbe Bereiche übrig!");
         DE_STRINGS.put("msg.strut_none_needed", "Auto-Stützen: Die Decke ist bereits zu 100% gestützt!");
@@ -135,6 +144,11 @@ public final class I18n {
         DE_STRINGS.put("msg.furnish_fail_doors", "Auto-Möblieren: Bitte zuerst mindestens eine Tür setzen!");
         DE_STRINGS.put("msg.furnish_no_workstations", "Auto-Möblieren: Keine Arbeitsstationen für diesen Raumtyp.");
         DE_STRINGS.put("msg.clear_success", "Alle Einrichtungsgegenstände im Raum-Entwurf entfernt.");
+        DE_STRINGS.put("msg.draw_room_first", "Bitte zeichne zuerst die Raumfläche auf dem Boden!");
+
+        DE_STRINGS.put("hud.planner", "PLANNER");
+        DE_STRINGS.put("hud.tooltip_title", "Syx Auto-Planner  [F9]");
+        DE_STRINGS.put("hud.tooltip_desc", "Klick öffnet die Auto-Planner Optionen und Einstellungen (Hotkeys: F9 / ESC).");
     }
 
     private I18n() {}
