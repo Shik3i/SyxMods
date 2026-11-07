@@ -27,11 +27,11 @@ public final class WorldModule implements ArchitectModule {
 
     private static BoostModule.DynamicBooster deathAgeBooster;
 
-    private double weatherTimer = 0.0;
-    private static final double WEATHER_INTERVAL = 0.5;
+    private long lastWeatherMs = 0;
+    private static final long WEATHER_INTERVAL_MS = 1000; // 1 real second
 
-    private double fertilityTimer = 0.0;
-    private static final double FERTILITY_INTERVAL = 0.1; // Smooth rolling slice check
+    private long lastFertilityMs = 0;
+    private static final long FERTILITY_INTERVAL_MS = 500; // 0.5 real seconds
     private int moistureRowCursor = 0;
     private static final int MOISTURE_ROWS_PER_TICK = 48;
 
@@ -70,20 +70,20 @@ public final class WorldModule implements ArchitectModule {
             return;
         }
 
-        // 1. Weather & Daylight freezing
+        long now = System.currentTimeMillis();
+
+        // 1. Weather & Daylight freezing (at most once per real-world second)
         if (state.freezeNiceWeather) {
-            weatherTimer += ds;
-            if (weatherTimer >= WEATHER_INTERVAL) {
-                weatherTimer = 0.0;
+            if (now - lastWeatherMs >= WEATHER_INTERVAL_MS) {
+                lastWeatherMs = now;
                 applyNiceWeather();
             }
         }
 
-        // 2. Continuous soil moisture enforcement (chunked rolling slice)
+        // 2. Continuous soil moisture enforcement (at most twice per real-world second)
         if (state.maxFertility) {
-            fertilityTimer += ds;
-            if (fertilityTimer >= FERTILITY_INTERVAL) {
-                fertilityTimer = 0.0;
+            if (now - lastFertilityMs >= FERTILITY_INTERVAL_MS) {
+                lastFertilityMs = now;
                 updateSoilMoistureSlice();
             }
         }

@@ -20,8 +20,8 @@ import world.entity.army.WArmyConstructor;
  */
 public final class SecurityModule implements ArchitectModule {
 
-    private double timer = 0.0;
-    private static final double INTERVAL = 1.0;
+    private long lastCheckMs = 0;
+    private static final long INTERVAL_MS = 1500; // 1.5 real seconds
 
     @Override
     public void init() {
@@ -34,11 +34,11 @@ public final class SecurityModule implements ArchitectModule {
             return;
         }
 
-        timer += ds;
-        if (timer < INTERVAL) {
+        long now = System.currentTimeMillis();
+        if (now - lastCheckMs < INTERVAL_MS) {
             return;
         }
-        timer = 0.0;
+        lastCheckMs = now;
 
         cancelHostileRaids();
     }

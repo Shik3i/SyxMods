@@ -30,8 +30,8 @@ public final class BoostModule implements ArchitectModule {
     private static DynamicBooster loyaltyBooster;
     private static DynamicBooster happinessBooster;
 
-    private double techCheckTimer = 0.0;
-    private static final double TECH_CHECK_INTERVAL = 1.0;
+    private long lastTechCheckMs = 0;
+    private static final long TECH_CHECK_INTERVAL_MS = 1500; // 1.5 real seconds
 
     public static class DynamicBooster extends BoosterImp {
         private double activeValue;
@@ -160,9 +160,9 @@ public final class BoostModule implements ArchitectModule {
 
     @Override
     public void update(double ds, ArchitectState state) {
-        techCheckTimer += ds;
-        if (techCheckTimer >= TECH_CHECK_INTERVAL) {
-            techCheckTimer = 0.0;
+        long now = System.currentTimeMillis();
+        if (now - lastTechCheckMs >= TECH_CHECK_INTERVAL_MS) {
+            lastTechCheckMs = now;
             ensureBoostersRegistered();
             if (state.knowledgeTier == KnowledgeTier.NO_FORGETTING) {
                 checkHighWatermark(state);

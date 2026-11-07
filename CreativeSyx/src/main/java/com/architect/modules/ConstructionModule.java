@@ -40,12 +40,13 @@ import snake2d.util.sets.Bitsmap1D;
  */
 public final class ConstructionModule implements ArchitectModule {
 
-    private double tickTimer = 0.0;
-    private static final double TICK_STEP = 0.05; // 20 times per second for smooth chunk progression
+    // Wall-clock rate limiting: ensures constant 10 Hz execution whether running at 1x or 250x simulation speed
+    private long lastUpdateMs = 0;
+    private static final long UPDATE_INTERVAL_MS = 100; // 100ms = 10 executions per real second
 
-    // Rolling chunk cursor for lag-free 60 Hz updates across colossal maps
+    // Rolling chunk cursor for lag-free updates across colossal maps
     private int scanRowCursor = 0;
-    private static final int ROWS_PER_TICK = 48; // Scans 48 rows per tick (entire 768 map scanned in ~0.8s)
+    private static final int ROWS_PER_TICK = 48; // Scans 48 rows per tick
 
     // Cached reflection handles for package-private engine classes
     private static Method jobFinsihMethod;
@@ -59,6 +60,10 @@ public final class ConstructionModule implements ArchitectModule {
     private static Method jobBuildConstructMethod;
     private static Field jobsProgressField;
     private static Field jobsWantsResField;
+    private static Field jobsMapField;
+    private static Field bitsmap2DMapField;
+    private static Field bitsField1D;
+    private static boolean bitsReflectionFailed = false;
     private static boolean roomReflectionFailed = false;
     private static boolean outsideJobsReflectionFailed = false;
     private static boolean janitorReflectionFailed = false;
@@ -69,43 +74,102 @@ public final class ConstructionModule implements ArchitectModule {
         // Scaffolding initialization
     }
 
+    /**
+     * Fast-path check: inspects the underlying 64-bit BitMap array in settlement.job.JOBS.
+     * Takes ~2 microseconds to determine if ANY outside jobs exist on the entire map.
+     */
+    public boolean hasAnyOutsideJobs() {
+        if (!SETT.exists() || SETT.JOBS() == null) return false;
+        if (bitsReflectionFailed) return true;
+        try {
+            if (jobsMapField == null) {
+                jobsMapField = settlement.job.JOBS.class.getDeclaredField("map");
+                jobsMapField.setAccessible(true);
+            }
+            Object bitsmap2D = jobsMapField.get(SETT.JOBS());
+            if (bitsmap2D != null) {
+                if (bitsmap2DMapField == null) {
+                    bitsmap2DMapField = bitsmap2D.getClass().getDeclaredField("map");
+                    bitsmap2DMapField.setAccessible(true);
+                }
+                Object bitsmap1D = bitsmap2DMapField.get(bitsmap2D);
+                if (bitsmap1D != null) {
+                    if (bitsField1D == null) {
+                        bitsField1D = bitsmap1D.getClass().getDeclaredField("bits");
+                        bitsField1D.setAccessible(true);
+                    }
+                    long[] bits = (long[]) bitsField1D.get(bitsmap1D);
+                    if (bits != null) {
+                        for (int i = 0; i < bits.length; i++) {
+                            if (bits[i] != 0L) {
+                                return true;
+                            }
+                        }
+                        return false;
+                    }
+                }
+            }
+        } catch (Throwable t) {
+            bitsReflectionFailed = true;
+        }
+        return true;
+    }
+
+    /**
+     * Fast-path check: checks if any room construction sites currently exist in the settlement.
+     */
+    public boolean hasAnyRoomConstruction() {
+        if (!SETT.exists() || SETT.ROOMS() == null || SETT.ROOMS().construction == null) {
+            return false;
+        }
+        return SETT.ROOMS().construction.instances() > 0;
+    }
+
     @Override
     public void update(double ds, ArchitectState state) {
         this.stateRef = state;
-        tickTimer += ds;
-        if (tickTimer < TICK_STEP) {
-            return;
-        }
-        tickTimer = 0.0;
 
         if (!SETT.exists()) {
             return;
         }
 
-        // 1. Instant Construction (Optimized rolling sweep: sweeps the entire map in ~200ms without 589k iterations/tick)
-        if (state.constructionTier == ConstructionTier.INSTANT_BUILD) {
-            int height = SETT.THEIGHT;
-            int width = SETT.TWIDTH;
-            int startY = scanRowCursor;
-            int endY = Math.min(height, startY + 192);
+        // 1. Wall-clock rate limiting: exactly 10 executions per real-world second, regardless of whether simulation is 1x or 250x
+        long now = System.currentTimeMillis();
+        if (now - lastUpdateMs < UPDATE_INTERVAL_MS) {
+            return;
+        }
+        lastUpdateMs = now;
 
+        boolean hasRooms = hasAnyRoomConstruction();
+        boolean hasJobs = hasAnyOutsideJobs();
+
+        // 2. Early return if zero construction and zero jobs are pending (99.9% of the time). Takes ~2 microseconds!
+        if (!hasRooms && !hasJobs && state.maintenanceTier != MaintenanceTier.JANITOR_WORK_FREE_MATS) {
+            return;
+        }
+
+        int height = SETT.THEIGHT;
+        int width = SETT.TWIDTH;
+        int startY = scanRowCursor;
+        int endY = Math.min(height, startY + (state.constructionTier == ConstructionTier.INSTANT_BUILD ? 256 : (state.instantJobs ? 96 : ROWS_PER_TICK)));
+
+        // 3. Instant Construction (Optimized rolling sweep)
+        if (state.constructionTier == ConstructionTier.INSTANT_BUILD) {
             // Fast room sweep
-            if (SETT.ROOMS() != null && SETT.ROOMS().construction != null) {
+            if (hasRooms && SETT.ROOMS().construction.isser != null) {
                 CONSTRUCTION construction = SETT.ROOMS().construction;
-                if (construction.isser != null && construction.instances() > 0) {
-                    for (int y = startY; y < endY; y++) {
-                        for (int x = 0; x < width; x++) {
-                            if (construction.isser.is(x, y)) {
-                                clearTileForConstruction(x, y, state.jobYieldTier);
-                                construction.construct(x, y);
-                            }
+                for (int y = startY; y < endY; y++) {
+                    for (int x = 0; x < width; x++) {
+                        if (construction.isser.is(x, y)) {
+                            clearTileForConstruction(x, y, state.jobYieldTier);
+                            construction.construct(x, y);
                         }
                     }
                 }
             }
 
             // Outside jobs sweep
-            if (SETT.JOBS() != null && SETT.JOBS().getter != null) {
+            if (hasJobs && SETT.JOBS() != null && SETT.JOBS().getter != null) {
                 for (int y = startY; y < endY; y++) {
                     for (int x = 0; x < width; x++) {
                         if (SETT.JOBS().getter.is(x, y)) {
@@ -124,34 +188,22 @@ public final class ConstructionModule implements ArchitectModule {
             return;
         }
 
-        int height = SETT.THEIGHT;
-        int width = SETT.TWIDTH;
-        int startY = scanRowCursor;
-        int endY = Math.min(height, startY + (state.instantJobs ? 96 : ROWS_PER_TICK));
-
-        // 2. Free Materials / Keep Work (or Fast & Free) with rolling chunk cursor
+        // 4. Free Materials / Keep Work (or Fast & Free) with rolling chunk cursor
         if (state.constructionTier == ConstructionTier.FREE_MATERIALS_KEEP_WORK ||
             state.constructionTier == ConstructionTier.FAST_AND_FREE) {
             boolean fastSpeed = (state.constructionTier == ConstructionTier.FAST_AND_FREE);
-            processFreeMaterialsSlice(fastSpeed, width, startY, endY);
-            processOutsideJobsSlice(fastSpeed, width, startY, endY, state.instantJobs, state.jobYieldTier);
-        } else if (state.instantJobs) {
+            if (hasRooms) {
+                processFreeMaterialsSlice(fastSpeed, width, startY, endY);
+            }
+            if (hasJobs) {
+                processOutsideJobsSlice(fastSpeed, width, startY, endY, state.instantJobs, state.jobYieldTier);
+            }
+        } else if (state.instantJobs && hasJobs) {
             processOutsideJobsSlice(false, width, startY, endY, true, state.jobYieldTier);
         }
 
-        // 3. Maintenance Logic with rolling chunk cursor
-        if (state.maintenanceTier == MaintenanceTier.NO_DECAY && SETT.MAINTENANCE() != null) {
-            MAINTENANCE maintenance = SETT.MAINTENANCE();
-            if (maintenance.needs != null) {
-                for (int y = startY; y < endY; y++) {
-                    for (int x = 0; x < width; x++) {
-                        if (maintenance.needs.is(x, y)) {
-                            maintenance.maintain(x, y);
-                        }
-                    }
-                }
-            }
-        } else if (state.maintenanceTier == MaintenanceTier.JANITOR_WORK_FREE_MATS) {
+        // 5. Janitor supplies maintenance
+        if (state.maintenanceTier == MaintenanceTier.JANITOR_WORK_FREE_MATS) {
             keepJanitorSuppliesFull();
         }
 
@@ -554,11 +606,34 @@ public final class ConstructionModule implements ArchitectModule {
         }
     }
 
+    /**
+     * Executes a one-time maintenance sweep across the map to restore all existing damaged
+     * buildings to 100%. Subsequent decay is permanently prevented by BoostModule's 100x booster.
+     */
+    public void maintainAll() {
+        if (!SETT.exists() || SETT.MAINTENANCE() == null || SETT.MAINTENANCE().needs == null) {
+            return;
+        }
+        MAINTENANCE maintenance = SETT.MAINTENANCE();
+        int width = SETT.TWIDTH;
+        int height = SETT.THEIGHT;
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                if (maintenance.needs.is(x, y)) {
+                    maintenance.maintain(x, y);
+                }
+            }
+        }
+    }
+
     @Override
     public void onStateChanged(ArchitectState state) {
         this.stateRef = state;
         if (state.constructionTier == ConstructionTier.INSTANT_BUILD || state.instantJobs) {
             triggerInstantBuildAll(state.jobYieldTier);
+        }
+        if (state.maintenanceTier == MaintenanceTier.NO_DECAY) {
+            maintainAll();
         }
     }
 }

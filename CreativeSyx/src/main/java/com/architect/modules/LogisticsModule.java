@@ -23,8 +23,8 @@ import snake2d.util.datatypes.RECTANGLE;
  */
 public final class LogisticsModule implements ArchitectModule {
 
-    private double updateTimer = 0.0;
-    private static final double REFILL_INTERVAL = 3.0; // Refills every 3 seconds
+    private long lastRefillMs = 0;
+    private static final long REFILL_INTERVAL_MS = 2000; // Refills at most once every 2 real seconds
 
     @Override
     public void init() {
@@ -47,11 +47,12 @@ public final class LogisticsModule implements ArchitectModule {
             return;
         }
 
-        updateTimer += ds;
-        if (updateTimer < REFILL_INTERVAL) {
+        // Wall-clock rate limiting: exactly 1 refill check per 2 real-world seconds regardless of game speed
+        long now = System.currentTimeMillis();
+        if (now - lastRefillMs < REFILL_INTERVAL_MS) {
             return;
         }
-        updateTimer = 0.0;
+        lastRefillMs = now;
 
         refillCrates(state.logisticsTier == LogisticsTier.RAW_MATERIALS_ONLY, 0.8);
     }
