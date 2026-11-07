@@ -143,7 +143,12 @@ public final class AutoPlannerInstance implements SCRIPT_INSTANCE {
             }
         }
 
-        // 4. Update button active/highlighted and visibility state
+        // 4. Ensure Interrupter is registered in SettView.uiManager to absorb clicks
+        if (VIEW.s() != null && VIEW.s().uiManager != null) {
+            overlayUI.ensureInterrupterAttached(VIEW.s().uiManager);
+        }
+
+        // 5. Update button active/highlighted and visibility state
         if (hudButton != null) {
             hudButton.selectedSet(overlayUI.isConfigOpen());
             if (topBarSection != null) {
@@ -152,28 +157,36 @@ public final class AutoPlannerInstance implements SCRIPT_INSTANCE {
             hudButton.activeSet(config.isShowHudButton());
         }
 
-        // 5. Update overlay simulation
+        // 6. Update overlay simulation
         overlayUI.update(ds);
     }
 
     @Override
     public void render(Renderer r, float ds) {
-        overlayUI.render(r, ds);
+        if (!overlayUI.isInterrupterActive()) {
+            overlayUI.render(r, ds);
+        }
     }
 
     @Override
     public void mouseClick(MButt button) {
-        overlayUI.mouseClick(button);
+        if (!overlayUI.isInterrupterActive()) {
+            overlayUI.mouseClick(button);
+        }
     }
 
     @Override
     public void hoverTimer(double mouseTimer, util.gui.misc.GBox text) {
-        overlayUI.hoverTimer(mouseTimer, text);
+        if (!overlayUI.isInterrupterActive()) {
+            overlayUI.hoverTimer(mouseTimer, text);
+        }
     }
 
     @Override
     public void hover(snake2d.util.datatypes.COORDINATE mCoo, boolean mouseHasMoved) {
-        overlayUI.hover(mCoo, mouseHasMoved);
+        if (!overlayUI.isInterrupterActive()) {
+            overlayUI.hover(mCoo, mouseHasMoved);
+        }
     }
 
     @Override

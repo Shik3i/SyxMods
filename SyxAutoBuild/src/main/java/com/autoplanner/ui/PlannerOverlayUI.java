@@ -31,6 +31,8 @@ import util.gui.misc.GButt;
 import util.gui.misc.GHeader;
 import util.gui.misc.GText;
 import util.gui.panel.GPanel;
+import view.interrupter.InterManager;
+import view.interrupter.Interrupter;
 import view.main.VIEW;
 import view.tool.ToolConfig;
 
@@ -76,6 +78,104 @@ public final class PlannerOverlayUI {
     // Native Toolbar Section (compact 2-row card with authentic GButt.ButtPanel buttons)
     private final ToolbarSection toolbarSection = new ToolbarSection();
     private Language cachedLanguage = null;
+
+    /**
+     * Native Settlement Interrupter: absorbs hover, clicks, tooltips, and rendering.
+     * When registered in SettView.uiManager, InterManager absorbs all clicks over the toolbar
+     * so that clicks NEVER reach SettView.mouseClick or RoomPlacer!
+     */
+    private final class OverlayInterrupter extends Interrupter {
+        private OverlayInterrupter() {
+            super(true, true, false); // persistent = true, pinned = true, desturbingfuck = false
+        }
+
+        @Override
+        protected boolean hover(COORDINATE m, boolean hasMoved) {
+            if (!isPlacerActive()) {
+                isDragging = false;
+                return false;
+            }
+            if (m == null) {
+                return false;
+            }
+            if (isDragging) {
+                return true;
+            }
+            return holdsPoint(m.x(), m.y());
+        }
+
+        @Override
+        protected void mouseClick(MButt button) {
+            if (!isPlacerActive()) {
+                return;
+            }
+            handleInterrupterClick(button);
+        }
+
+        @Override
+        protected void hoverTimer(GBox text) {
+            if (!isPlacerActive() || text == null || isDragging) {
+                return;
+            }
+            if (toolbarSection.hoveredIs()) {
+                toolbarSection.hoverInfoGet(text);
+            }
+        }
+
+        @Override
+        protected boolean render(Renderer r, float ds) {
+            if (isPlacerActive()) {
+                renderOverlay(r, ds);
+            }
+            return true;
+        }
+
+        @Override
+        protected boolean update(float ds) {
+            return true;
+        }
+
+        private void attach(InterManager manager) {
+            if (manager == null) return;
+            if (isActivated() && manager() == manager) {
+                return;
+            }
+            if (isActivated()) {
+                try {
+                    hide();
+                } catch (Throwable ignored) {}
+            }
+            try {
+                show(manager);
+            } catch (Throwable t) {
+                snake2d.LOG.err("AutoPlanner: Failed to show Interrupter: " + t.getMessage());
+            }
+        }
+    }
+
+    private final OverlayInterrupter interrupter = new OverlayInterrupter();
+
+    public boolean isInterrupterActive() {
+        return interrupter.isActivated();
+    }
+
+    public void ensureInterrupterAttached(InterManager manager) {
+        interrupter.attach(manager);
+    }
+
+    public boolean holdsPoint(int x, int y) {
+        if (toolbarSection != null && toolbarSection.body().holdsPoint(x, y)) {
+            return true;
+        }
+        if (statusTimer > 0.0 && !statusMessage.isEmpty() && toastBounds != null && toastBounds.holdsPoint(x, y)) {
+            return true;
+        }
+        return false;
+    }
+
+    public boolean holdsPoint(COORDINATE m) {
+        return m != null && holdsPoint(m.x(), m.y());
+    }
 
     public PlannerOverlayUI(PlannerConfig config, AutoStrutSolver strutSolver, AutoFurnishSolver furnishSolver) {
         this.config = config;
@@ -313,6 +413,12 @@ public final class PlannerOverlayUI {
     }
 
     public void render(Renderer r, float ds) {
+        if (!isInterrupterActive()) {
+            renderOverlay(r, ds);
+        }
+    }
+
+    public void renderOverlay(Renderer r, float ds) {
         if (!isPlacerActive()) {
             isDragging = false;
             return;
@@ -407,6 +513,13 @@ public final class PlannerOverlayUI {
     }
 
     public boolean mouseClick(MButt button) {
+        if (!isInterrupterActive()) {
+            return handleInterrupterClick(button);
+        }
+        return false;
+    }
+
+    public boolean handleInterrupterClick(MButt button) {
         if (button != MButt.LEFT || !isPlacerActive()) {
             return false;
         }
@@ -481,6 +594,12 @@ public final class PlannerOverlayUI {
             }
 
             // Clicked inside panel padding / background: consume click
+            CORE.getInput().clearAllInput();
+            return true;
+        }
+
+        // Also consume click if inside status toast
+        if (statusTimer > 0.0 && !statusMessage.isEmpty() && toastBounds.holdsPoint(m.x(), m.y())) {
             CORE.getInput().clearAllInput();
             return true;
         }
