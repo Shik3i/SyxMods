@@ -21,6 +21,8 @@ import settlement.room.infra.janitor.ROOM_JANITOR;
 import settlement.room.main.Room;
 import settlement.room.main.RoomInstance;
 import settlement.room.main.construction.CONSTRUCTION;
+import settlement.thing.ThingsResources.ScatteredResource;
+import settlement.tilemap.terrain.Terrain.TerrainTile;
 import snake2d.util.sets.Bitmap1D;
 import snake2d.util.sets.Bitsmap1D;
 
@@ -137,6 +139,7 @@ public final class ConstructionModule implements ArchitectModule {
             for (int x = 0; x < width; x++) {
                 if (construction.isser.is(x, y)) {
                     if (fastSpeed) {
+                        clearTileForConstruction(x, y, stateRef != null ? stateRef.jobYieldTier : JobYieldTier.DROP_ON_GROUND);
                         construction.construct(x, y);
                     } else {
                         Room room = SETT.ROOMS().map.get(x, y);
@@ -247,6 +250,7 @@ public final class ConstructionModule implements ArchitectModule {
                 }
             }
         }
+        clearTileForConstruction(x, y, yieldTier);
     }
 
     /**
@@ -275,6 +279,89 @@ public final class ConstructionModule implements ArchitectModule {
         // If STOCKPILE, keep the engine's +1 in the player's stockpile directly
     }
 
+    /**
+     * Completely levels and clears ("planiert") a tile before construction of roads,
+     * floors, walls, structures, rooms, or agricultural fields.
+     * Eradicates:
+     * - Standing flora & terrain clutter: trees, rocks, bushes, flowers, mushrooms, wild herbs/crops.
+     * - Floor growth: growth sprites, saplings, fungi, undergrowth.
+     * - Surface vegetation: tall grass coverage.
+     * - Scattered ground debris: directs yielded items according to JobYieldTier.
+     */
+    private void clearTileForConstruction(int x, int y, JobYieldTier yieldTier) {
+        if (!SETT.IN_BOUNDS(x, y)) {
+            return;
+        }
+
+        // 1. Terrain layer (Trees, Rocks, Bushes, Flowers, Mushrooms, Growables/Herbs, Ruins)
+        if (SETT.TERRAIN() != null) {
+            TerrainTile tt = SETT.TERRAIN().get(x, y);
+            if (tt != null && tt != SETT.TERRAIN().NADA) {
+                // Safeguard: Do not accidentally demolish solid natural mountains, caves, or water bodies
+                boolean isMountain = (tt == SETT.TERRAIN().MOUNTAIN || tt == SETT.TERRAIN().CAVE);
+                boolean isWater = (SETT.TERRAIN().WATER != null && (tt == SETT.TERRAIN().WATER.DEEP || tt == SETT.TERRAIN().WATER.SHALLOW || tt == SETT.TERRAIN().WATER.BRIDGE));
+                if (!isMountain && !isWater) {
+                    try {
+                        if (tt.clearing() != null) {
+                            if (yieldTier == JobYieldTier.STOCKPILE) {
+                                RESOURCE res = tt.clearing().clear1(x, y);
+                                if (res != null && GAME.player() != null && GAME.player().res() != null) {
+                                    GAME.player().res().inc(res, RTYPE.PRODUCED, 1);
+                                }
+                            }
+                            tt.clearing().destroy(x, y);
+                        } else {
+                            SETT.TERRAIN().NADA.placeFixed(x, y);
+                        }
+                    } catch (Throwable t) {
+                        try {
+                            SETT.TERRAIN().NADA.placeFixed(x, y);
+                        } catch (Throwable ignored) {}
+                    }
+                    if (SETT.TERRAIN().get(x, y) != SETT.TERRAIN().NADA && !isMountain && !isWater) {
+                        try {
+                            SETT.TERRAIN().NADA.placeFixed(x, y);
+                        } catch (Throwable ignored) {}
+                    }
+                }
+            }
+        }
+
+        // 2. Floor Growth layer (Flower sprites, herbs, bushes, mushrooms, undergrowth)
+        if (SETT.TILE_MAP() != null && SETT.TILE_MAP().growth != null) {
+            try {
+                if (SETT.TILE_MAP().growth.nothing != null) {
+                    SETT.TILE_MAP().growth.nothing.set(x, y, 0.0);
+                }
+                SETT.TILE_MAP().growth.tear(x, y);
+            } catch (Throwable ignored) {}
+        }
+
+        // 3. Grass layer (Grass visual density & blades)
+        if (SETT.GRASS() != null && SETT.GRASS().currentI != null) {
+            try {
+                SETT.GRASS().currentI.set(x, y, 0);
+            } catch (Throwable ignored) {}
+        }
+
+        // 4. Ground Clutter / Scattered resources
+        try {
+            if (SETT.THINGS() != null && SETT.THINGS().resources != null) {
+                ScatteredResource sr = SETT.THINGS().resources.get(x, y);
+                if (sr != null && sr.amount() > 0 && sr.amountReserved() == 0) {
+                    if (yieldTier == JobYieldTier.VOID_DISCARD) {
+                        sr.removeUnreserved(sr.amount());
+                    } else if (yieldTier == JobYieldTier.STOCKPILE) {
+                        if (GAME.player() != null && GAME.player().res() != null && sr.resource() != null) {
+                            GAME.player().res().inc(sr.resource(), RTYPE.PRODUCED, sr.amount());
+                        }
+                        sr.removeUnreserved(sr.amount());
+                    }
+                }
+            }
+        } catch (Throwable ignored) {}
+    }
+
     private void completeJobBuild(JobBuild job, int x, int y) {
         if (outsideJobsReflectionFailed) return;
         try {
@@ -284,6 +371,9 @@ public final class ConstructionModule implements ArchitectModule {
             }
             RESOURCE res = job.res();
             int amount = job.resAmount();
+
+            clearTileForConstruction(x, y, stateRef != null ? stateRef.jobYieldTier : JobYieldTier.DROP_ON_GROUND);
+
             jobBuildConstructMethod.invoke(job, x, y);
             if (SETT.JOBS() != null && SETT.JOBS().clearer != null) {
                 SETT.JOBS().clearer.set(x, y);
@@ -303,6 +393,7 @@ public final class ConstructionModule implements ArchitectModule {
     private void fulfillTileResources(Room room, int x, int y) {
         if (outsideJobsReflectionFailed) return;
         try {
+            clearTileForConstruction(x, y, stateRef != null ? stateRef.jobYieldTier : JobYieldTier.DROP_ON_GROUND);
             if (jobFinsihMethod == null) {
                 Class<?> clazz = room.getClass();
                 jobFinsihMethod = clazz.getMethod("jobFinsih", int.class, int.class, RESOURCE.class, int.class);
@@ -402,6 +493,7 @@ public final class ConstructionModule implements ArchitectModule {
                 for (int y = 0; y < height; y++) {
                     for (int x = 0; x < width; x++) {
                         if (construction.isser.is(x, y)) {
+                            clearTileForConstruction(x, y, yieldTier);
                             construction.construct(x, y);
                         }
                     }
