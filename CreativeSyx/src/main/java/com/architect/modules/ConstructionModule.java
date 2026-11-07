@@ -82,9 +82,45 @@ public final class ConstructionModule implements ArchitectModule {
             return;
         }
 
-        // 1. Instant Construction
+        // 1. Instant Construction (Optimized rolling sweep: sweeps the entire map in ~200ms without 589k iterations/tick)
         if (state.constructionTier == ConstructionTier.INSTANT_BUILD) {
-            triggerInstantBuildAll(state.jobYieldTier);
+            int height = SETT.THEIGHT;
+            int width = SETT.TWIDTH;
+            int startY = scanRowCursor;
+            int endY = Math.min(height, startY + 192);
+
+            // Fast room sweep
+            if (SETT.ROOMS() != null && SETT.ROOMS().construction != null) {
+                CONSTRUCTION construction = SETT.ROOMS().construction;
+                if (construction.isser != null && construction.instances() > 0) {
+                    for (int y = startY; y < endY; y++) {
+                        for (int x = 0; x < width; x++) {
+                            if (construction.isser.is(x, y)) {
+                                clearTileForConstruction(x, y, state.jobYieldTier);
+                                construction.construct(x, y);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Outside jobs sweep
+            if (SETT.JOBS() != null && SETT.JOBS().getter != null) {
+                for (int y = startY; y < endY; y++) {
+                    for (int x = 0; x < width; x++) {
+                        if (SETT.JOBS().getter.is(x, y)) {
+                            Job job = SETT.JOBS().getter.get(x, y);
+                            if (job instanceof JobBuild) {
+                                completeJobBuild((JobBuild) job, x, y);
+                            } else if (job != null) {
+                                completeJobClear(job, x, y, state.jobYieldTier);
+                            }
+                        }
+                    }
+                }
+            }
+
+            scanRowCursor = (endY >= height) ? 0 : endY;
             return;
         }
 
