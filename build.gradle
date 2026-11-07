@@ -28,11 +28,11 @@ subprojects {
     }
 }
 
-// Master deployment task: compiles, verifies, packages as V71, and deploys both mods
+// Master deployment task: compiles, verifies, packages as V71, and deploys all mods
 tasks.register('deployAll') {
     group = 'songs of syx'
-    description = 'Builds, verifies, and deploys both Syx Auto-Planner and Syx Architect to %APPDATA%/songsofsyx/mods/ with case-exact _Info.txt'
-    dependsOn ':SyxAutoBuild:deployMod', ':CreativeSyx:deployMod'
+    description = 'Builds, verifies, and deploys all Syx mods to %APPDATA%/songsofsyx/mods/ with case-exact _Info.txt'
+    dependsOn ':SyxAutoBuild:deployMod', ':CreativeSyx:deployMod', ':SyxTreeZones:deployMod'
 
     doLast {
         def appData = System.getenv("APPDATA") ?: "${System.getProperty('user.home')}/AppData/Roaming"
@@ -40,6 +40,7 @@ tasks.register('deployAll') {
         println "ALL MODS DEPLOYED SUCCESSFULLY TO SONGS OF SYX (V71):"
         println "  1. ${appData}/songsofsyx/mods/SyxAutoPlanner"
         println "  2. ${appData}/songsofsyx/mods/SyxArchitect"
+        println "  3. ${appData}/songsofsyx/mods/SyxTreeZones"
         println "================================================================================"
     }
 }

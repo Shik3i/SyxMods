@@ -2,3 +2,5 @@ rootProject.name = 'SyxMods'
 
 include ':SyxAutoBuild'
 include ':CreativeSyx'
+include ':SyxTreeZones'
+
