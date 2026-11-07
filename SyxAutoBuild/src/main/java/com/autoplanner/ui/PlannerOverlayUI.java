@@ -284,8 +284,32 @@ public final class PlannerOverlayUI {
         return placer.blueprint().constructor().usesArea();
     }
 
+    private boolean isConfigOpen = false;
+    private GuiSection activeConfigModal = null;
+
     public boolean isConfigOpen() {
-        return VIEW.inters() != null && VIEW.inters().section != null && VIEW.inters().section.isActivated();
+        if (!isConfigOpen) {
+            return false;
+        }
+        if (VIEW.inters() == null || VIEW.inters().section == null || !VIEW.inters().section.isActivated()) {
+            isConfigOpen = false;
+            activeConfigModal = null;
+            return false;
+        }
+        if (activeConfigModal != null && VIEW.inters().section.current() != activeConfigModal) {
+            isConfigOpen = false;
+            activeConfigModal = null;
+            return false;
+        }
+        return true;
+    }
+
+    public void closeConfigModal() {
+        isConfigOpen = false;
+        activeConfigModal = null;
+        if (VIEW.inters() != null && VIEW.inters().section != null) {
+            VIEW.inters().section.close();
+        }
     }
 
     public void render(Renderer r, float ds) {
@@ -745,7 +769,7 @@ public final class PlannerOverlayUI {
         GButt.ButtPanel btnClose = new GButt.ButtPanel(I18n.get("btn.close")) {
             @Override
             protected void clickA() {
-                VIEW.inters().section.close();
+                closeConfigModal();
             }
         }.icon(SPRITES.icons().m.ok);
 
@@ -762,7 +786,7 @@ public final class PlannerOverlayUI {
         panel.setCloseAction(new ACTION() {
             @Override
             public void exe() {
-                VIEW.inters().section.close();
+                closeConfigModal();
             }
         });
         panelRef[0] = panel;
@@ -788,6 +812,8 @@ public final class PlannerOverlayUI {
         modal.body().moveX1Y1(configModalX, configModalY);
         // Compensate vanilla GPanel$1.moveY1 bug (missing +8 closeAction offset)
         panel.inner().incrY(8);
+        isConfigOpen = true;
+        activeConfigModal = modal;
         VIEW.inters().section.activate(modal);
     }
 

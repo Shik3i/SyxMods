@@ -40,6 +40,7 @@ import view.main.VIEW;
 public final class ArchitectUI {
 
     private static boolean isOpen = false;
+    private static GuiSection activeRootSection = null;
     private static int activeTab = 0; // 0 = City & Economy, 1 = World & Population
     private static int selectedRaceIndex = 0;
     private static int windowX = -1;
@@ -59,11 +60,26 @@ public final class ArchitectUI {
     }
 
     public static boolean isOpen() {
-        return isOpen && VIEW.inters() != null && VIEW.inters().section != null && VIEW.inters().section.isActivated();
+        if (!isOpen && !TutorialModal.isOpen()) {
+            return false;
+        }
+        if (VIEW.inters() == null || VIEW.inters().section == null || !VIEW.inters().section.isActivated()) {
+            isOpen = false;
+            activeRootSection = null;
+            return false;
+        }
+        GuiSection curr = VIEW.inters().section.current();
+        if (curr != activeRootSection && curr != TutorialModal.getActiveModal()) {
+            isOpen = false;
+            activeRootSection = null;
+            return false;
+        }
+        return true;
     }
 
     public static void close() {
         isOpen = false;
+        activeRootSection = null;
         if (VIEW.inters() != null && VIEW.inters().section != null) {
             VIEW.inters().section.close();
         }
@@ -241,6 +257,7 @@ public final class ArchitectUI {
         root.body().moveX1Y1(windowX, windowY);
         // Compensate vanilla GPanel$1.moveY1 bug (missing +8 closeAction offset)
         panel.inner().incrY(8);
+        activeRootSection = root;
         VIEW.inters().section.activate(root);
     }
 

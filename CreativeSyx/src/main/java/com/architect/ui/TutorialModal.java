@@ -32,8 +32,17 @@ public final class TutorialModal {
 
     private static int modalX = -1;
     private static int modalY = -1;
+    private static GuiSection activeModal = null;
 
     private TutorialModal() {}
+
+    public static GuiSection getActiveModal() {
+        return activeModal;
+    }
+
+    public static boolean isOpen() {
+        return activeModal != null && VIEW.inters() != null && VIEW.inters().section != null && VIEW.inters().section.isActivated() && VIEW.inters().section.current() == activeModal;
+    }
 
     /**
      * Loads tutorial text from packaged JAR resources with multiple path fallbacks.
@@ -120,6 +129,7 @@ public final class TutorialModal {
         ACTION closeAction = new ACTION() {
             @Override
             public void exe() {
+                activeModal = null;
                 ArchitectUI.close();
             }
         };
@@ -219,6 +229,7 @@ public final class TutorialModal {
         modal.body().moveX1Y1(modalX, modalY);
         // Compensate vanilla GPanel$1.moveY1 bug (missing +8 closeAction offset)
         panel.inner().incrY(8);
+        activeModal = modal;
         VIEW.inters().section.activate(modal);
     }
 }

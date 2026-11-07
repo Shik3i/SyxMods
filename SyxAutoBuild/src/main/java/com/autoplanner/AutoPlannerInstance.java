@@ -107,7 +107,7 @@ public final class AutoPlannerInstance implements SCRIPT_INSTANCE {
 
     private void toggleConfig() {
         if (overlayUI.isConfigOpen()) {
-            VIEW.inters().section.close();
+            overlayUI.closeConfigModal();
         } else {
             overlayUI.openConfigModal();
         }
@@ -131,7 +131,7 @@ public final class AutoPlannerInstance implements SCRIPT_INSTANCE {
         if (overlayUI.isConfigOpen()) {
             boolean esc = CORE.getInput().getKeyboard().isPressed(KEYCODES.KEY_ESCAPE);
             if (esc) {
-                VIEW.inters().section.close();
+                overlayUI.closeConfigModal();
             }
         }
 
