@@ -112,6 +112,9 @@ public final class I18n {
         EN_STRINGS.put("btn.fill_crates_100", "Fill Crates to 100%");
         EN_STRINGS.put("btn.add_denari_1m", "+1M Denari");
         EN_STRINGS.put("btn.win_combat_now", "Win Combat Now");
+        EN_STRINGS.put("btn.clear_ground_items", "Delete Ground Items");
+        EN_STRINGS.put("btn.collect_ground_items", "Deposit Ground Items");
+        EN_STRINGS.put("btn.clear_waste", "Clear Waste & Rubbish");
         EN_STRINGS.put("btn.apply", "Apply");
         EN_STRINGS.put("btn.close", "Close (ESC / F10)");
         EN_STRINGS.put("btn.tutorial", "Manual");
@@ -206,6 +209,9 @@ public final class I18n {
         DE_STRINGS.put("btn.fill_crates_100", "Kisten auf 100%");
         DE_STRINGS.put("btn.add_denari_1m", "+1 Mio. Denari");
         DE_STRINGS.put("btn.win_combat_now", "Sofort-Sieg");
+        DE_STRINGS.put("btn.clear_ground_items", "Boden-Items loeschen");
+        DE_STRINGS.put("btn.collect_ground_items", "Boden-Items einlagern");
+        DE_STRINGS.put("btn.clear_waste", "Muell & Dreck beseitigen");
         DE_STRINGS.put("btn.apply", "Anwenden");
         DE_STRINGS.put("btn.close", "Schliessen (ESC / F10)");
         DE_STRINGS.put("btn.tutorial", "Handbuch");

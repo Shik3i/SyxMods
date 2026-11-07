@@ -5,12 +5,20 @@ import com.architect.config.CheatTiers.LogisticsTier;
 
 import game.GAME;
 import game.faction.FCredits;
+import game.faction.FResources.RTYPE;
 import init.resources.RESOURCE;
 import settlement.main.SETT;
 import settlement.room.infra.stockpile.ROOM_STOCKPILE;
 import settlement.room.infra.stockpile.StockpileInstance;
+import settlement.room.main.Room;
 import settlement.room.main.job.StorageCrate;
+import settlement.thing.THINGS;
+import settlement.thing.ThingsResources;
+import settlement.thing.ThingsResources.ScatteredResource;
 import snake2d.util.datatypes.RECTANGLE;
+
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 
 /**
  * Logistics, storage, and treasury management subsystem.
@@ -29,6 +37,17 @@ public final class LogisticsModule implements ArchitectModule {
     // High-watermark storage buffer for NO_DECREASE tier
     private short[] crateWatermark = null;
     private short[] crateResourceIndex = null;
+
+    private static Field thingsResourcesAllField;
+    private static Method thingsResourcesAllMethod;
+    private static boolean thingsResourcesReflectionFailed = false;
+
+    private static Field thingsRubbishHolderField;
+    private static Field rubbishGoreField;
+    private static boolean rubbishReflectionFailed = false;
+
+    private static Field corpsesAllField;
+    private static boolean corpsesReflectionFailed = false;
 
     @Override
     public void init() {
@@ -191,6 +210,193 @@ public final class LogisticsModule implements ArchitectModule {
                 GAME.player().credits().set(GAME.player().credits().credits() + amount);
             }
         }
+    }
+
+    /**
+     * Checks whether a map coordinate is a dedicated warehouse, hauler, depot,
+     * or active room storage tile where items should NOT be removed by ground cleanup.
+     */
+    public static boolean isProtectedStorageTile(int tx, int ty) {
+        if (!SETT.exists() || !SETT.IN_BOUNDS(tx, ty) || SETT.ROOMS() == null || SETT.ROOMS().map == null) {
+            return false;
+        }
+        Room room = SETT.ROOMS().map.get(tx, ty);
+        if (room == null) {
+            return false;
+        }
+        if (SETT.ROOMS().STOCKPILE != null && room.blueprint() == SETT.ROOMS().STOCKPILE) {
+            return true;
+        }
+        if (SETT.ROOMS().HAULER != null && room.blueprint() == SETT.ROOMS().HAULER) {
+            return true;
+        }
+        if (SETT.ROOMS().IMPORT != null && room.blueprint() == SETT.ROOMS().IMPORT) {
+            return true;
+        }
+        if (SETT.ROOMS().EXPORT != null && room.blueprint() == SETT.ROOMS().EXPORT) {
+            return true;
+        }
+        if (SETT.ROOMS().SUPPLY != null && room.blueprint() == SETT.ROOMS().SUPPLY) {
+            return true;
+        }
+        try {
+            if (room.storage(tx, ty) != null) {
+                return true;
+            }
+        } catch (Throwable ignored) {
+        }
+        try {
+            if (room.resourceTile(tx, ty) != null) {
+                return true;
+            }
+        } catch (Throwable ignored) {
+        }
+        return false;
+    }
+
+    private static ScatteredResource[] getScatteredResourcesArray() {
+        if (!SETT.exists() || SETT.THINGS() == null || SETT.THINGS().resources == null) {
+            return null;
+        }
+        if (thingsResourcesReflectionFailed) {
+            return null;
+        }
+        try {
+            if (thingsResourcesAllField == null && thingsResourcesAllMethod == null) {
+                try {
+                    thingsResourcesAllField = ThingsResources.class.getDeclaredField("all");
+                    thingsResourcesAllField.setAccessible(true);
+                } catch (Throwable t1) {
+                    thingsResourcesAllMethod = ThingsResources.class.getDeclaredMethod("all");
+                    thingsResourcesAllMethod.setAccessible(true);
+                }
+            }
+            if (thingsResourcesAllField != null) {
+                return (ScatteredResource[]) thingsResourcesAllField.get(SETT.THINGS().resources);
+            }
+            if (thingsResourcesAllMethod != null) {
+                return (ScatteredResource[]) thingsResourcesAllMethod.invoke(SETT.THINGS().resources);
+            }
+        } catch (Throwable t) {
+            thingsResourcesReflectionFailed = true;
+        }
+        return null;
+    }
+
+    /**
+     * Cleans up all loose resource stacks on the ground (outside of warehouses and room storages).
+     * @param toStockpile if true, resources are added to player faction inventory before being removed.
+     * @return int array [stacksRemoved, totalUnits]
+     */
+    public int[] clearGroundResources(boolean toStockpile) {
+        ScatteredResource[] all = getScatteredResourcesArray();
+        if (all == null) {
+            return new int[]{0, 0};
+        }
+
+        int stacksCount = 0;
+        int totalUnits = 0;
+
+        for (int i = 0; i < all.length; i++) {
+            ScatteredResource sr = all[i];
+            if (sr != null && !sr.isRemoved()) {
+                int tx = sr.x();
+                int ty = sr.y();
+                if (isProtectedStorageTile(tx, ty)) {
+                    continue;
+                }
+                try {
+                    int am = sr.amount();
+                    RESOURCE res = sr.resource();
+                    if (toStockpile && res != null && am > 0 && GAME.player() != null && GAME.player().res() != null) {
+                        GAME.player().res().inc(res, RTYPE.PRODUCED, am);
+                        totalUnits += am;
+                    }
+                    sr.remove();
+                    stacksCount++;
+                } catch (Throwable ignored) {
+                }
+            }
+        }
+
+        return new int[]{stacksCount, totalUnits};
+    }
+
+    /**
+     * Cleans up all waste, rubbish, and corpses across the map.
+     * @return number of debris items removed
+     */
+    public int clearWaste() {
+        if (!SETT.exists() || SETT.THINGS() == null) {
+            return 0;
+        }
+        int removedCount = 0;
+
+        // 1. Rubbish
+        if (SETT.THINGS().rubbish != null) {
+            try {
+                if (!rubbishReflectionFailed && thingsRubbishHolderField == null) {
+                    try {
+                        thingsRubbishHolderField = settlement.thing.ThingsRubbish.class.getDeclaredField("rubbish");
+                        thingsRubbishHolderField.setAccessible(true);
+                        Class<?> holderClass = thingsRubbishHolderField.getType();
+                        rubbishGoreField = holderClass.getDeclaredField("gore");
+                        rubbishGoreField.setAccessible(true);
+                    } catch (Throwable t) {
+                        rubbishReflectionFailed = true;
+                    }
+                }
+                if (thingsRubbishHolderField != null && rubbishGoreField != null) {
+                    Object holder = thingsRubbishHolderField.get(SETT.THINGS().rubbish);
+                    if (holder != null) {
+                        Object[] gore = (Object[]) rubbishGoreField.get(holder);
+                        if (gore != null) {
+                            for (int i = 0; i < gore.length; i++) {
+                                if (gore[i] instanceof THINGS.Thing) {
+                                    THINGS.Thing t = (THINGS.Thing) gore[i];
+                                    if (!t.isRemoved()) {
+                                        t.remove();
+                                        removedCount++;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (Throwable ignored) {
+            }
+        }
+
+        // 2. Corpses
+        if (SETT.THINGS().corpses != null) {
+            try {
+                if (corpsesAllField == null && !corpsesReflectionFailed) {
+                    try {
+                        corpsesAllField = settlement.thing.ThingsCorpses.class.getDeclaredField("corpses");
+                        corpsesAllField.setAccessible(true);
+                    } catch (Throwable t) {
+                        corpsesReflectionFailed = true;
+                    }
+                }
+                if (corpsesAllField != null) {
+                    Object[] corpses = (Object[]) corpsesAllField.get(SETT.THINGS().corpses);
+                    if (corpses != null) {
+                        for (int i = 0; i < corpses.length; i++) {
+                            if (corpses[i] instanceof THINGS.Thing) {
+                                THINGS.Thing t = (THINGS.Thing) corpses[i];
+                                if (!t.isRemoved()) {
+                                    t.remove();
+                                    removedCount++;
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (Throwable ignored) {
+            }
+        }
+
+        return removedCount;
     }
 
     private static boolean isRawMaterial(RESOURCE res) {

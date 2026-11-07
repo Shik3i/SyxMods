@@ -142,6 +142,17 @@ public class SanityTest {
             failed++;
         }
 
+        // Check 10: LogisticsModule Ground Cleanup & Waste Reflection Verification
+        try {
+            testCleanupReflection();
+            System.out.println("[PASS] Check 10: Ground cleanup & waste reflection handles resolved with setAccessible(true).");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] Check 10: Ground cleanup reflection error: " + t.getMessage());
+            t.printStackTrace();
+            failed++;
+        }
+
 
         System.out.println("================================================================================");
         System.out.println("INTEGRATION TEST RESULTS: " + passed + " passed, " + failed + " failed.");
@@ -538,6 +549,23 @@ public class SanityTest {
         Class<?> bpClass = Class.forName("settlement.room.main.construction.ConstructionBlueprint");
         java.lang.reflect.Field f2 = bpClass.getDeclaredField("all");
         f2.setAccessible(true);
+    }
+
+    private static void testCleanupReflection() throws Exception {
+        Class<?> trClass = Class.forName("settlement.thing.ThingsResources");
+        java.lang.reflect.Field fAll = trClass.getDeclaredField("all");
+        fAll.setAccessible(true);
+
+        Class<?> rubClass = Class.forName("settlement.thing.ThingsRubbish");
+        java.lang.reflect.Field fRub = rubClass.getDeclaredField("rubbish");
+        fRub.setAccessible(true);
+        Class<?> holderClass = fRub.getType();
+        java.lang.reflect.Field fGore = holderClass.getDeclaredField("gore");
+        fGore.setAccessible(true);
+
+        Class<?> tcClass = Class.forName("settlement.thing.ThingsCorpses");
+        java.lang.reflect.Field fCorpses = tcClass.getDeclaredField("corpses");
+        fCorpses.setAccessible(true);
     }
 
 

@@ -12,6 +12,7 @@ import com.architect.modules.WorldModule;
 import com.architect.ui.ArchitectUI;
 import com.architect.util.I18n;
 
+import game.GAME;
 import init.constant.C;
 import init.race.Race;
 import init.sprite.SPRITES;
@@ -114,6 +115,30 @@ public final class ArchitectInstance implements SCRIPT_INSTANCE {
         @Override
         public void onMaxFertilityRequested() {
             worldModule.maximizeSoilMoistureNow();
+        }
+
+        @Override
+        public void onClearGroundItemsRequested(boolean toStockpile) {
+            int[] res = logisticsModule.clearGroundResources(toStockpile);
+            boolean de = I18n.getLanguage() == I18n.Language.DE;
+            if (toStockpile) {
+                GAME.Notify(de
+                    ? "Boden aufgeraeumt: " + res[0] + " Rohstoffstapel (" + res[1] + " Einheiten) ins Lager gebucht."
+                    : "Ground cleaned: " + res[0] + " stacks (" + res[1] + " units) deposited to stockpile.");
+            } else {
+                GAME.Notify(de
+                    ? "Boden aufgeraeumt: " + res[0] + " herumliegende Rohstoffstapel geloescht."
+                    : "Ground cleaned: " + res[0] + " loose resource stacks deleted.");
+            }
+        }
+
+        @Override
+        public void onClearWasteRequested() {
+            int count = logisticsModule.clearWaste();
+            boolean de = I18n.getLanguage() == I18n.Language.DE;
+            GAME.Notify(de
+                ? "Boden aufgeraeumt: " + count + " Abfaelle, Schmutz & Kadaver entfernt."
+                : "Waste cleared: " + count + " debris, rubbish & cadavers removed.");
         }
     };
 

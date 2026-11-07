@@ -57,6 +57,8 @@ public final class ArchitectUI {
         void onSpawnImmigrantsRequested(Race race, int count);
         void onSpawnAllPlayableRequested(int countPerRace);
         void onMaxFertilityRequested();
+        void onClearGroundItemsRequested(boolean toStockpile);
+        void onClearWasteRequested();
     }
 
     public static boolean isOpen() {
@@ -625,6 +627,54 @@ public final class ArchitectUI {
         actionSection.addRight(6, btnWinCombat);
 
         content.addDown(4, actionSection);
+
+        // Row 2: Cleanup & Maintenance Instant Actions
+        GuiSection cleanupSection = new GuiSection();
+        int btnWClean = (contentW - 12) / 3; // 259px each
+
+        // 1-Click Delete Ground Items
+        GButt.ButtPanel btnClearGround = createBtnM(I18n.get("btn.clear_ground_items"), btnWClean, 30);
+        btnClearGround.hoverTitleSet(I18n.get("btn.clear_ground_items"));
+        btnClearGround.hoverInfoSet(de
+            ? "Loescht alle herumliegenden Rohstoffstapel (Holz, Stein, Erze etc.) auf dem Boden, Baustellen und Strassen restlos.\nRohstoffe in Lagern oder Gebaeuden bleiben unberuehrt."
+            : "Deletes all loose resource stacks (wood, stone, ores, etc.) dropped on the ground, construction sites, and roads.\nResources inside warehouses or room storages are untouched.");
+        btnClearGround.clickActionSet(new ACTION() {
+            @Override
+            public void exe() {
+                callback.onClearGroundItemsRequested(false);
+            }
+        });
+        cleanupSection.add(btnClearGround);
+
+        // 1-Click Deposit Ground Items to Stockpile
+        GButt.ButtPanel btnCollectGround = createBtnM(I18n.get("btn.collect_ground_items"), btnWClean, 30);
+        btnCollectGround.hoverTitleSet(I18n.get("btn.collect_ground_items"));
+        btnCollectGround.hoverInfoSet(de
+            ? "Sammelt alle herumliegenden Rohstoffe auf der Karte ein und bucht sie sofort vollstaendig ins Stadtlager ein, bevor der Boden aufgeraeumt wird."
+            : "Collects all loose resource stacks across the map and credits them directly to city stockpile before clearing the ground.");
+        btnCollectGround.clickActionSet(new ACTION() {
+            @Override
+            public void exe() {
+                callback.onClearGroundItemsRequested(true);
+            }
+        });
+        cleanupSection.addRight(6, btnCollectGround);
+
+        // 1-Click Clear Waste & Rubbish
+        GButt.ButtPanel btnClearWaste = createBtnM(I18n.get("btn.clear_waste"), btnWClean, 30);
+        btnClearWaste.hoverTitleSet(I18n.get("btn.clear_waste"));
+        btnClearWaste.hoverInfoSet(de
+            ? "Beseitigt kartenweit sofort allen herumliegenden Schmutz, Muell (Rubbish), Schlachtfeld-Leichen und Kadaver."
+            : "Instantly removes all scattered trash, rubbish, battlefield corpses, and cadavers across the map.");
+        btnClearWaste.clickActionSet(new ACTION() {
+            @Override
+            public void exe() {
+                callback.onClearWasteRequested();
+            }
+        });
+        cleanupSection.addRight(6, btnClearWaste);
+
+        content.addDown(4, cleanupSection);
         content.addDown(8, GFrame.separator(contentW));
 
         // --- 4. Footer: Close Button ---
