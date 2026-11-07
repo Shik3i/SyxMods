@@ -80,7 +80,7 @@ public class SanityTest {
         }        // Check 6: PlannerConfig Serialization & Language Persistence
         try {
             testPlannerConfigSerialization();
-            System.out.println("[PASS] Check 6: PlannerConfig V2 save/load, V1 backward-compat & language persistence verified.");
+            System.out.println("[PASS] Check 6: PlannerConfig V3 save/load, V1/V2 backward-compat & HUD toggle verified.");
             passed++;
         } catch (Throwable t) {
             System.err.println("[FAIL] Check 6: PlannerConfig serialization check failed: " + t.getMessage());
@@ -249,6 +249,7 @@ public class SanityTest {
             c1.setStorageRatio(0.15);
             c1.setAutoStrutOnPlace(true);
             c1.setShowOverlay(false);
+            c1.setShowHudButton(false);
             c1.setLanguage("de");
 
             snake2d.util.file.FilePutter putter = new snake2d.util.file.FilePutter(tempPath, 512);
@@ -265,7 +266,28 @@ public class SanityTest {
             if (Math.abs(c2.getStorageRatio() - 0.15) > 1e-4) throw new AssertionError("Storage ratio mismatch");
             if (!c2.isAutoStrutOnPlace()) throw new AssertionError("autoStrutOnPlace mismatch");
             if (c2.isShowOverlay()) throw new AssertionError("showOverlay mismatch");
+            if (c2.isShowHudButton()) throw new AssertionError("showHudButton mismatch");
             if (!"de".equals(c2.getLanguage())) throw new AssertionError("Language mismatch");
+
+            // Test V2 backward compatibility (defaults showHudButton to true)
+            putter = new snake2d.util.file.FilePutter(tempPath, 512);
+            putter.i(0x53595850);
+            putter.i(2);
+            putter.i(com.autoplanner.config.PlannerConfig.LayoutStyle.BALANCED.ordinal());
+            putter.d(1.1);
+            putter.d(0.10);
+            putter.bool(true);
+            putter.bool(true);
+            putter.chars("de");
+            putter.save();
+
+            com.autoplanner.config.PlannerConfig cV2 = new com.autoplanner.config.PlannerConfig();
+            getter = new snake2d.util.file.FileGetter(tempPath);
+            cV2.load(getter);
+            getter.close();
+
+            if (!cV2.isShowHudButton()) throw new AssertionError("V2 showHudButton should default to true");
+            if (!"de".equals(cV2.getLanguage())) throw new AssertionError("V2 language should be de");
 
             // Test V1 backward compatibility
             putter = new snake2d.util.file.FilePutter(tempPath, 512);
@@ -284,6 +306,7 @@ public class SanityTest {
             getter.close();
 
             if (c3.getStyle() != com.autoplanner.config.PlannerConfig.LayoutStyle.COMPACT) throw new AssertionError("V1 style mismatch");
+            if (!c3.isShowHudButton()) throw new AssertionError("V1 showHudButton should default to true");
             if (!"en".equals(c3.getLanguage())) throw new AssertionError("V1 default language should be en");
         } finally {
             java.nio.file.Files.deleteIfExists(tempPath);

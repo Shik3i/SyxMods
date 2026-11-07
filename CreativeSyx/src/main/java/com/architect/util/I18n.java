@@ -82,6 +82,8 @@ public final class I18n {
         EN_STRINGS.put("cheat.battle_autowin.desc", "Ensures unconditional morale victory in all tactical battles and sieges.");
         EN_STRINGS.put("cheat.instant_jobs", "Instant Jobs");
         EN_STRINGS.put("cheat.instant_jobs.desc", "Jobs like tree felling, road demolition, wall disassembly, and rock clearing complete instantly.");
+        EN_STRINGS.put("cheat.hud_button", "Top-Bar HUD Button");
+        EN_STRINGS.put("cheat.hud_button.desc", "Shows or hides the Creative icon in the game top panel (F10 hotkey always works).");
         EN_STRINGS.put("cheat.job_yield", "Job Yield");
         EN_STRINGS.put("cheat.job_yield.desc", "Configures whether cleared resources drop onto the floor, vanish (True Creative), or go to stockpile.");
         EN_STRINGS.put("tier.job_yield.drop", "Drop on Floor");
@@ -173,6 +175,8 @@ public final class I18n {
         DE_STRINGS.put("cheat.battle_autowin.desc", "Sichert bedingungslosen Moralsieg in allen Feldschlachten und Belagerungen.");
         DE_STRINGS.put("cheat.instant_jobs", "Sofort-Auftraege");
         DE_STRINGS.put("cheat.instant_jobs.desc", "Baeume faellen, Strassen abreissen, Mauern zerlegen und Felsen werden sofort erledigt.");
+        DE_STRINGS.put("cheat.hud_button", "Top-Bar HUD-Button");
+        DE_STRINGS.put("cheat.hud_button.desc", "Zeigt oder versteckt das Creative-Symbol in der oberen Leiste (F10 funktioniert immer).");
         DE_STRINGS.put("cheat.job_yield", "Auftrags-Ertrag");
         DE_STRINGS.put("cheat.job_yield.desc", "Legt fest, ob abgebaute Rohstoffe auf den Boden droppen, verschwinden (True Creative) oder ins Lager wandern.");
         DE_STRINGS.put("tier.job_yield.drop", "Boden-Spawn");

@@ -70,6 +70,7 @@ public final class ArchitectInstance implements SCRIPT_INSTANCE {
 
     // Native stone HUD button
     private GButt.ButtPanel hudButton;
+    private GuiSection topBarSection;
     private boolean attachedToTopPanel = false;
     private UIPanelTop lastAttachedTop = null;
 
@@ -125,17 +126,12 @@ public final class ArchitectInstance implements SCRIPT_INSTANCE {
     }
 
     private void ensureHudButton() {
-        if (hudButton == null && UI.FONT() != null && UI.FONT().S != null) {
-            GText t = new GText(UI.FONT().S, "CREATIVE");
-            t.lablify();
-            hudButton = new GButt.ButtPanel((snake2d.util.sprite.SPRITE) t);
-            hudButton.icon(SPRITES.icons().m.capitol);
-            hudButton.pad(6, 2);
-            hudButton.align(DIR.C);
+        if (hudButton == null && SPRITES.icons() != null && SPRITES.icons().m != null && SPRITES.icons().m.capitol != null) {
+            hudButton = new UIPanelTop.Butt(SPRITES.icons().m.capitol);
             hudButton.hoverTitleSet("Creative Mode  [F10]");
             hudButton.hoverInfoSet(I18n.getLanguage() == I18n.Language.DE
-                ? "Klick oeffnet das Creative-, Schoenbau- & Sandbox-Kontrollzentrum (Hotkeys: F10 / ESC)."
-                : "Click opens the creative and sandbox control center (Hotkeys: F10 / ESC).");
+                ? "Klick oder F10 oeffnet das Creative-, Schoenbau- & Sandbox-Kontrollzentrum (ESC schliesst)."
+                : "Click or press F10 to open the creative and sandbox control center (ESC closes).");
             hudButton.clickActionSet(new ACTION() {
                 @Override
                 public void exe() {
@@ -175,11 +171,13 @@ public final class ArchitectInstance implements SCRIPT_INSTANCE {
         if (top == null || top == lastAttachedTop) return;
         ensureHudButton();
         if (hudButton != null) {
-            GuiSection section = new GuiSection();
-            section.add(UIPanelTop.sep());
-            section.addRightC(4, hudButton);
-            section.pad(2, 0);
-            top.addRightRight(section);
+            topBarSection = new GuiSection();
+            topBarSection.add(hudButton);
+            if (!state.showHudButton) {
+                topBarSection.visableSet(false);
+                hudButton.activeSet(false);
+            }
+            top.addRightRight(topBarSection);
             lastAttachedTop = top;
             attachedToTopPanel = true;
         }
@@ -219,9 +217,13 @@ public final class ArchitectInstance implements SCRIPT_INSTANCE {
             }
         }
 
-        // 4. Update button active/highlighted state matching open modal
+        // 4. Update button active/highlighted and visibility state
         if (hudButton != null) {
             hudButton.selectedSet(ArchitectUI.isOpen());
+            if (topBarSection != null) {
+                topBarSection.visableSet(state.showHudButton);
+            }
+            hudButton.activeSet(state.showHudButton);
         }
 
         // 5. Subsystem simulation updates

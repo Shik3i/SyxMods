@@ -47,6 +47,7 @@ public final class AutoPlannerInstance implements SCRIPT_INSTANCE {
 
     // Native Top Bar HUD Button & State Tracking
     private GButt.ButtPanel hudButton;
+    private GuiSection topBarSection;
     private boolean attachedToTopPanel = false;
     private UIPanelTop lastAttachedTop = null;
 
@@ -55,13 +56,8 @@ public final class AutoPlannerInstance implements SCRIPT_INSTANCE {
     private double f9Cooldown = 0.0;
 
     private void ensureHudButton() {
-        if (hudButton == null && UI.FONT() != null && UI.FONT().S != null) {
-            GText t = new GText(UI.FONT().S, I18n.get("hud.planner"));
-            t.lablify();
-            hudButton = new GButt.ButtPanel((snake2d.util.sprite.SPRITE) t);
-            hudButton.icon(SPRITES.icons().m.wallceiling);
-            hudButton.pad(6, 2);
-            hudButton.align(DIR.C);
+        if (hudButton == null && SPRITES.icons() != null && SPRITES.icons().m != null && SPRITES.icons().m.wallceiling != null) {
+            hudButton = new UIPanelTop.Butt(SPRITES.icons().m.wallceiling);
             hudButton.hoverTitleSet(I18n.get("hud.tooltip_title"));
             hudButton.hoverInfoSet(I18n.get("hud.tooltip_desc"));
             hudButton.clickActionSet(new ACTION() {
@@ -97,11 +93,13 @@ public final class AutoPlannerInstance implements SCRIPT_INSTANCE {
         if (top == null || top == lastAttachedTop) return;
         ensureHudButton();
         if (hudButton != null) {
-            GuiSection section = new GuiSection();
-            section.add(UIPanelTop.sep());
-            section.addRightC(4, hudButton);
-            section.pad(2, 0);
-            top.addRightRight(section);
+            topBarSection = new GuiSection();
+            topBarSection.add(hudButton);
+            if (!config.isShowHudButton()) {
+                topBarSection.visableSet(false);
+                hudButton.activeSet(false);
+            }
+            top.addRightRight(topBarSection);
             lastAttachedTop = top;
             attachedToTopPanel = true;
         }
@@ -145,9 +143,13 @@ public final class AutoPlannerInstance implements SCRIPT_INSTANCE {
             }
         }
 
-        // 4. Update button active/highlighted state matching open modal
+        // 4. Update button active/highlighted and visibility state
         if (hudButton != null) {
             hudButton.selectedSet(overlayUI.isConfigOpen());
+            if (topBarSection != null) {
+                topBarSection.visableSet(config.isShowHudButton());
+            }
+            hudButton.activeSet(config.isShowHudButton());
         }
 
         // 5. Update overlay simulation

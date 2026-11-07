@@ -56,6 +56,8 @@ public final class I18n {
         EN_STRINGS.put("ui.panel.storage.val", "{0}% Storage");
         EN_STRINGS.put("ui.panel.language", "Interface Language");
         EN_STRINGS.put("ui.panel.language.desc", "Display language for buttons, dialogs and tooltips");
+        EN_STRINGS.put("ui.panel.hud_button", "Top-Bar HUD Button");
+        EN_STRINGS.put("ui.panel.hud_button.desc", "Show or hide the Auto-Planner icon in the top panel (F9 hotkey always works)");
         
         EN_STRINGS.put("btn.strut", "Auto-Strut");
         EN_STRINGS.put("btn.furnish", "Auto-Furnish");
@@ -112,8 +114,10 @@ public final class I18n {
         DE_STRINGS.put("ui.panel.storage.desc", "Fläche für interne Lagerkisten und Material-Puffer");
         DE_STRINGS.put("ui.panel.storage.none", "Deaktiviert (0%)");
         DE_STRINGS.put("ui.panel.storage.val", "{0}% Lager");
-        DE_STRINGS.put("ui.panel.language", "Benutzeroberfläche");
-        DE_STRINGS.put("ui.panel.language.desc", "Sprache für Schaltflächen, Menüs und Hilfetexte");
+        DE_STRINGS.put("ui.panel.language", "Benutzeroberflaeche");
+        DE_STRINGS.put("ui.panel.language.desc", "Sprache fuer Schaltflaechen, Menues und Hilfetexte");
+        DE_STRINGS.put("ui.panel.hud_button", "Top-Bar HUD-Button");
+        DE_STRINGS.put("ui.panel.hud_button.desc", "Auto-Planer Symbol in der oberen Leiste anzeigen/ausblenden (F9 funktioniert immer)");
         
         DE_STRINGS.put("btn.strut", "Auto-Stützen");
         DE_STRINGS.put("btn.furnish", "Auto-Möbel");

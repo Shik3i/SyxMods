@@ -19,7 +19,7 @@ import snake2d.util.file.FilePutter;
 public final class ArchitectState {
 
     public static final int MAGIC_HEADER = 0x59584152; // 'SXAR'
-    public static final int CURRENT_VERSION = 5;
+    public static final int CURRENT_VERSION = 6;
 
     // Semantic Schönbau and sandbox settings
     public MaintenanceTier maintenanceTier = MaintenanceTier.VANILLA;
@@ -39,6 +39,9 @@ public final class ArchitectState {
     // Instant Jobs (tree felling, road demolition, wall disassembly, rock clearing, tunneling)
     public boolean instantJobs = false;
     public JobYieldTier jobYieldTier = JobYieldTier.DROP_ON_GROUND;
+
+    // HUD / Top-Bar Button visibility
+    public boolean showHudButton = true;
 
     // Treasury (Sprint 4.5)
     public boolean infiniteDenari = false;
@@ -68,6 +71,7 @@ public final class ArchitectState {
         battleAutoWin = false;
         instantJobs = false;
         jobYieldTier = JobYieldTier.DROP_ON_GROUND;
+        showHudButton = true;
         infiniteDenari = false;
         freezeNiceWeather = false;
         disableAging = false;
@@ -138,6 +142,9 @@ public final class ArchitectState {
         file.bool(instantJobs);
         file.i(jobYieldTier.ordinal());
 
+        // Version 6 fields
+        file.bool(showHudButton);
+
         file.chars(language != null ? language : "en");
     }
 
@@ -187,6 +194,12 @@ public final class ArchitectState {
             } else {
                 instantJobs = false;
                 jobYieldTier = JobYieldTier.DROP_ON_GROUND;
+            }
+
+            if (version >= 6) {
+                showHudButton = file.bool();
+            } else {
+                showHudButton = true;
             }
 
             language = file.chars();

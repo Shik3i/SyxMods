@@ -13,7 +13,7 @@ import snake2d.util.file.FilePutter;
 public final class PlannerConfig {
 
     private static final int MAGIC = 0x53595850; // "SYXP"
-    private static final int VERSION = 2;
+    private static final int VERSION = 3;
 
     public enum LayoutStyle {
         COMPACT,
@@ -29,6 +29,7 @@ public final class PlannerConfig {
     private double storageRatio = 0.05;     // 5% storage allowance
     private boolean autoStrutOnPlace = false;
     private boolean showOverlay = true;
+    private boolean showHudButton = true;
     private String language = "en";
 
     public LayoutStyle getStyle() {
@@ -87,6 +88,7 @@ public final class PlannerConfig {
         this.style = LayoutStyle.COMPACT;
         this.targetEfficiency = 1.0;
         this.storageRatio = 0.05;
+        this.showHudButton = true;
         this.language = "en";
         I18n.setLanguage(I18n.Language.EN);
     }
@@ -111,6 +113,18 @@ public final class PlannerConfig {
         this.showOverlay = !this.showOverlay;
     }
 
+    public boolean isShowHudButton() {
+        return showHudButton;
+    }
+
+    public void setShowHudButton(boolean showHudButton) {
+        this.showHudButton = showHudButton;
+    }
+
+    public void toggleHudButton() {
+        this.showHudButton = !this.showHudButton;
+    }
+
     public String getLanguage() {
         return language;
     }
@@ -131,6 +145,7 @@ public final class PlannerConfig {
         file.bool(autoStrutOnPlace);
         file.bool(showOverlay);
         file.chars(language != null ? language : "en");
+        file.bool(showHudButton);
     }
 
     public void load(FileGetter file) throws IOException {
@@ -153,6 +168,12 @@ public final class PlannerConfig {
             if (ver >= 2) {
                 this.language = file.chars();
                 I18n.setLanguage(I18n.Language.fromCode(language));
+            }
+
+            if (ver >= 3) {
+                this.showHudButton = file.bool();
+            } else {
+                this.showHudButton = true;
             }
         }
     }

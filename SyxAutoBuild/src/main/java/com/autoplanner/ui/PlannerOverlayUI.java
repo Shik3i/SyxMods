@@ -708,6 +708,28 @@ public final class PlannerOverlayUI {
         // Divider
         modal.addDown(8, new HorizontalSeparator(contentWidth));
 
+        // Row 5: Top-Bar HUD Button
+        String hudLabel = config.isShowHudButton()
+                ? (I18n.getLanguage() == Language.DE ? "Aktiviert" : "Enabled")
+                : (I18n.getLanguage() == Language.DE ? "Ausgeblendet" : "Hidden");
+        GButt.ButtPanel btnHud = new GButt.ButtPanel(hudLabel) {
+            @Override
+            protected void clickA() {
+                config.toggleHudButton();
+                openConfigModal();
+            }
+        };
+        btnHud.selectedSet(config.isShowHudButton());
+        btnHud.body().setWidth(250);
+        btnHud.body().setHeight(32);
+        modal.addDown(8, createOptionRow(SPRITES.icons().m.wallceiling,
+                I18n.get("ui.panel.hud_button"),
+                I18n.get("ui.panel.hud_button.desc"),
+                btnHud, contentWidth));
+
+        // Divider
+        modal.addDown(8, new HorizontalSeparator(contentWidth));
+
         // Footer Action Bar: Reset Defaults & Close/Done
         GuiSection footer = new GuiSection();
         footer.body().setWidth(contentWidth);

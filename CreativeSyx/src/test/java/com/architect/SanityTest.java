@@ -56,10 +56,10 @@ public class SanityTest {
             failed++;
         }
 
-        // Check 2: Symmetrical State Serialization (V5 Save & Load)
+        // Check 2: Symmetrical State Serialization (V6 Save & Load)
         try {
-            testStateSerializationV5();
-            System.out.println("[PASS] Check 2: Symmetrical Save & Load (V5) verified with 100% fidelity.");
+            testStateSerializationV6();
+            System.out.println("[PASS] Check 2: Symmetrical Save & Load (V6) verified with 100% fidelity.");
             passed++;
         } catch (Throwable t) {
             System.err.println("[FAIL] Check 2: Serialization error: " + t.getMessage());
@@ -67,10 +67,10 @@ public class SanityTest {
             failed++;
         }
 
-        // Check 3: Backward Compatibility with V4, V3 and V2 Savegames
+        // Check 3: Backward Compatibility with V5, V4, V3 and V2 Savegames
         try {
             testBackwardCompatibility();
-            System.out.println("[PASS] Check 3: Backward compatibility (V1/V2/V3/V4 -> V5) verified.");
+            System.out.println("[PASS] Check 3: Backward compatibility (V1/V2/V3/V4/V5 -> V6) verified.");
             passed++;
         } catch (Throwable t) {
             System.err.println("[FAIL] Check 3: Backward compatibility error: " + t.getMessage());
@@ -209,8 +209,8 @@ public class SanityTest {
         }
     }
 
-    private static void testStateSerializationV5() throws Exception {
-        Path tempPath = Files.createTempFile("syx_architect_test_v5", ".bin");
+    private static void testStateSerializationV6() throws Exception {
+        Path tempPath = Files.createTempFile("syx_architect_test_v6", ".bin");
         try {
             ArchitectState s1 = new ArchitectState();
             s1.maintenanceTier = MaintenanceTier.NO_DECAY;
@@ -224,6 +224,7 @@ public class SanityTest {
             s1.battleAutoWin = true;
             s1.instantJobs = true;
             s1.jobYieldTier = JobYieldTier.VOID_DISCARD;
+            s1.showHudButton = false;
             s1.infiniteDenari = true;
             s1.freezeNiceWeather = true;
             s1.disableAging = true;
@@ -250,6 +251,7 @@ public class SanityTest {
             assertEquals("battleAutoWin", s1.battleAutoWin, s2.battleAutoWin);
             assertEquals("instantJobs", s1.instantJobs, s2.instantJobs);
             assertEquals("jobYieldTier", s1.jobYieldTier, s2.jobYieldTier);
+            assertEquals("showHudButton", s1.showHudButton, s2.showHudButton);
             assertEquals("infiniteDenari", s1.infiniteDenari, s2.infiniteDenari);
             assertEquals("freezeNiceWeather", s1.freezeNiceWeather, s2.freezeNiceWeather);
             assertEquals("disableAging", s1.disableAging, s2.disableAging);
@@ -261,7 +263,48 @@ public class SanityTest {
     }
 
     private static void testBackwardCompatibility() throws Exception {
-        // 1. Test V4 binary stream
+        // 1. Test V5 binary stream
+        Path tempPathV5 = Files.createTempFile("syx_architect_test_v5", ".bin");
+        try {
+            FilePutter putter = new FilePutter(tempPathV5, 1024);
+            putter.i(ArchitectState.MAGIC_HEADER);
+            putter.i(5); // V5
+            putter.i(MaintenanceTier.NO_DECAY.ordinal());
+            putter.i(ConstructionTier.INSTANT_BUILD.ordinal());
+            putter.i(KnowledgeTier.OMNISCIENCE.ordinal());
+            putter.i(LogisticsTier.ALL_ASSIGNED_CRATES.ordinal());
+            putter.d(12345.0);
+            putter.bool(true);
+            putter.bool(true);
+            putter.bool(true);
+            putter.bool(true);
+            // V3 booleans
+            putter.bool(true);
+            putter.bool(false);
+            putter.bool(true);
+            // V4 booleans
+            putter.bool(true); // infiniteDenari
+            // V5 booleans
+            putter.bool(true); // instantJobs
+            putter.i(JobYieldTier.STOCKPILE.ordinal());
+            putter.chars("en");
+            putter.save();
+
+            ArchitectState s = new ArchitectState();
+            FileGetter getter = new FileGetter(tempPathV5);
+            s.load(getter);
+            getter.close();
+
+            assertEquals("V5 maintenanceTier", MaintenanceTier.NO_DECAY, s.maintenanceTier);
+            assertEquals("V5 infiniteDenari", true, s.infiniteDenari);
+            assertEquals("V5 instantJobs", true, s.instantJobs);
+            assertEquals("V5 jobYieldTier", JobYieldTier.STOCKPILE, s.jobYieldTier);
+            assertEquals("V5 showHudButton (default)", true, s.showHudButton);
+            assertEquals("V5 language", "en", s.language);
+        } finally {
+            Files.deleteIfExists(tempPathV5);
+        }
+        // 2. Test V4 binary stream
         Path tempPathV4 = Files.createTempFile("syx_architect_test_v4", ".bin");
         try {
             FilePutter putter = new FilePutter(tempPathV4, 1024);
@@ -299,7 +342,7 @@ public class SanityTest {
             Files.deleteIfExists(tempPathV4);
         }
 
-        // 2. Test V3 binary stream
+        // 3. Test V3 binary stream
         Path tempPath = Files.createTempFile("syx_architect_test_v3", ".bin");
         try {
             FilePutter putter = new FilePutter(tempPath, 1024);

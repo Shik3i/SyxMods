@@ -525,6 +525,21 @@ public final class ArchitectUI {
         });
         rightCol.addDown(4, createOptionRow(colW, I18n.get("cheat.battle_autowin"), btnBattle));
 
+        // Row 6: Top-Bar HUD Button Toggle
+        GButt.ButtPanel btnHud = createBtnM(state.showHudButton ? I18n.get("status.active") : I18n.get("status.inactive"), ctrlW, ctrlH);
+        btnHud.selectedSet(state.showHudButton);
+        btnHud.hoverTitleSet(I18n.get("cheat.hud_button") + " [" + (state.showHudButton ? I18n.get("status.active") : I18n.get("status.inactive")) + "]");
+        btnHud.hoverInfoSet(I18n.get("cheat.hud_button.desc"));
+        btnHud.clickActionSet(new ACTION() {
+            @Override
+            public void exe() {
+                state.showHudButton = !state.showHudButton;
+                callback.onStateUpdated();
+                open(state, callback);
+            }
+        });
+        rightCol.addDown(4, createOptionRow(colW, I18n.get("cheat.hud_button"), btnHud));
+
         gridRow.addRight(16, rightCol);
         content.addDown(8, gridRow);
         content.addDown(8, GFrame.separator(contentW));
