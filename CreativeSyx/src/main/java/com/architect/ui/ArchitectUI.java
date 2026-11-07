@@ -405,6 +405,20 @@ public final class ArchitectUI {
         });
         leftCol.addDown(4, createOptionRow(colW, I18n.get("cheat.instant_jobs"), btnJobs));
 
+        // Row 6: Job Yield Tier (Drop on floor, Void/True Creative, To Stockpile)
+        GButt.ButtPanel btnYield = createBtnM(state.jobYieldTier.getLabel(), ctrlW, ctrlH);
+        btnYield.hoverTitleSet(I18n.get("cheat.job_yield") + " [" + state.jobYieldTier.getLabel() + "]");
+        btnYield.hoverInfoSet(state.jobYieldTier.getDetailedTooltip());
+        btnYield.clickActionSet(new ACTION() {
+            @Override
+            public void exe() {
+                state.jobYieldTier = state.jobYieldTier.next();
+                callback.onStateUpdated();
+                open(state, callback);
+            }
+        });
+        leftCol.addDown(4, createOptionRow(colW, I18n.get("cheat.job_yield"), btnYield));
+
         gridRow.add(leftCol);
 
         // === RIGHT COLUMN: Logistics, Treasury, Loyalty, Raid Immunity ===

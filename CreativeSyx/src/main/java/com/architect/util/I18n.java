@@ -82,6 +82,11 @@ public final class I18n {
         EN_STRINGS.put("cheat.battle_autowin.desc", "Ensures unconditional morale victory in all tactical battles and sieges.");
         EN_STRINGS.put("cheat.instant_jobs", "Instant Jobs");
         EN_STRINGS.put("cheat.instant_jobs.desc", "Jobs like tree felling, road demolition, wall disassembly, and rock clearing complete instantly.");
+        EN_STRINGS.put("cheat.job_yield", "Job Yield");
+        EN_STRINGS.put("cheat.job_yield.desc", "Configures whether cleared resources drop onto the floor, vanish (True Creative), or go to stockpile.");
+        EN_STRINGS.put("tier.job_yield.drop", "Drop on Floor");
+        EN_STRINGS.put("tier.job_yield.void", "Void (True Creative)");
+        EN_STRINGS.put("tier.job_yield.stockpile", "To Stockpile");
 
         EN_STRINGS.put("tier.maintenance.vanilla", "Vanilla");
         EN_STRINGS.put("tier.maintenance.janitors_free", "Free Janitors");
@@ -168,6 +173,11 @@ public final class I18n {
         DE_STRINGS.put("cheat.battle_autowin.desc", "Sichert bedingungslosen Moralsieg in allen Feldschlachten und Belagerungen.");
         DE_STRINGS.put("cheat.instant_jobs", "Sofort-Auftraege");
         DE_STRINGS.put("cheat.instant_jobs.desc", "Baeume faellen, Strassen abreissen, Mauern zerlegen und Felsen werden sofort erledigt.");
+        DE_STRINGS.put("cheat.job_yield", "Auftrags-Ertrag");
+        DE_STRINGS.put("cheat.job_yield.desc", "Legt fest, ob abgebaute Rohstoffe auf den Boden droppen, verschwinden (True Creative) oder ins Lager wandern.");
+        DE_STRINGS.put("tier.job_yield.drop", "Boden-Spawn");
+        DE_STRINGS.put("tier.job_yield.void", "Weg (True Creative)");
+        DE_STRINGS.put("tier.job_yield.stockpile", "Direkt ins Lager");
 
         DE_STRINGS.put("tier.maintenance.vanilla", "Vanilla");
         DE_STRINGS.put("tier.maintenance.janitors_free", "Gratis Hausmeister");

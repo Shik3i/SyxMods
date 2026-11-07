@@ -3,6 +3,7 @@ package com.architect.config;
 import java.io.IOException;
 
 import com.architect.config.CheatTiers.ConstructionTier;
+import com.architect.config.CheatTiers.JobYieldTier;
 import com.architect.config.CheatTiers.KnowledgeTier;
 import com.architect.config.CheatTiers.LogisticsTier;
 import com.architect.config.CheatTiers.MaintenanceTier;
@@ -37,6 +38,7 @@ public final class ArchitectState {
 
     // Instant Jobs (tree felling, road demolition, wall disassembly, rock clearing, tunneling)
     public boolean instantJobs = false;
+    public JobYieldTier jobYieldTier = JobYieldTier.DROP_ON_GROUND;
 
     // Treasury (Sprint 4.5)
     public boolean infiniteDenari = false;
@@ -65,6 +67,7 @@ public final class ArchitectState {
         raidImmunity = false;
         battleAutoWin = false;
         instantJobs = false;
+        jobYieldTier = JobYieldTier.DROP_ON_GROUND;
         infiniteDenari = false;
         freezeNiceWeather = false;
         disableAging = false;
@@ -83,6 +86,7 @@ public final class ArchitectState {
         logisticsTier = CheatTiers.LogisticsTier.ALL_ASSIGNED_CRATES;
         infiniteDenari = true;
         instantJobs = true;
+        jobYieldTier = CheatTiers.JobYieldTier.VOID_DISCARD;
         spoilageDisabled = true;
         loyaltyBoost = true;
         raidImmunity = true;
@@ -97,6 +101,7 @@ public final class ArchitectState {
         knowledgeTier = CheatTiers.KnowledgeTier.NO_FORGETTING;
         logisticsTier = CheatTiers.LogisticsTier.RAW_MATERIALS_ONLY;
         infiniteDenari = true;
+        jobYieldTier = CheatTiers.JobYieldTier.DROP_ON_GROUND;
         spoilageDisabled = false;
         loyaltyBoost = true;
         raidImmunity = true;
@@ -131,6 +136,7 @@ public final class ArchitectState {
 
         // Version 5 fields
         file.bool(instantJobs);
+        file.i(jobYieldTier.ordinal());
 
         file.chars(language != null ? language : "en");
     }
@@ -177,8 +183,10 @@ public final class ArchitectState {
 
             if (version >= 5) {
                 instantJobs = file.bool();
+                jobYieldTier = JobYieldTier.fromOrdinal(file.i());
             } else {
                 instantJobs = false;
+                jobYieldTier = JobYieldTier.DROP_ON_GROUND;
             }
 
             language = file.chars();

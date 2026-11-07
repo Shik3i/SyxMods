@@ -310,4 +310,77 @@ public final class CheatTiers {
             return sb.toString();
         }
     }
+
+    /**
+     * Resource yield behavior for instant clearing and demolition jobs.
+     */
+    public enum JobYieldTier {
+        DROP_ON_GROUND("tier.job_yield.drop"),
+        VOID_DISCARD("tier.job_yield.void"),
+        STOCKPILE("tier.job_yield.stockpile");
+
+        public final String i18nKey;
+
+        JobYieldTier(String i18nKey) {
+            this.i18nKey = i18nKey;
+        }
+
+        public String getLabel() {
+            return I18n.get(i18nKey);
+        }
+
+        public JobYieldTier next() {
+            JobYieldTier[] values = values();
+            return values[(ordinal() + 1) % values.length];
+        }
+
+        public static JobYieldTier fromOrdinal(int ord) {
+            JobYieldTier[] values = values();
+            if (ord >= 0 && ord < values.length) {
+                return values[ord];
+            }
+            return DROP_ON_GROUND;
+        }
+
+        public String getDetailedTooltip() {
+            boolean de = I18n.getLanguage() == I18n.Language.DE;
+            StringBuilder sb = new StringBuilder();
+            if (de) {
+                sb.append("AKTUELL: ").append(getLabel()).append("\n");
+                switch (this) {
+                    case DROP_ON_GROUND:
+                        sb.append("Ressourcen (Holz, Stein, Erze) spawnen wie gewohnt auf dem Boden am Abbauort zum spaeteren Abtransport.");
+                        break;
+                    case VOID_DISCARD:
+                        sb.append("True Creative: Ressourcen werden vollstaendig verworfen und geloescht. Kein Muell, kein Boden-Chaos.");
+                        break;
+                    case STOCKPILE:
+                        sb.append("Ressourcen werden sofort direkt dem staedtischen Hauptlager gutgeschrieben.");
+                        break;
+                }
+                sb.append("\n\nKlick schaltet zur naechsten Stufe:");
+                sb.append("\n- ").append(DROP_ON_GROUND.getLabel()).append(": Boden-Spawn (wie beim Abbauen)");
+                sb.append("\n- ").append(VOID_DISCARD.getLabel()).append(": True Creative (einfach weg)");
+                sb.append("\n- ").append(STOCKPILE.getLabel()).append(": Direkt ins Lager");
+            } else {
+                sb.append("CURRENT: ").append(getLabel()).append("\n");
+                switch (this) {
+                    case DROP_ON_GROUND:
+                        sb.append("Resources (wood, stone, ore) drop onto the ground tiles at clearing sites as loose crates.");
+                        break;
+                    case VOID_DISCARD:
+                        sb.append("True Creative: Resources vanish completely upon clearing. Zero floor clutter, zero mess.");
+                        break;
+                    case STOCKPILE:
+                        sb.append("Resources are deposited directly into the city stockpile.");
+                        break;
+                }
+                sb.append("\n\nClick to cycle to the next tier:");
+                sb.append("\n- ").append(DROP_ON_GROUND.getLabel()).append(": Drop on ground (like vanilla)");
+                sb.append("\n- ").append(VOID_DISCARD.getLabel()).append(": True Creative (discarded)");
+                sb.append("\n- ").append(STOCKPILE.getLabel()).append(": Direct to stockpile");
+            }
+            return sb.toString();
+        }
+    }
 }

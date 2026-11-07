@@ -5,6 +5,7 @@ import java.lang.reflect.Method;
 
 import com.architect.config.ArchitectState;
 import com.architect.config.CheatTiers.ConstructionTier;
+import com.architect.config.CheatTiers.JobYieldTier;
 import com.architect.config.CheatTiers.MaintenanceTier;
 
 import game.GAME;
@@ -59,6 +60,7 @@ public final class ConstructionModule implements ArchitectModule {
     private static boolean roomReflectionFailed = false;
     private static boolean outsideJobsReflectionFailed = false;
     private static boolean janitorReflectionFailed = false;
+    private ArchitectState stateRef;
 
     @Override
     public void init() {
@@ -67,6 +69,7 @@ public final class ConstructionModule implements ArchitectModule {
 
     @Override
     public void update(double ds, ArchitectState state) {
+        this.stateRef = state;
         tickTimer += ds;
         if (tickTimer < TICK_STEP) {
             return;
@@ -79,7 +82,7 @@ public final class ConstructionModule implements ArchitectModule {
 
         // 1. Instant Construction
         if (state.constructionTier == ConstructionTier.INSTANT_BUILD) {
-            triggerInstantBuildAll();
+            triggerInstantBuildAll(state.jobYieldTier);
             return;
         }
 
@@ -93,9 +96,9 @@ public final class ConstructionModule implements ArchitectModule {
             state.constructionTier == ConstructionTier.FAST_AND_FREE) {
             boolean fastSpeed = (state.constructionTier == ConstructionTier.FAST_AND_FREE);
             processFreeMaterialsSlice(fastSpeed, width, startY, endY);
-            processOutsideJobsSlice(fastSpeed, width, startY, endY, state.instantJobs);
+            processOutsideJobsSlice(fastSpeed, width, startY, endY, state.instantJobs, state.jobYieldTier);
         } else if (state.instantJobs) {
-            processOutsideJobsSlice(false, width, startY, endY, true);
+            processOutsideJobsSlice(false, width, startY, endY, true, state.jobYieldTier);
         }
 
         // 3. Maintenance Logic with rolling chunk cursor
@@ -149,7 +152,7 @@ public final class ConstructionModule implements ArchitectModule {
     /**
      * Budgeted row slice scan for outside jobs (roads, walls, ceilings, fortifications, clearings).
      */
-    private void processOutsideJobsSlice(boolean fastSpeed, int width, int startY, int endY, boolean instantJobs) {
+    private void processOutsideJobsSlice(boolean fastSpeed, int width, int startY, int endY, boolean instantJobs, JobYieldTier yieldTier) {
         if (SETT.JOBS() == null || SETT.JOBS().getter == null) {
             return;
         }
@@ -191,7 +194,7 @@ public final class ConstructionModule implements ArchitectModule {
                             }
                         }
                     } else if (instantJobs && job != null) {
-                        completeJobClear(job, x, y);
+                        completeJobClear(job, x, y, yieldTier);
                     }
                 }
             }
@@ -201,9 +204,10 @@ public final class ConstructionModule implements ArchitectModule {
     /**
      * Instantly completes an outside clearing or demolition job (tree felling, rock clearing,
      * road destruction, structure/wall disassembly, tunneling, wild food harvesting).
-     * Uses a multi-pass loop to deplete all HP/stages, granting produced resources to the player.
+     * Uses a multi-pass loop to deplete all HP/stages, directing yielded resources according to
+     * JobYieldTier (drop on floor, void/discard, or direct to stockpile).
      */
-    private void completeJobClear(Job job, int x, int y) {
+    private void completeJobClear(Job job, int x, int y, JobYieldTier yieldTier) {
         if (job == null) return;
         int maxSteps = 30;
         while (maxSteps-- > 0 && SETT.JOBS() != null && SETT.JOBS().getter != null && SETT.JOBS().getter.is(x, y)) {
@@ -212,7 +216,10 @@ public final class ConstructionModule implements ArchitectModule {
                 break;
             }
             try {
-                current.jobPerform(null, null, 0);
+                RESOURCE res = current.jobPerform(null, null, 0);
+                if (res != null) {
+                    handleJobYield(res, x, y, yieldTier);
+                }
             } catch (Throwable t) {
                 break;
             }
@@ -240,6 +247,32 @@ public final class ConstructionModule implements ArchitectModule {
                 }
             }
         }
+    }
+
+    /**
+     * Directs yielded clearing resources according to the player's JobYieldTier preference:
+     * - DROP_ON_GROUND: Spawns scattered item crates on the ground next to the clearing tile.
+     * - VOID_DISCARD: Discards resources completely (True Creative mode, zero clutter).
+     * - STOCKPILE: Keeps yielded resources directly in the global player stockpile.
+     */
+    private void handleJobYield(RESOURCE res, int x, int y, JobYieldTier yieldTier) {
+        if (res == null) return;
+
+        if (yieldTier == JobYieldTier.VOID_DISCARD) {
+            // Revert engine's automatic +1 to stockpile so resource vanishes
+            if (GAME.player() != null && GAME.player().res() != null) {
+                GAME.player().res().inc(res, RTYPE.PRODUCED, -1);
+            }
+        } else if (yieldTier == JobYieldTier.DROP_ON_GROUND) {
+            // Revert engine's automatic +1 to stockpile and spawn physical item on floor
+            if (GAME.player() != null && GAME.player().res() != null) {
+                GAME.player().res().inc(res, RTYPE.PRODUCED, -1);
+            }
+            if (SETT.THINGS() != null && SETT.THINGS().resources != null) {
+                SETT.THINGS().resources.create(x, y, res, 1);
+            }
+        }
+        // If STOCKPILE, keep the engine's +1 in the player's stockpile directly
     }
 
     private void completeJobBuild(JobBuild job, int x, int y) {
@@ -345,7 +378,16 @@ public final class ConstructionModule implements ArchitectModule {
      * (Rooms, Road paving, Wall building, Ceilings, Fortifications).
      * Full sweep executed on 1-click button or tier activation.
      */
+    /**
+     * Instantly finishes all ongoing construction sites settlement-wide
+     * (Rooms, Road paving, Wall building, Ceilings, Fortifications, Tree felling, Demolition, Excavation).
+     * Full sweep executed on 1-click button or tier activation.
+     */
     public void triggerInstantBuildAll() {
+        triggerInstantBuildAll(stateRef != null ? stateRef.jobYieldTier : JobYieldTier.DROP_ON_GROUND);
+    }
+
+    public void triggerInstantBuildAll(JobYieldTier yieldTier) {
         if (!SETT.exists()) {
             return;
         }
@@ -376,7 +418,7 @@ public final class ConstructionModule implements ArchitectModule {
                         if (job instanceof JobBuild) {
                             completeJobBuild((JobBuild) job, x, y);
                         } else if (job != null) {
-                            completeJobClear(job, x, y);
+                            completeJobClear(job, x, y, yieldTier);
                         }
                     }
                 }
@@ -386,8 +428,9 @@ public final class ConstructionModule implements ArchitectModule {
 
     @Override
     public void onStateChanged(ArchitectState state) {
+        this.stateRef = state;
         if (state.constructionTier == ConstructionTier.INSTANT_BUILD || state.instantJobs) {
-            triggerInstantBuildAll();
+            triggerInstantBuildAll(state.jobYieldTier);
         }
     }
 }

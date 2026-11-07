@@ -14,6 +14,7 @@ import java.util.Properties;
 
 import com.architect.config.ArchitectState;
 import com.architect.config.CheatTiers.ConstructionTier;
+import com.architect.config.CheatTiers.JobYieldTier;
 import com.architect.config.CheatTiers.KnowledgeTier;
 import com.architect.config.CheatTiers.LogisticsTier;
 import com.architect.config.CheatTiers.MaintenanceTier;
@@ -222,6 +223,7 @@ public class SanityTest {
             s1.raidImmunity = true;
             s1.battleAutoWin = true;
             s1.instantJobs = true;
+            s1.jobYieldTier = JobYieldTier.VOID_DISCARD;
             s1.infiniteDenari = true;
             s1.freezeNiceWeather = true;
             s1.disableAging = true;
@@ -247,6 +249,7 @@ public class SanityTest {
             assertEquals("raidImmunity", s1.raidImmunity, s2.raidImmunity);
             assertEquals("battleAutoWin", s1.battleAutoWin, s2.battleAutoWin);
             assertEquals("instantJobs", s1.instantJobs, s2.instantJobs);
+            assertEquals("jobYieldTier", s1.jobYieldTier, s2.jobYieldTier);
             assertEquals("infiniteDenari", s1.infiniteDenari, s2.infiniteDenari);
             assertEquals("freezeNiceWeather", s1.freezeNiceWeather, s2.freezeNiceWeather);
             assertEquals("disableAging", s1.disableAging, s2.disableAging);
@@ -290,6 +293,7 @@ public class SanityTest {
             assertEquals("V4 maintenanceTier", MaintenanceTier.NO_DECAY, s.maintenanceTier);
             assertEquals("V4 infiniteDenari", true, s.infiniteDenari);
             assertEquals("V4 instantJobs (default)", false, s.instantJobs);
+            assertEquals("V4 jobYieldTier (default)", JobYieldTier.DROP_ON_GROUND, s.jobYieldTier);
             assertEquals("V4 language", "en", s.language);
         } finally {
             Files.deleteIfExists(tempPathV4);
@@ -327,6 +331,7 @@ public class SanityTest {
             assertEquals("V3 disableAging", true, s.disableAging);
             assertEquals("V3 infiniteDenari (default)", false, s.infiniteDenari);
             assertEquals("V3 instantJobs (default)", false, s.instantJobs);
+            assertEquals("V3 jobYieldTier (default)", JobYieldTier.DROP_ON_GROUND, s.jobYieldTier);
             assertEquals("V3 language", "en", s.language);
         } finally {
             Files.deleteIfExists(tempPath);
