@@ -1,0 +1,102 @@
+plugins {
+    id 'java'
+}
+
+group = 'com.voidcrates'
+version = '1.0.0'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_16
+    targetCompatibility = JavaVersion.VERSION_16
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 16
+}
+
+// Locate Songs of Syx JAR
+def defaultSteamPath = "C:/Program Files (x86)/Steam/steamapps/common/Songs of Syx/SongsOfSyx.jar"
+def songsJarPath = project.findProperty("songsJar") ?: defaultSteamPath
+
+if (!file(songsJarPath).exists()) {
+    logger.warn("WARNING: SongsOfSyx.jar not found at: ${songsJarPath}. Set -PsongsJar=<path> if located elsewhere.")
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compileOnly files(songsJarPath)
+    testImplementation files(songsJarPath)
+}
+
+jar {
+    archiveBaseName.set("SyxVoidCrates")
+    archiveVersion.set("")
+    archiveClassifier.set("")
+    
+    // Include text assets directly at JAR root for zero-path ClassLoader access
+    from("mod-files/assets/text") {
+        include "*.properties"
+        include "*.txt"
+    }
+
+    // Include full assets path matching mod structure
+    from("mod-files") {
+        include "assets/**"
+        include "_info.txt"
+        include "_Info.txt"
+        include "icon.png"
+    }
+}
+
+tasks.register('sanityCheck', JavaExec) {
+    dependsOn tasks.jar, tasks.testClasses
+    group = "verification"
+    description = "Executes automated void crate logic, localization parity, and serialization tests"
+    workingDir = projectDir
+    classpath = sourceSets.test.runtimeClasspath + files(songsJarPath)
+    mainClass = "com.voidcrates.SanityTest"
+}
+
+tasks.register('deployMod', Copy) {
+    dependsOn tasks.sanityCheck
+    group = "songs of syx"
+    description = "Deploys Syx Void Crates to %APPDATA%/songsofsyx/mods/ with case-exact V71 structure"
+
+    def appData = System.getenv("APPDATA") ?: "${System.getProperty('user.home')}/AppData/Roaming"
+    def targetDir = file("${appData}/songsofsyx/mods/SyxVoidCrates")
+
+    into targetDir
+
+    // Root-level metadata
+    from("mod-files/_Info.txt")
+    from("mod-files/icon.png")
+
+    // Compiled code
+    from(tasks.jar.archiveFile) {
+        into "."
+    }
+
+    // Standard assets
+    from("mod-files/assets") {
+        into "assets"
+    }
+
+    // V71 subfolder structure for native game engine detection
+    into("V71") {
+        from("mod-files/_Info.txt")
+        from(tasks.jar.archiveFile)
+        from("mod-files/assets") {
+            into "assets"
+        }
+    }
+
+    doLast {
+        println "Deploying Syx Void Crates to: ${targetDir}"
+        println "Deployment complete! _Info.txt verified in:"
+        println "  -> ${targetDir}/_Info.txt"
+    }
+}

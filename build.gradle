@@ -32,7 +32,7 @@ subprojects {
 tasks.register('deployAll') {
     group = 'songs of syx'
     description = 'Builds, verifies, and deploys all Syx mods to %APPDATA%/songsofsyx/mods/ with case-exact _Info.txt'
-    dependsOn ':SyxAutoBuild:deployMod', ':CreativeSyx:deployMod', ':SyxTreeZones:deployMod'
+    dependsOn ':SyxAutoBuild:deployMod', ':CreativeSyx:deployMod', ':SyxTreeZones:deployMod', ':SyxVoidCrates:deployMod'
 
     doLast {
         def appData = System.getenv("APPDATA") ?: "${System.getProperty('user.home')}/AppData/Roaming"
@@ -41,6 +41,7 @@ tasks.register('deployAll') {
         println "  1. ${appData}/songsofsyx/mods/SyxAutoPlanner"
         println "  2. ${appData}/songsofsyx/mods/SyxArchitect"
         println "  3. ${appData}/songsofsyx/mods/SyxTreeZones"
+        println "  4. ${appData}/songsofsyx/mods/SyxVoidCrates"
         println "================================================================================"
     }
 }

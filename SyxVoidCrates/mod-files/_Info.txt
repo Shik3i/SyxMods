@@ -1,0 +1,6 @@
+NAME: "Syx Void Crates",
+DESC: "Black Hole & Void Crates: Automatically purges excess byproducts (Stone, Clay, Dung, Debris) so industries never stall",
+VERSION: "1.0.0",
+AUTHOR: "Architect",
+GAMEVERSION: "71",
+INFO: "Void Crates / Schwarzes Loch: Automated overflow voiding for byproducts and custom warehouse crates",
