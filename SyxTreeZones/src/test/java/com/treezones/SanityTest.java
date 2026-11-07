@@ -72,6 +72,7 @@ public class SanityTest {
             cfg.setInstantPlant(true);
             cfg.setShowOverlay(false);
             cfg.setShowHudButton(false);
+            cfg.setAutoNoGrowth(true);
 
             Path tempPath = java.nio.file.Files.createTempFile("tz_cfg_test", ".bin");
             try {
@@ -88,7 +89,8 @@ public class SanityTest {
                         || loadedCfg.isDropWood() != cfg.isDropWood()
                         || loadedCfg.isInstantPlant() != cfg.isInstantPlant()
                         || loadedCfg.isShowOverlay() != cfg.isShowOverlay()
-                        || loadedCfg.isShowHudButton() != cfg.isShowHudButton()) {
+                        || loadedCfg.isShowHudButton() != cfg.isShowHudButton()
+                        || loadedCfg.isAutoNoGrowth() != cfg.isAutoNoGrowth()) {
                     throw new IllegalStateException("Config serialization fidelity check failed!");
                 }
             } finally {

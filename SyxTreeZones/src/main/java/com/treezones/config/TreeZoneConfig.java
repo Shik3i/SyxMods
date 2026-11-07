@@ -10,13 +10,26 @@ import snake2d.util.file.FilePutter;
  */
 public final class TreeZoneConfig {
 
-    public static final int VERSION = 1;
+    public static final int VERSION = 2;
 
     private boolean instantClear = true;
     private boolean dropWood = true;
     private boolean instantPlant = true;
     private boolean showOverlay = true;
     private boolean showHudButton = true;
+    private boolean autoNoGrowth = false;
+
+    public boolean isAutoNoGrowth() {
+        return autoNoGrowth;
+    }
+
+    public void setAutoNoGrowth(boolean autoNoGrowth) {
+        this.autoNoGrowth = autoNoGrowth;
+    }
+
+    public void toggleAutoNoGrowth() {
+        this.autoNoGrowth = !this.autoNoGrowth;
+    }
 
     public boolean isInstantClear() {
         return instantClear;
@@ -85,6 +98,7 @@ public final class TreeZoneConfig {
         file.bool(instantPlant);
         file.bool(showOverlay);
         file.bool(showHudButton);
+        file.bool(autoNoGrowth);
     }
 
     public void load(FileGetter file) throws IOException {
@@ -95,6 +109,9 @@ public final class TreeZoneConfig {
             instantPlant = file.bool();
             showOverlay = file.bool();
             showHudButton = file.bool();
+        }
+        if (v >= 2) {
+            autoNoGrowth = file.bool();
         }
     }
 }
