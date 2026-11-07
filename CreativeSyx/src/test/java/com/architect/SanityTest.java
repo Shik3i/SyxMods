@@ -531,6 +531,13 @@ public class SanityTest {
         Class<?> jiClass = Class.forName("settlement.room.infra.janitor.JanitorInstance");
         java.lang.reflect.Method m4 = bitsClass.getMethod("resInc", jiClass, init.resources.RESOURCE.class, int.class);
         m4.setAccessible(true);
+
+        Class<?> constrClass = Class.forName("settlement.room.main.construction.CONSTRUCTION");
+        java.lang.reflect.Field f1 = constrClass.getDeclaredField("construction");
+        f1.setAccessible(true);
+        Class<?> bpClass = Class.forName("settlement.room.main.construction.ConstructionBlueprint");
+        java.lang.reflect.Field f2 = bpClass.getDeclaredField("all");
+        f2.setAccessible(true);
     }
 
 

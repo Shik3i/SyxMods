@@ -23,6 +23,11 @@ public final class TreeZoneManager {
     private int activeNoTreeCount = 0;
     private int activeForestCount = 0;
 
+    private int dirtyMinX = Integer.MAX_VALUE;
+    private int dirtyMaxX = -1;
+    private int dirtyMinY = Integer.MAX_VALUE;
+    private int dirtyMaxY = -1;
+
     private long lastEnforceTime = 0L;
     private static final long ENFORCE_INTERVAL_MS = 5000L; // Every 5 seconds
 
@@ -74,11 +79,20 @@ public final class TreeZoneManager {
         return forestZones.is(tx, ty);
     }
 
+    private void expandDirty(int x, int y) {
+        if (x < dirtyMinX) dirtyMinX = x;
+        if (x > dirtyMaxX) dirtyMaxX = x;
+        if (y < dirtyMinY) dirtyMinY = y;
+        if (y > dirtyMaxY) dirtyMaxY = y;
+    }
+
     public void applyNoTree(int tx, int ty, boolean instantClear, boolean dropWood) {
         ensureInitialized();
         if (!SETT.IN_BOUNDS(tx, ty)) {
             return;
         }
+
+        expandDirty(tx, ty);
 
         if (!noTreeZones.is(tx, ty)) {
             noTreeZones.set(tx, ty, true);
@@ -115,6 +129,8 @@ public final class TreeZoneManager {
         if (!SETT.IN_BOUNDS(tx, ty)) {
             return;
         }
+
+        expandDirty(tx, ty);
 
         if (!forestZones.is(tx, ty)) {
             forestZones.set(tx, ty, true);
@@ -169,10 +185,14 @@ public final class TreeZoneManager {
 
     /**
      * Periodic enforcement: maintains integrity of No-Tree and Forest zones.
-     * Anchored to wall-clock time with zero-GC overhead.
+     * Anchored to wall-clock time with zero-GC overhead and tight dirty bounding box.
      */
     public void update() {
         if (activeNoTreeCount == 0 && activeForestCount == 0) {
+            dirtyMinX = Integer.MAX_VALUE;
+            dirtyMaxX = -1;
+            dirtyMinY = Integer.MAX_VALUE;
+            dirtyMaxY = -1;
             return;
         }
 
@@ -186,12 +206,13 @@ public final class TreeZoneManager {
             return;
         }
 
-        // We only enforce when zones exist
-        int w = SETT.TWIDTH;
-        int h = SETT.THEIGHT;
+        int x1 = Math.max(0, dirtyMinX);
+        int x2 = Math.min(SETT.TWIDTH - 1, dirtyMaxX >= 0 ? dirtyMaxX : SETT.TWIDTH - 1);
+        int y1 = Math.max(0, dirtyMinY);
+        int y2 = Math.min(SETT.THEIGHT - 1, dirtyMaxY >= 0 ? dirtyMaxY : SETT.THEIGHT - 1);
 
-        for (int y = 0; y < h; y++) {
-            for (int x = 0; x < w; x++) {
+        for (int y = y1; y <= y2; y++) {
+            for (int x = x1; x <= x2; x++) {
                 if (noTreeZones.is(x, y)) {
                     // Suppress any rogue tree/bush that tried to sprout
                     if (SETT.TERRAIN().TREES != null && SETT.TERRAIN().TREES.isTree(x, y)) {
@@ -244,6 +265,17 @@ public final class TreeZoneManager {
             ensureInitialized();
             noTreeZones.load(file);
             forestZones.load(file);
+            if (activeNoTreeCount > 0 || activeForestCount > 0) {
+                dirtyMinX = 0;
+                dirtyMaxX = w - 1;
+                dirtyMinY = 0;
+                dirtyMaxY = h - 1;
+            } else {
+                dirtyMinX = Integer.MAX_VALUE;
+                dirtyMaxX = -1;
+                dirtyMinY = Integer.MAX_VALUE;
+                dirtyMaxY = -1;
+            }
         }
     }
 }

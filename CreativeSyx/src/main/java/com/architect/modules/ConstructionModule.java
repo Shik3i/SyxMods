@@ -63,10 +63,13 @@ public final class ConstructionModule implements ArchitectModule {
     private static Field jobsMapField;
     private static Field bitsmap2DMapField;
     private static Field bitsField1D;
+    private static Field constructionBlueprintField;
+    private static Field blueprintAllField;
     private static boolean bitsReflectionFailed = false;
     private static boolean roomReflectionFailed = false;
     private static boolean outsideJobsReflectionFailed = false;
     private static boolean janitorReflectionFailed = false;
+    private static boolean constructionBlueprintReflectionFailed = false;
     private ArchitectState stateRef;
 
     @Override
@@ -158,11 +161,13 @@ public final class ConstructionModule implements ArchitectModule {
             // Fast room sweep
             if (hasRooms && SETT.ROOMS().construction.isser != null) {
                 CONSTRUCTION construction = SETT.ROOMS().construction;
-                for (int y = startY; y < endY; y++) {
-                    for (int x = 0; x < width; x++) {
-                        if (construction.isser.is(x, y)) {
-                            clearTileForConstruction(x, y, state.jobYieldTier);
-                            construction.construct(x, y);
+                if (!processInstantRoomsFast(construction, state.jobYieldTier)) {
+                    for (int y = startY; y < endY; y++) {
+                        for (int x = 0; x < width; x++) {
+                            if (construction.isser.is(x, y)) {
+                                clearTileForConstruction(x, y, state.jobYieldTier);
+                                construction.construct(x, y);
+                            }
                         }
                     }
                 }
@@ -384,40 +389,79 @@ public final class ConstructionModule implements ArchitectModule {
         // 1. Terrain layer (Trees, Rocks, Bushes, Flowers, Mushrooms, Growables/Herbs, Ruins)
         if (SETT.TERRAIN() != null) {
             TerrainTile tt = SETT.TERRAIN().get(x, y);
-            if (tt != null && tt != SETT.TERRAIN().NADA) {
-                // Safeguard: Do not accidentally demolish solid natural mountains, caves, or water bodies
-                boolean isMountain = (tt == SETT.TERRAIN().MOUNTAIN || tt == SETT.TERRAIN().CAVE);
-                boolean isWater = (SETT.TERRAIN().WATER != null && (tt == SETT.TERRAIN().WATER.DEEP || tt == SETT.TERRAIN().WATER.SHALLOW || tt == SETT.TERRAIN().WATER.BRIDGE));
-                if (!isMountain && !isWater) {
+            boolean isMountain = (tt == SETT.TERRAIN().MOUNTAIN || tt == SETT.TERRAIN().CAVE);
+            boolean isWater = (SETT.TERRAIN().WATER != null && SETT.TERRAIN().WATER.is != null && SETT.TERRAIN().WATER.is.is(x, y));
+            if (!isMountain && !isWater) {
+                if (tt != null && tt != SETT.TERRAIN().NADA) {
                     try {
                         if (tt.clearing() != null) {
                             if (yieldTier == JobYieldTier.STOCKPILE) {
-                                RESOURCE res = tt.clearing().clear1(x, y);
-                                if (res != null && GAME.player() != null && GAME.player().res() != null) {
-                                    GAME.player().res().inc(res, RTYPE.PRODUCED, 1);
+                                while (SETT.TERRAIN().get(x, y).clearing() != null && SETT.TERRAIN().get(x, y).clearing().can()) {
+                                    RESOURCE res = SETT.TERRAIN().get(x, y).clearing().clear1(x, y);
+                                    if (res != null && GAME.player() != null && GAME.player().res() != null) {
+                                        GAME.player().res().inc(res, RTYPE.PRODUCED, 1);
+                                    }
                                 }
+                            } else if (yieldTier == JobYieldTier.DROP_ON_GROUND) {
+                                while (SETT.TERRAIN().get(x, y).clearing() != null && SETT.TERRAIN().get(x, y).clearing().can()) {
+                                    RESOURCE res = SETT.TERRAIN().get(x, y).clearing().clear1(x, y);
+                                    if (res != null && SETT.THINGS() != null && SETT.THINGS().resources != null) {
+                                        SETT.THINGS().resources.create(x, y, res, 1);
+                                    }
+                                }
+                            } else {
+                                tt.clearing().destroy(x, y);
                             }
-                            tt.clearing().destroy(x, y);
-                        } else {
-                            SETT.TERRAIN().NADA.placeFixed(x, y);
                         }
-                    } catch (Throwable t) {
-                        try {
-                            SETT.TERRAIN().NADA.placeFixed(x, y);
-                        } catch (Throwable ignored) {}
-                    }
-                    if (SETT.TERRAIN().get(x, y) != SETT.TERRAIN().NADA && !isMountain && !isWater) {
-                        try {
-                            SETT.TERRAIN().NADA.placeFixed(x, y);
-                        } catch (Throwable ignored) {}
-                    }
+                    } catch (Throwable ignored) {}
+
+                    try {
+                        SETT.TERRAIN().NADA.placeFixed(x, y);
+                    } catch (Throwable ignored) {}
                 }
+
+                // Explicit safety pass for rogue flora
+                try {
+                    if (SETT.TERRAIN().TREES != null && SETT.TERRAIN().TREES.isTree(x, y)) {
+                        SETT.TERRAIN().NADA.placeFixed(x, y);
+                    }
+                    if (SETT.TERRAIN().BUSH != null && SETT.TERRAIN().BUSH.is(x, y)) {
+                        SETT.TERRAIN().NADA.placeFixed(x, y);
+                    }
+                    if (SETT.TERRAIN().FLOWER != null && SETT.TERRAIN().FLOWER.is(x, y)) {
+                        SETT.TERRAIN().NADA.placeFixed(x, y);
+                    }
+                    if (SETT.TERRAIN().MUSHROOM != null && SETT.TERRAIN().MUSHROOM.is(x, y)) {
+                        SETT.TERRAIN().NADA.placeFixed(x, y);
+                    }
+                    if (SETT.TERRAIN().GROWABLES != null) {
+                        for (int gi = 0; gi < SETT.TERRAIN().GROWABLES.size(); gi++) {
+                            settlement.tilemap.terrain.TGrowable tg = SETT.TERRAIN().GROWABLES.get(gi);
+                            if (tg != null && tg.is(x, y)) {
+                                SETT.TERRAIN().NADA.placeFixed(x, y);
+                                break;
+                            }
+                        }
+                    }
+                } catch (Throwable ignored) {}
             }
         }
 
         // 2. Floor Growth layer (Flower sprites, herbs, bushes, mushrooms, undergrowth)
         if (SETT.TILE_MAP() != null && SETT.TILE_MAP().growth != null) {
             try {
+                if (SETT.TILE_MAP().growth.tree != null) {
+                    SETT.TILE_MAP().growth.tree.set(x, y, 0.0);
+                }
+                if (SETT.TILE_MAP().growth.flower != null) {
+                    SETT.TILE_MAP().growth.flower.set(x, y, 0.0);
+                }
+                if (SETT.TILE_MAP().growth.bush != null) {
+                    SETT.TILE_MAP().growth.bush.set(x, y, 0.0);
+                }
+                if (SETT.TILE_MAP().growth.mushroom != null) {
+                    SETT.TILE_MAP().growth.mushroom.set(x, y, 0.0);
+                }
                 if (SETT.TILE_MAP().growth.nothing != null) {
                     SETT.TILE_MAP().growth.nothing.set(x, y, 0.0);
                 }
@@ -553,10 +597,54 @@ public final class ConstructionModule implements ArchitectModule {
 
 
     /**
-     * Instantly finishes all ongoing construction sites settlement-wide
-     * (Rooms, Road paving, Wall building, Ceilings, Fortifications).
-     * Full sweep executed on 1-click button or tier activation.
+     * High-speed direct instance room solver: directly accesses bounding boxes of
+     * active room construction sites instead of sweeping hundreds of thousands of world tiles.
      */
+    private boolean processInstantRoomsFast(CONSTRUCTION construction, JobYieldTier yieldTier) {
+        if (constructionBlueprintReflectionFailed || construction == null) return false;
+        try {
+            if (constructionBlueprintField == null) {
+                constructionBlueprintField = CONSTRUCTION.class.getDeclaredField("construction");
+                constructionBlueprintField.setAccessible(true);
+            }
+            Object bp = constructionBlueprintField.get(construction);
+            if (bp != null) {
+                if (blueprintAllField == null) {
+                    blueprintAllField = bp.getClass().getDeclaredField("all");
+                    blueprintAllField.setAccessible(true);
+                }
+                snake2d.util.sets.LIST<?> all = (snake2d.util.sets.LIST<?>) blueprintAllField.get(bp);
+                if (all != null) {
+                    int count = all.size();
+                    for (int i = 0; i < count; i++) {
+                        Object ins = all.get(i);
+                        if (ins instanceof settlement.room.main.ROOMA) {
+                            snake2d.util.datatypes.RECTANGLE body = ((settlement.room.main.ROOMA) ins).body();
+                            if (body != null) {
+                                int x1 = Math.max(0, body.x1());
+                                int x2 = Math.min(SETT.TWIDTH, body.x2());
+                                int y1 = Math.max(0, body.y1());
+                                int y2 = Math.min(SETT.THEIGHT, body.y2());
+                                for (int y = y1; y < y2; y++) {
+                                    for (int x = x1; x < x2; x++) {
+                                        if (construction.isser != null && construction.isser.is(x, y)) {
+                                            clearTileForConstruction(x, y, yieldTier);
+                                            construction.construct(x, y);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    return true;
+                }
+            }
+        } catch (Throwable t) {
+            constructionBlueprintReflectionFailed = true;
+        }
+        return false;
+    }
+
     /**
      * Instantly finishes all ongoing construction sites settlement-wide
      * (Rooms, Road paving, Wall building, Ceilings, Fortifications, Tree felling, Demolition, Excavation).
@@ -578,11 +666,13 @@ public final class ConstructionModule implements ArchitectModule {
         if (SETT.ROOMS() != null && SETT.ROOMS().construction != null) {
             CONSTRUCTION construction = SETT.ROOMS().construction;
             if (construction.isser != null && construction.instances() > 0) {
-                for (int y = 0; y < height; y++) {
-                    for (int x = 0; x < width; x++) {
-                        if (construction.isser.is(x, y)) {
-                            clearTileForConstruction(x, y, yieldTier);
-                            construction.construct(x, y);
+                if (!processInstantRoomsFast(construction, yieldTier)) {
+                    for (int y = 0; y < height; y++) {
+                        for (int x = 0; x < width; x++) {
+                            if (construction.isser.is(x, y)) {
+                                clearTileForConstruction(x, y, yieldTier);
+                                construction.construct(x, y);
+                            }
                         }
                     }
                 }

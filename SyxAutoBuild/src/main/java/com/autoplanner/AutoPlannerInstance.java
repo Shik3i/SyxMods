@@ -97,7 +97,6 @@ public final class AutoPlannerInstance implements SCRIPT_INSTANCE {
             topBarSection.add(hudButton);
             if (!config.isShowHudButton()) {
                 topBarSection.visableSet(false);
-                hudButton.activeSet(false);
             }
             top.addRightRight(topBarSection);
             lastAttachedTop = top;
@@ -154,7 +153,6 @@ public final class AutoPlannerInstance implements SCRIPT_INSTANCE {
             if (topBarSection != null) {
                 topBarSection.visableSet(config.isShowHudButton());
             }
-            hudButton.activeSet(config.isShowHudButton());
         }
 
         // 6. Update overlay simulation

@@ -175,7 +175,6 @@ public final class ArchitectInstance implements SCRIPT_INSTANCE {
             topBarSection.add(hudButton);
             if (!state.showHudButton) {
                 topBarSection.visableSet(false);
-                hudButton.activeSet(false);
             }
             top.addRightRight(topBarSection);
             lastAttachedTop = top;
@@ -223,7 +222,6 @@ public final class ArchitectInstance implements SCRIPT_INSTANCE {
             if (topBarSection != null) {
                 topBarSection.visableSet(state.showHudButton);
             }
-            hudButton.activeSet(state.showHudButton);
         }
 
         // 5. Subsystem simulation updates
