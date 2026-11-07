@@ -244,7 +244,8 @@ public final class CheatTiers {
     public enum LogisticsTier {
         VANILLA("tier.logistics.vanilla"),
         RAW_MATERIALS_ONLY("tier.logistics.raw_only"),
-        ALL_ASSIGNED_CRATES("tier.logistics.all_crates");
+        ALL_ASSIGNED_CRATES("tier.logistics.all_crates"),
+        NO_DECREASE("tier.logistics.no_decrease");
 
         public final String i18nKey;
 
@@ -284,11 +285,15 @@ public final class CheatTiers {
                     case ALL_ASSIGNED_CRATES:
                         sb.append("Jede zugewiesene Kiste kartenweit wird automatisch auf ca. 80% gefuellt.");
                         break;
+                    case NO_DECREASE:
+                        sb.append("Bodenlose Kisten: Waren muessen normal eingelagert werden, aber Entnahmen sind unbegrenzt gratis (Bestand sinkt nie).");
+                        break;
                 }
                 sb.append("\n\nKlick schaltet zur naechsten Stufe:");
                 sb.append("\n 1. ").append(I18n.get("tier.logistics.vanilla")).append(" (Standard)");
                 sb.append("\n 2. ").append(I18n.get("tier.logistics.raw_only")).append(" (Rohstoffe ~80%)");
                 sb.append("\n 3. ").append(I18n.get("tier.logistics.all_crates")).append(" (Alle Kisten ~80%)");
+                sb.append("\n 4. ").append(I18n.get("tier.logistics.no_decrease")).append(" (Bodenlos / Kein Schwund)");
             } else {
                 sb.append("CURRENT: ").append(getLabel()).append("\n");
                 switch (this) {
@@ -301,11 +306,15 @@ public final class CheatTiers {
                     case ALL_ASSIGNED_CRATES:
                         sb.append("Every assigned storage crate map-wide is kept topped up to ~80%.");
                         break;
+                    case NO_DECREASE:
+                        sb.append("Bottomless Crates: Goods must be hauled in normally, but pickup is infinite (stock never drops below stored amount).");
+                        break;
                 }
                 sb.append("\n\nClick cycles to next tier:");
                 sb.append("\n 1. ").append(I18n.get("tier.logistics.vanilla")).append(" (Default)");
                 sb.append("\n 2. ").append(I18n.get("tier.logistics.raw_only")).append(" (Raw Materials ~80%)");
                 sb.append("\n 3. ").append(I18n.get("tier.logistics.all_crates")).append(" (All Crates ~80%)");
+                sb.append("\n 4. ").append(I18n.get("tier.logistics.no_decrease")).append(" (Bottomless / No Depletion)");
             }
             return sb.toString();
         }

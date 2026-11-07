@@ -225,8 +225,8 @@ public final class BoostModule implements ArchitectModule {
             maintenanceBooster.setValue(1.0);
         }
 
-        // 3. Spoilage (Disabled if explicitly checked OR if ALL_ASSIGNED_CRATES is on)
-        boolean noSpoil = state.spoilageDisabled || (state.logisticsTier == LogisticsTier.ALL_ASSIGNED_CRATES);
+        // 3. Spoilage (Disabled if explicitly checked OR if ALL_ASSIGNED_CRATES / NO_DECREASE is on)
+        boolean noSpoil = state.spoilageDisabled || (state.logisticsTier == LogisticsTier.ALL_ASSIGNED_CRATES) || (state.logisticsTier == LogisticsTier.NO_DECREASE);
         spoilageBooster.setValue(noSpoil ? 0.0 : 1.0);
 
         // 4. Loyalty & Happiness

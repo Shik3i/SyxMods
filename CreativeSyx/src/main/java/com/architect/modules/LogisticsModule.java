@@ -24,7 +24,11 @@ import snake2d.util.datatypes.RECTANGLE;
 public final class LogisticsModule implements ArchitectModule {
 
     private long lastRefillMs = 0;
-    private static final long REFILL_INTERVAL_MS = 2000; // Refills at most once every 2 real seconds
+    private static final long REFILL_INTERVAL_MS = 1500; // Refills at most once every 1.5 real seconds
+
+    // High-watermark storage buffer for NO_DECREASE tier
+    private short[] crateWatermark = null;
+    private short[] crateResourceIndex = null;
 
     @Override
     public void init() {
@@ -47,14 +51,80 @@ public final class LogisticsModule implements ArchitectModule {
             return;
         }
 
-        // Wall-clock rate limiting: exactly 1 refill check per 2 real-world seconds regardless of game speed
+        // Wall-clock rate limiting: exactly 1 refill check per 1.5 real-world seconds regardless of game speed
         long now = System.currentTimeMillis();
         if (now - lastRefillMs < REFILL_INTERVAL_MS) {
             return;
         }
         lastRefillMs = now;
 
-        refillCrates(state.logisticsTier == LogisticsTier.RAW_MATERIALS_ONLY, 0.8);
+        if (state.logisticsTier == LogisticsTier.NO_DECREASE) {
+            processNoDecrease();
+        } else {
+            refillCrates(state.logisticsTier == LogisticsTier.RAW_MATERIALS_ONLY, 0.8);
+        }
+    }
+
+    /**
+     * Bottomless Crates / High-Watermark Storage:
+     * Goods must be hauled in normally by player workers, but pickup by consumers or workshops
+     * is infinite (stock never drops below the recorded high-watermark level).
+     */
+    private void processNoDecrease() {
+        if (!SETT.exists() || SETT.ROOMS() == null || SETT.ROOMS().STOCKPILE == null) {
+            return;
+        }
+
+        ROOM_STOCKPILE stockpile = SETT.ROOMS().STOCKPILE;
+        int count = stockpile.instancesSize();
+        if (count == 0) return;
+
+        int mapArea = SETT.TAREA;
+        if (crateWatermark == null || crateWatermark.length != mapArea) {
+            crateWatermark = new short[mapArea];
+            crateResourceIndex = new short[mapArea];
+        }
+
+        int mapW = SETT.TWIDTH;
+        for (int i = 0; i < count; i++) {
+            StockpileInstance instance = stockpile.getInstance(i);
+            if (instance == null || instance.body() == null) {
+                continue;
+            }
+
+            RECTANGLE body = instance.body();
+            int x1 = body.x1();
+            int x2 = body.x2();
+            int y1 = body.y1();
+            int y2 = body.y2();
+
+            for (int y = y1; y < y2; y++) {
+                for (int x = x1; x < x2; x++) {
+                    if (instance.is(x, y)) {
+                        StorageCrate crate = instance.crate(x, y);
+                        int tileIdx = y * mapW + x;
+                        if (crate != null && crate.resource() != null) {
+                            short resIdx = (short) (crate.resource().index() + 1);
+                            if (crateResourceIndex[tileIdx] != resIdx) {
+                                crateResourceIndex[tileIdx] = resIdx;
+                                crateWatermark[tileIdx] = (short) Math.min(32767, crate.amount());
+                            } else {
+                                int cur = crate.amount();
+                                int mark = crateWatermark[tileIdx] & 0xFFFF;
+                                if (cur > mark) {
+                                    crateWatermark[tileIdx] = (short) Math.min(32767, cur);
+                                } else if (cur < mark) {
+                                    crate.amountSet(mark);
+                                }
+                            }
+                        } else {
+                            crateWatermark[tileIdx] = 0;
+                            crateResourceIndex[tileIdx] = 0;
+                        }
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -143,7 +213,9 @@ public final class LogisticsModule implements ArchitectModule {
             } catch (Throwable ignored) {
             }
         }
-        if (state.logisticsTier != LogisticsTier.VANILLA) {
+        if (state.logisticsTier == LogisticsTier.NO_DECREASE) {
+            processNoDecrease();
+        } else if (state.logisticsTier != LogisticsTier.VANILLA) {
             refillCrates(state.logisticsTier == LogisticsTier.RAW_MATERIALS_ONLY, 0.8);
         }
     }

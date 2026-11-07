@@ -106,6 +106,7 @@ public final class I18n {
         EN_STRINGS.put("tier.logistics.vanilla", "Off (Vanilla)");
         EN_STRINGS.put("tier.logistics.raw_only", "Raw Materials (~80%)");
         EN_STRINGS.put("tier.logistics.all_crates", "All Crates (~80%)");
+        EN_STRINGS.put("tier.logistics.no_decrease", "Bottomless (No Depletion)");
 
         EN_STRINGS.put("btn.instant_build_now", "Instant Build Now");
         EN_STRINGS.put("btn.fill_crates_100", "Fill Crates to 100%");
@@ -199,6 +200,7 @@ public final class I18n {
         DE_STRINGS.put("tier.logistics.vanilla", "Aus (Vanilla)");
         DE_STRINGS.put("tier.logistics.raw_only", "Rohstoffe (~80%)");
         DE_STRINGS.put("tier.logistics.all_crates", "Alle Kisten (~80%)");
+        DE_STRINGS.put("tier.logistics.no_decrease", "Bodenlos (Kein Verbrauch)");
 
         DE_STRINGS.put("btn.instant_build_now", "Sofortbau jetzt");
         DE_STRINGS.put("btn.fill_crates_100", "Kisten auf 100%");
