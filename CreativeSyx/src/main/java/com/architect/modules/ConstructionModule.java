@@ -86,14 +86,16 @@ public final class ConstructionModule implements ArchitectModule {
         int height = SETT.THEIGHT;
         int width = SETT.TWIDTH;
         int startY = scanRowCursor;
-        int endY = Math.min(height, startY + ROWS_PER_TICK);
+        int endY = Math.min(height, startY + (state.instantJobs ? 96 : ROWS_PER_TICK));
 
         // 2. Free Materials / Keep Work (or Fast & Free) with rolling chunk cursor
         if (state.constructionTier == ConstructionTier.FREE_MATERIALS_KEEP_WORK ||
             state.constructionTier == ConstructionTier.FAST_AND_FREE) {
             boolean fastSpeed = (state.constructionTier == ConstructionTier.FAST_AND_FREE);
             processFreeMaterialsSlice(fastSpeed, width, startY, endY);
-            processOutsideJobsSlice(fastSpeed, width, startY, endY);
+            processOutsideJobsSlice(fastSpeed, width, startY, endY, state.instantJobs);
+        } else if (state.instantJobs) {
+            processOutsideJobsSlice(false, width, startY, endY, true);
         }
 
         // 3. Maintenance Logic with rolling chunk cursor
@@ -145,49 +147,97 @@ public final class ConstructionModule implements ArchitectModule {
     }
 
     /**
-     * Budgeted row slice scan for outside jobs (roads, walls, ceilings, fortifications).
+     * Budgeted row slice scan for outside jobs (roads, walls, ceilings, fortifications, clearings).
      */
-    private void processOutsideJobsSlice(boolean fastSpeed, int width, int startY, int endY) {
-        if (outsideJobsReflectionFailed || SETT.JOBS() == null || SETT.JOBS().getter == null) {
+    private void processOutsideJobsSlice(boolean fastSpeed, int width, int startY, int endY, boolean instantJobs) {
+        if (SETT.JOBS() == null || SETT.JOBS().getter == null) {
             return;
         }
 
-        try {
-            if (jobsProgressField == null) {
-                jobsProgressField = JOBS.class.getDeclaredField("progress");
-                jobsProgressField.setAccessible(true);
-                jobsWantsResField = JOBS.class.getDeclaredField("wantsRes");
-                jobsWantsResField.setAccessible(true);
+        Bitsmap1D progress = null;
+        Bitmap1D wantsRes = null;
+        if (!outsideJobsReflectionFailed) {
+            try {
+                if (jobsProgressField == null) {
+                    jobsProgressField = JOBS.class.getDeclaredField("progress");
+                    jobsProgressField.setAccessible(true);
+                    jobsWantsResField = JOBS.class.getDeclaredField("wantsRes");
+                    jobsWantsResField.setAccessible(true);
+                }
+                progress = (Bitsmap1D) jobsProgressField.get(SETT.JOBS());
+                wantsRes = (Bitmap1D) jobsWantsResField.get(SETT.JOBS());
+            } catch (Throwable t) {
+                outsideJobsReflectionFailed = true;
+                System.err.println("[SyxArchitect] Reflection disabled for OutsideJobs: " + t.getMessage());
             }
-            Bitsmap1D progress = (Bitsmap1D) jobsProgressField.get(SETT.JOBS());
-            Bitmap1D wantsRes = (Bitmap1D) jobsWantsResField.get(SETT.JOBS());
+        }
 
-            for (int y = startY; y < endY; y++) {
-                for (int x = 0; x < width; x++) {
-                    if (SETT.JOBS().getter.is(x, y)) {
-                        Job job = SETT.JOBS().getter.get(x, y);
-                        if (job instanceof JobBuild) {
-                            JobBuild jb = (JobBuild) job;
-                            if (fastSpeed) {
-                                completeJobBuild(jb, x, y);
-                            } else {
-                                int tile = y * width + x;
-                                int needed = jb.resAmount();
-                                if (progress != null && progress.get(tile) < needed) {
-                                    progress.set(tile, needed);
-                                    if (wantsRes != null) {
-                                        wantsRes.set(tile, false);
-                                    }
+        for (int y = startY; y < endY; y++) {
+            for (int x = 0; x < width; x++) {
+                if (SETT.JOBS().getter.is(x, y)) {
+                    Job job = SETT.JOBS().getter.get(x, y);
+                    if (job instanceof JobBuild) {
+                        JobBuild jb = (JobBuild) job;
+                        if (fastSpeed) {
+                            completeJobBuild(jb, x, y);
+                        } else if (progress != null) {
+                            int tile = y * width + x;
+                            int needed = jb.resAmount();
+                            if (progress.get(tile) < needed) {
+                                progress.set(tile, needed);
+                                if (wantsRes != null) {
+                                    wantsRes.set(tile, false);
                                 }
                             }
                         }
+                    } else if (instantJobs && job != null) {
+                        completeJobClear(job, x, y);
                     }
                 }
             }
-        } catch (Throwable t) {
-            if (!outsideJobsReflectionFailed) {
-                outsideJobsReflectionFailed = true;
-                System.err.println("[SyxArchitect] Reflection disabled for OutsideJobs: " + t.getMessage());
+        }
+    }
+
+    /**
+     * Instantly completes an outside clearing or demolition job (tree felling, rock clearing,
+     * road destruction, structure/wall disassembly, tunneling, wild food harvesting).
+     * Uses a multi-pass loop to deplete all HP/stages, granting produced resources to the player.
+     */
+    private void completeJobClear(Job job, int x, int y) {
+        if (job == null) return;
+        int maxSteps = 30;
+        while (maxSteps-- > 0 && SETT.JOBS() != null && SETT.JOBS().getter != null && SETT.JOBS().getter.is(x, y)) {
+            Job current = SETT.JOBS().getter.get(x, y);
+            if (current == null || current instanceof JobBuild) {
+                break;
+            }
+            try {
+                current.jobPerform(null, null, 0);
+            } catch (Throwable t) {
+                break;
+            }
+        }
+        // Robust cleanup: if job still lingering after multi-pass attempts, force clear tile
+        if (SETT.JOBS() != null && SETT.JOBS().getter != null && SETT.JOBS().getter.is(x, y)) {
+            Job rem = SETT.JOBS().getter.get(x, y);
+            if (rem != null && !(rem instanceof JobBuild)) {
+                try {
+                    if (SETT.TERRAIN() != null) {
+                        settlement.tilemap.terrain.Terrain.TerrainTile tt = SETT.TERRAIN().get(x, y);
+                        if (tt != null && tt.clearing() != null) {
+                            tt.clearing().destroy(x, y);
+                        }
+                    }
+                    if (SETT.FLOOR() != null && SETT.FLOOR().getter != null && SETT.FLOOR().getter.is(x, y)) {
+                        if (SETT.FLOOR().clearer != null) {
+                            SETT.FLOOR().clearer.clear(x, y);
+                        }
+                    }
+                    if (SETT.JOBS().clearer != null) {
+                        SETT.JOBS().clearer.set(x, y);
+                    }
+                } catch (Throwable ignored) {
+                }
             }
         }
     }
@@ -317,14 +367,16 @@ public final class ConstructionModule implements ArchitectModule {
             }
         }
 
-        // 2. Outside jobs (Roads, Floors, Walls, Ceilings, Fortifications)
-        if (!outsideJobsReflectionFailed && SETT.JOBS() != null && SETT.JOBS().getter != null) {
+        // 2. Outside jobs (Roads, Floors, Walls, Ceilings, Fortifications, Tree felling, Demolition, Excavation)
+        if (SETT.JOBS() != null && SETT.JOBS().getter != null) {
             for (int y = 0; y < height; y++) {
                 for (int x = 0; x < width; x++) {
                     if (SETT.JOBS().getter.is(x, y)) {
                         Job job = SETT.JOBS().getter.get(x, y);
                         if (job instanceof JobBuild) {
                             completeJobBuild((JobBuild) job, x, y);
+                        } else if (job != null) {
+                            completeJobClear(job, x, y);
                         }
                     }
                 }
@@ -334,7 +386,7 @@ public final class ConstructionModule implements ArchitectModule {
 
     @Override
     public void onStateChanged(ArchitectState state) {
-        if (state.constructionTier == ConstructionTier.INSTANT_BUILD) {
+        if (state.constructionTier == ConstructionTier.INSTANT_BUILD || state.instantJobs) {
             triggerInstantBuildAll();
         }
     }

@@ -80,6 +80,8 @@ public final class I18n {
         EN_STRINGS.put("cheat.raid_protection.desc", "Automatically cancels hostile raids and barbarian incursions.");
         EN_STRINGS.put("cheat.battle_autowin", "Combat");
         EN_STRINGS.put("cheat.battle_autowin.desc", "Ensures unconditional morale victory in all tactical battles and sieges.");
+        EN_STRINGS.put("cheat.instant_jobs", "Instant Jobs");
+        EN_STRINGS.put("cheat.instant_jobs.desc", "Jobs like tree felling, road demolition, wall disassembly, and rock clearing complete instantly.");
 
         EN_STRINGS.put("tier.maintenance.vanilla", "Vanilla");
         EN_STRINGS.put("tier.maintenance.janitors_free", "Free Janitors");
@@ -164,6 +166,8 @@ public final class I18n {
         DE_STRINGS.put("cheat.raid_protection.desc", "Bricht feindliche Raids und Barbaren-Invasionen automatisch ab.");
         DE_STRINGS.put("cheat.battle_autowin", "Schlachten");
         DE_STRINGS.put("cheat.battle_autowin.desc", "Sichert bedingungslosen Moralsieg in allen Feldschlachten und Belagerungen.");
+        DE_STRINGS.put("cheat.instant_jobs", "Sofort-Auftraege");
+        DE_STRINGS.put("cheat.instant_jobs.desc", "Baeume faellen, Strassen abreissen, Mauern zerlegen und Felsen werden sofort erledigt.");
 
         DE_STRINGS.put("tier.maintenance.vanilla", "Vanilla");
         DE_STRINGS.put("tier.maintenance.janitors_free", "Gratis Hausmeister");

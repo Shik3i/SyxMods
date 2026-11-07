@@ -384,6 +384,27 @@ public final class ArchitectUI {
         });
         leftCol.addDown(4, createOptionRow(colW, I18n.get("cheat.spoilage"), btnSpoil));
 
+        // Row 5: Instant Jobs Toggle (Fell trees, destroy roads, disassemble walls, clear rocks/tunnels)
+        GButt.ButtPanel btnJobs = createBtnM(state.instantJobs ? I18n.get("status.active") : I18n.get("status.inactive"), ctrlW, ctrlH);
+        btnJobs.selectedSet(state.instantJobs);
+        btnJobs.hoverTitleSet(I18n.get("cheat.instant_jobs") + " [" + (state.instantJobs ? I18n.get("status.active") : I18n.get("status.inactive")) + "]");
+        btnJobs.hoverInfoSet(de
+            ? (state.instantJobs
+                ? "Status: AKTIV (Baeume faellen, Strassen abreissen, Mauern zerlegen & Felsen werden sofort erledigt).\nKlick schaltet die Funktion AUS."
+                : "Status: AUS (Arbeiter erledigen Auftraege normal).\nKlick schaltet Sofort-Erledigung fuer alle Rodungs- & Abbrucharbeiten EIN.")
+            : (state.instantJobs
+                ? "Status: ACTIVE (Tree felling, road demolition, wall disassembly & clearing complete instantly).\nClick to turn OFF."
+                : "Status: OFF (Oddjobbers clear tiles normally).\nClick to turn instant job completion ON."));
+        btnJobs.clickActionSet(new ACTION() {
+            @Override
+            public void exe() {
+                state.instantJobs = !state.instantJobs;
+                callback.onStateUpdated();
+                open(state, callback);
+            }
+        });
+        leftCol.addDown(4, createOptionRow(colW, I18n.get("cheat.instant_jobs"), btnJobs));
+
         gridRow.add(leftCol);
 
         // === RIGHT COLUMN: Logistics, Treasury, Loyalty, Raid Immunity ===
@@ -469,6 +490,27 @@ public final class ArchitectUI {
         });
         rightCol.addDown(4, createOptionRow(colW, I18n.get("cheat.raid_protection"), btnRaid));
 
+        // Row 5: Battle Auto-Win Toggle
+        GButt.ButtPanel btnBattle = createBtnM(state.battleAutoWin ? I18n.get("status.active") : I18n.get("status.inactive"), ctrlW, ctrlH);
+        btnBattle.selectedSet(state.battleAutoWin);
+        btnBattle.hoverTitleSet(I18n.get("cheat.battle_autowin") + " [" + (state.battleAutoWin ? I18n.get("status.active") : I18n.get("status.inactive")) + "]");
+        btnBattle.hoverInfoSet(de
+            ? (state.battleAutoWin
+                ? "Status: AKTIV (Feindliche Armeen brechen auf allen Schlachtfeldern sofort die Moral).\nKlick schaltet die Funktion AUS."
+                : "Status: AUS (Schlachten laufen normal ab).\nKlick aktiviert automatischen Sofortsieg fuer alle Kaempfe.")
+            : (state.battleAutoWin
+                ? "Status: ACTIVE (Hostile army morale shatters immediately on all battlefields).\nClick to turn OFF."
+                : "Status: OFF (Battles proceed normally).\nClick to activate unconditional auto-victory."));
+        btnBattle.clickActionSet(new ACTION() {
+            @Override
+            public void exe() {
+                state.battleAutoWin = !state.battleAutoWin;
+                callback.onStateUpdated();
+                open(state, callback);
+            }
+        });
+        rightCol.addDown(4, createOptionRow(colW, I18n.get("cheat.battle_autowin"), btnBattle));
+
         gridRow.addRight(16, rightCol);
         content.addDown(8, gridRow);
         content.addDown(8, GFrame.separator(contentW));
@@ -484,8 +526,8 @@ public final class ArchitectUI {
         GButt.ButtPanel btnInstantBuild = createBtnM(I18n.get("btn.instant_build_now"), btnW4, 30);
         btnInstantBuild.hoverTitleSet(I18n.get("btn.instant_build_now"));
         btnInstantBuild.hoverInfoSet(de
-            ? "Stellt alle derzeit geplanten Raeume, Strassen, Mauern und Daecher kartenweit sofort fertig."
-            : "Instantly finishes all currently planned rooms, roads, walls, and roofs across the map.");
+            ? "Stellt alle derzeit geplanten Raeume, Strassen, Mauern, Daecher sowie Auftraege (Faellen, Abreissen, Roden) kartenweit sofort fertig."
+            : "Instantly finishes all currently planned rooms, roads, walls, roofs, and pending jobs (felling, demolition, clearing) across the map.");
         btnInstantBuild.clickActionSet(new ACTION() {
             @Override
             public void exe() {

@@ -18,7 +18,7 @@ import snake2d.util.file.FilePutter;
 public final class ArchitectState {
 
     public static final int MAGIC_HEADER = 0x59584152; // 'SXAR'
-    public static final int CURRENT_VERSION = 4;
+    public static final int CURRENT_VERSION = 5;
 
     // Semantic Schönbau and sandbox settings
     public MaintenanceTier maintenanceTier = MaintenanceTier.VANILLA;
@@ -34,6 +34,9 @@ public final class ArchitectState {
     public boolean loyaltyBoost = false;
     public boolean raidImmunity = false;
     public boolean battleAutoWin = false;
+
+    // Instant Jobs (tree felling, road demolition, wall disassembly, rock clearing, tunneling)
+    public boolean instantJobs = false;
 
     // Treasury (Sprint 4.5)
     public boolean infiniteDenari = false;
@@ -61,6 +64,7 @@ public final class ArchitectState {
         loyaltyBoost = false;
         raidImmunity = false;
         battleAutoWin = false;
+        instantJobs = false;
         infiniteDenari = false;
         freezeNiceWeather = false;
         disableAging = false;
@@ -78,6 +82,7 @@ public final class ArchitectState {
         knowledgeTier = CheatTiers.KnowledgeTier.OMNISCIENCE;
         logisticsTier = CheatTiers.LogisticsTier.ALL_ASSIGNED_CRATES;
         infiniteDenari = true;
+        instantJobs = true;
         spoilageDisabled = true;
         loyaltyBoost = true;
         raidImmunity = true;
@@ -124,6 +129,9 @@ public final class ArchitectState {
         // Version 4 fields
         file.bool(infiniteDenari);
 
+        // Version 5 fields
+        file.bool(instantJobs);
+
         file.chars(language != null ? language : "en");
     }
 
@@ -165,6 +173,12 @@ public final class ArchitectState {
                 infiniteDenari = file.bool();
             } else {
                 infiniteDenari = false;
+            }
+
+            if (version >= 5) {
+                instantJobs = file.bool();
+            } else {
+                instantJobs = false;
             }
 
             language = file.chars();
